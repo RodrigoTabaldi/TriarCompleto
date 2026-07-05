@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MauiApp3.HomePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:models="clr-namespace:MauiApp3.Models"
+    BackgroundColor="#F5F7F6"
+    Shell.NavBarIsVisible="False">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- ================= HEADER ================= -->
+        <Grid Padding="20,12" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12"
+              BackgroundColor="White" Shadow="0,2,12,#00000018">
+
+            <Image Source="logo.png" HeightRequest="55" VerticalOptions="Center"/>
+
+            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="0">
+                <Label x:Name="NomeUsuario" FontSize="16" FontAttributes="Bold" TextColor="#0F172A"/>
+                <Label x:Name="EmailUsuario" FontSize="12" TextColor="#6B7280"/>
+            </VerticalStackLayout>
+
+            <Button Grid.Column="2"
+                    Text="↻ Atualizar"
+                    Clicked="Atualizar"
+                    BackgroundColor="Transparent"
+                    TextColor="#10B981"
+                    FontAttributes="Bold"
+                    VerticalOptions="Center"/>
+
+            <Border Grid.Column="3"
+                    BackgroundColor="#10B981"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 100"
+                    HeightRequest="45" WidthRequest="45"
+                    VerticalOptions="Center">
+                <Label x:Name="InicialUsuario" Text="U" TextColor="White"
+                       HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold"/>
+            </Border>
+        </Grid>
+
+        <!-- ================= CONTEÚDO ================= -->
+        <CollectionView
+            x:Name="ListaTriagens"
+            Grid.Row="1"
+            Margin="20,0"
+            SelectionMode="None">
+
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout x:Name="LayoutGrade"
+                                 Orientation="Vertical"
+                                 Span="1"
+                                 HorizontalItemSpacing="15"
+                                 VerticalItemSpacing="15"/>
+            </CollectionView.ItemsLayout>
+
+            <CollectionView.Header>
+                <VerticalStackLayout Spacing="4" Padding="0,20,0,15">
+                    <Label Text="Triagens disponíveis" FontSize="24" FontAttributes="Bold" TextColor="#0F172A"/>
+                    <Label Text="Selecione uma triagem para iniciar o atendimento" FontSize="14" TextColor="#6B7280"/>
+
+                    <HorizontalStackLayout Spacing="10" Margin="0,12,0,0">
+                        <Button x:Name="BotaoEditarHome"
+                                Text="⚙ Editar home"
+                                Clicked="AlternarEdicaoHome"
+                                BackgroundColor="#E6F6F1"
+                                TextColor="#10B981"
+                                FontAttributes="Bold"
+                                CornerRadius="10"
+                                HeightRequest="42"/>
+                        <Button Text="＋ Criar sua triagem"
+                                Clicked="IrCriarTriagem"
+                                BackgroundColor="#10B981"
+                                TextColor="White"
+                                FontAttributes="Bold"
+                                CornerRadius="10"
+                                HeightRequest="42"/>
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </CollectionView.Header>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:TriagemResumo">
+                    <Border BackgroundColor="White"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 15"
+                            Padding="18"
+                            Shadow="0,3,14,#0000001A">
+
+                        <VerticalStackLayout Spacing="10">
+
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                <Border BackgroundColor="#E6F6F1"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 100"
+                                        HeightRequest="52" WidthRequest="52">
+                                    <Label Text="{Binding Icone}" FontSize="26"
+                                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Border>
+
+                                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                                    <Label Text="{Binding Titulo}" FontSize="17" FontAttributes="Bold"
+                                           TextColor="#0F172A" LineBreakMode="WordWrap"/>
+                                    <Label FontSize="13" TextColor="#6B7280">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="Público alvo: " FontAttributes="Bold"/>
+                                                <Span Text="{Binding PublicoAlvo}"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                </VerticalStackLayout>
+
+                                <Border Grid.Column="2"
+                                        BackgroundColor="#DCFCE7"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 100"
+                                        Padding="10,4"
+                                        VerticalOptions="Start"
+                                        IsVisible="{Binding MinhaAutoria}">
+                                    <Label Text="minha" FontSize="11" TextColor="#166534" FontAttributes="Bold"/>
+                                </Border>
+                            </Grid>
+
+                            <!-- modo normal: Entrar / Ver histórico -->
+                            <VerticalStackLayout Spacing="8" IsVisible="{Binding ModoNormal}">
+                                <Button Text="Entrar"
+                                        Clicked="AbrirTriagem"
+                                        BackgroundColor="#10B981"
+                                        TextColor="White"
+                                        FontAttributes="Bold"
+                                        CornerRadius="10"
+                                        HeightRequest="44"/>
+                                <Button Text="Ver histórico de pacientes"
+                                        Clicked="AbrirHistorico"
+                                        BackgroundColor="White"
+                                        BorderColor="#10B981"
+                                        BorderWidth="1.5"
+                                        TextColor="#10B981"
+                                        CornerRadius="10"
+                                        HeightRequest="44"/>
+                            </VerticalStackLayout>
+
+                            <!-- modo edição da home: escolher visibilidade / editar / excluir -->
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8"
+                                  IsVisible="{Binding ModoEdicao}">
+                                <Label Text="Exibir na home" VerticalOptions="Center" TextColor="#374151"/>
+                                <Switch Grid.Column="1"
+                                        IsToggled="{Binding VisivelNaHome, Mode=TwoWay}"
+                                        OnColor="#10B981"
+                                        VerticalOptions="Center"/>
+                                <Button Grid.Column="2"
+                                        Text="✏️"
+                                        Clicked="EditarTriagem"
+                                        BackgroundColor="#E6F6F1"
+                                        CornerRadius="10"
+                                        WidthRequest="44" HeightRequest="44"
+                                        IsVisible="{Binding MinhaAutoria}"/>
+                                <Button Grid.Column="3"
+                                        Text="🗑"
+                                        Clicked="ExcluirTriagem"
+                                        BackgroundColor="#FEE2E2"
+                                        TextColor="#EF4444"
+                                        CornerRadius="10"
+                                        WidthRequest="44" HeightRequest="44"
+                                        IsVisible="{Binding MinhaAutoria}"/>
+                            </Grid>
+
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+
+            <CollectionView.Footer>
+                <VerticalStackLayout Spacing="15" Padding="0,15,0,30">
+
+                    <Button x:Name="BotaoSalvarHome"
+                            Text="Salvar configuração da home"
+                            Clicked="SalvarConfiguracaoHome"
+                            IsVisible="False"
+                            BackgroundColor="#10B981"
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            CornerRadius="12"
+                            HeightRequest="48"/>
+
+                    <!-- Sobre o projeto -->
+                    <Border BackgroundColor="#E6F6F1" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="18" Shadow="0,2,10,#00000012">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                            <Border BackgroundColor="#10B981" StrokeThickness="0" StrokeShape="RoundRectangle 100"
+                                    HeightRequest="42" WidthRequest="42">
+                                <Label Text="i" TextColor="White" FontAttributes="Bold" FontSize="18"
+                                       HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
+                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                <Label Text="Sobre o projeto" FontAttributes="Bold" TextColor="#0F172A"/>
+                                <Label Text="Saiba mais sobre o Triar, seus objetivos e como as triagens funcionam."
+                                       FontSize="13" TextColor="#374151"/>
+                            </VerticalStackLayout>
+                            <Label Grid.Column="2" Text="›" FontSize="26" TextColor="#10B981" VerticalOptions="Center"/>
+                        </Grid>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="IrSobre"/>
+                        </Border.GestureRecognizers>
+                    </Border>
+
+                    <!-- Rodapé institucional -->
+                    <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="18" Shadow="0,2,10,#00000012">
+                        <FlexLayout Wrap="Wrap" JustifyContent="SpaceBetween">
+                            <VerticalStackLayout WidthRequest="220" Margin="0,8">
+                                <Label Text="🛡 Segurança" FontAttributes="Bold" TextColor="#10B981"/>
+                                <Label Text="Seus dados e dos pacientes estão protegidos." FontSize="12" TextColor="#6B7280"/>
+                            </VerticalStackLayout>
+                            <VerticalStackLayout WidthRequest="220" Margin="0,8">
+                                <Label Text="🔒 Privacidade" FontAttributes="Bold" TextColor="#10B981"/>
+                                <Label Text="Cumprimos as normas da LGPD e boas práticas de segurança." FontSize="12" TextColor="#6B7280"/>
+                            </VerticalStackLayout>
+                            <VerticalStackLayout WidthRequest="220" Margin="0,8">
+                                <Label Text="🎓 Uso Acadêmico" FontAttributes="Bold" TextColor="#10B981"/>
+                                <Label Text="Projeto desenvolvido para fins acadêmicos em ambiente universitário." FontSize="12" TextColor="#6B7280"/>
+                            </VerticalStackLayout>
+                            <VerticalStackLayout WidthRequest="220" Margin="0,8">
+                                <Label Text="💡 Melhoria Contínua" FontAttributes="Bold" TextColor="#10B981"/>
+                                <Label Text="Sua participação ajuda a tornar o sistema cada vez melhor." FontSize="12" TextColor="#6B7280"/>
+                            </VerticalStackLayout>
+                        </FlexLayout>
+                    </Border>
+
+                    <Button Text="Sair da conta"
+                            Clicked="Sair"
+                            BackgroundColor="Transparent"
+                            TextColor="#EF4444"
+                            FontAttributes="Bold"/>
+                </VerticalStackLayout>
+            </CollectionView.Footer>
+
+        </CollectionView>
+    </Grid>
+</ContentPage>

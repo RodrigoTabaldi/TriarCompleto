@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MauiApp3.CadastroPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    BackgroundColor="#F5F7F6">
+
+    <Grid>
+
+        <!-- FUNDO DECORATIVO -->
+        <Image 
+            Source="iconelogo.png"
+            Opacity="0.08"
+            Aspect="AspectFill"
+            HorizontalOptions="Start"
+            VerticalOptions="Center"
+            HeightRequest="400"/>
+
+        <ScrollView>
+            <VerticalStackLayout 
+                VerticalOptions="Center"
+                HorizontalOptions="Center"
+                Padding="20"
+                Spacing="20">
+
+                <!-- CARD -->
+                <Border 
+                    BackgroundColor="White"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 20"
+                    Padding="30"
+                    HorizontalOptions="Center"
+                    MaximumWidthRequest="500"
+                    WidthRequest="{OnPlatform Android=380, iOS=380, WinUI=500}"
+                    Shadow="0,4,20,#00000020">
+
+                    <VerticalStackLayout Spacing="18">
+
+                        <!-- LOGO -->
+                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
+                            <Image Source="logo.png" HeightRequest="120"/>
+                            <Label></Label> 
+                               
+                        </HorizontalStackLayout>
+
+                        <!-- TÍTULO -->
+                        <Label 
+                            Text="Crie sua conta"
+                            FontSize="22"
+                            FontAttributes="Bold"
+                            HorizontalOptions="Center"
+                            TextColor="#111827"/>
+
+                        <Label 
+                            Text="Preencha os dados abaixo para se cadastrar"
+                            FontSize="14"
+                            HorizontalOptions="Center"
+                            TextColor="#6B7280"/>
+
+                        <!-- NOME -->
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Nome" TextColor="#374151"/>
+                            <Entry 
+                                x:Name="Nome"
+                                Placeholder="Seu nome completo"
+                                TextColor="Black"
+                                PlaceholderColor="#9CA3AF"/>
+                                
+                        </VerticalStackLayout>
+
+                        <!-- EMAIL -->
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Email" TextColor="#374151"/>
+                            <Entry 
+                                x:Name="Email"
+                                Placeholder="seu@email.com"
+                                TextColor="Black"
+                                PlaceholderColor="#9CA3AF"/>
+                        </VerticalStackLayout>
+
+                        <!-- SENHA -->
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Senha" TextColor="#374151"/>
+                            <Entry 
+                                x:Name="Senha"
+                                Placeholder="Sua senha"
+                                IsPassword="True"
+                                TextColor="Black"
+                                PlaceholderColor="#9CA3AF"/>
+                        </VerticalStackLayout>
+
+                       
+
+                        <!-- BOTÃO CADASTRAR -->
+                        <Button 
+                            Text="Cadastrar"
+                            Clicked="Cadastrar"
+                            BackgroundColor="#10B981"
+                            TextColor="White"
+                            CornerRadius="10"
+                            HeightRequest="50"/>
+
+                        <!-- LINK LOGIN -->
+                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="5">
+                            <Label 
+                                Text="Já tem uma conta?"
+                                TextColor="#6B7280"/>
+
+                            <Label 
+                                Text="Entrar"
+                                TextColor="#10B981"
+                                FontAttributes="Bold">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="IrLogin"/>
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </HorizontalStackLayout>
+
+                    </VerticalStackLayout>
+
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+    </Grid>
+
+</ContentPage>

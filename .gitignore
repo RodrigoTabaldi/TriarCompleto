@@ -1,0 +1,13 @@
+# Build
+bin/
+obj/
+publish/
+
+# IDE
+.vs/
+.idea/
+*.user
+
+# Sistema
+*.log
+.DS_Store

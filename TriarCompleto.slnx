@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Triagem.App/MauiApp3/MauiApp3.csproj" />
+  <Project Path="Triagem.API/Triagem.API/Triagem.API.csproj" />
+</Solution>

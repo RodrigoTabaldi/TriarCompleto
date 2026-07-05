@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MauiApp3.HistoricoPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:models="clr-namespace:MauiApp3.Models"
+    BackgroundColor="#F5F7F6"
+    Shell.NavBarIsVisible="False">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- HEADER -->
+        <Border BackgroundColor="White" Padding="20" StrokeThickness="0" Shadow="0,2,12,#00000020">
+            <VerticalStackLayout Spacing="8">
+                <HorizontalStackLayout Spacing="8">
+                    <Label Text="←" FontSize="22" TextColor="#10B981" FontAttributes="Bold"/>
+                    <Label Text="Voltar" TextColor="#10B981" FontAttributes="Bold" VerticalOptions="Center"/>
+                    <HorizontalStackLayout.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="Voltar"/>
+                    </HorizontalStackLayout.GestureRecognizers>
+                </HorizontalStackLayout>
+
+                <Image Source="logo.png" HeightRequest="42" HorizontalOptions="Start"/>
+
+                <Label x:Name="TituloPagina" Text="Histórico de Triagens"
+                       FontSize="24" FontAttributes="Bold" TextColor="#0F172A"/>
+                <Label x:Name="Subtitulo" Text="Visualize as avaliações realizadas"
+                       FontSize="14" TextColor="#6B7280"/>
+
+                <Button Text="📄 Exportar para Excel"
+                        Clicked="ExportarExcel"
+                        BackgroundColor="#E6F6F1" TextColor="#10B981" FontAttributes="Bold"
+                        CornerRadius="10" HeightRequest="42"
+                        HorizontalOptions="Start"/>
+            </VerticalStackLayout>
+        </Border>
+
+        <!-- LISTA -->
+        <CollectionView Grid.Row="1" x:Name="Lista" Margin="15" SelectionMode="None">
+
+            <CollectionView.EmptyView>
+                <VerticalStackLayout Padding="30" Spacing="8" VerticalOptions="Center">
+                    <Label Text="📭" FontSize="40" HorizontalOptions="Center"/>
+                    <Label Text="Nenhuma triagem realizada ainda."
+                           TextColor="#6B7280" HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:HistoricoItem">
+                    <Border BackgroundColor="White" Padding="18" Margin="0,0,0,12"
+                            StrokeThickness="0" StrokeShape="RoundRectangle 16" Shadow="0,2,10,#00000015">
+                        <VerticalStackLayout Spacing="10">
+
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                <Border BackgroundColor="#E6F6F1" WidthRequest="42" HeightRequest="42"
+                                        StrokeThickness="0" StrokeShape="RoundRectangle 100">
+                                    <Label Text="👤" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Border>
+
+                                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="1">
+                                    <Label Text="{Binding Nome}" FontSize="16" FontAttributes="Bold" TextColor="#0F172A"/>
+                                    <Label Text="{Binding TituloTriagem}" FontSize="12" TextColor="#10B981" FontAttributes="Bold"/>
+                                    <Label Text="{Binding DataFormatada}" FontSize="12" TextColor="#6B7280"/>
+                                </VerticalStackLayout>
+
+                                <Border Grid.Column="2" BackgroundColor="#DCFCE7" Padding="12,6"
+                                        StrokeThickness="0" StrokeShape="RoundRectangle 100" VerticalOptions="Center">
+                                    <Label Text="{Binding PontuacaoFormatada}" TextColor="#166534" FontAttributes="Bold"/>
+                                </Border>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,*,*">
+                                <VerticalStackLayout>
+                                    <Label Text="Resultado" FontSize="11" TextColor="#6B7280"/>
+                                    <Label Text="{Binding Resultado}" FontAttributes="Bold" TextColor="#0F172A"/>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1">
+                                    <Label Text="Idade" FontSize="11" TextColor="#6B7280"/>
+                                    <Label Text="{Binding Idade}" FontAttributes="Bold" TextColor="#0F172A"/>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="2">
+                                    <Label Text="Sexo" FontSize="11" TextColor="#6B7280"/>
+                                    <Label Text="{Binding Sexo}" FontAttributes="Bold" TextColor="#0F172A"/>
+                                </VerticalStackLayout>
+                            </Grid>
+
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>
