@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Triagem.API.Dtos;
@@ -6,14 +7,15 @@ using Triagem.API.Services;
 namespace Triagem.API.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/triagens")]
 [EnableRateLimiting("api")]
 public class TriagensController(TriagemService service) : ControllerBase
 {
-    /// <summary>Lista as triagens disponíveis para o usuário (padrão + criadas por ele), com flag de visibilidade na home.</summary>
+    /// <summary>Lista as triagens disponíveis para o usuário autenticado (padrão + criadas por ele).</summary>
     [HttpGet]
-    public async Task<IActionResult> Listar([FromQuery] int usuarioId) =>
-        Ok(await service.ListarParaUsuarioAsync(usuarioId));
+    public async Task<IActionResult> Listar() =>
+        Ok(await service.ListarParaUsuarioAsync(User.GetUserId()));
 
     /// <summary>Detalhe de uma triagem: perguntas (com pesos) e faixas de resultado.</summary>
     [HttpGet("{id:int}")]
@@ -27,23 +29,23 @@ public class TriagensController(TriagemService service) : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Criar([FromBody] CriarTriagemRequest req)
     {
-        var (detalhe, erro) = await service.CriarAsync(req);
+        var (detalhe, erro) = await service.CriarAsync(User.GetUserId(), req);
         return erro is null ? Ok(detalhe) : BadRequest(erro);
     }
 
-    /// <summary>Edita uma triagem criada pelo usuário.</summary>
+    /// <summary>Edita uma triagem criada pelo usuário autenticado.</summary>
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Atualizar(int id, [FromBody] CriarTriagemRequest req)
     {
-        var (ok, erro) = await service.AtualizarAsync(id, req);
+        var (ok, erro) = await service.AtualizarAsync(User.GetUserId(), id, req);
         return ok ? Ok() : BadRequest(erro);
     }
 
-    /// <summary>Remove (desativa) uma triagem criada pelo usuário.</summary>
+    /// <summary>Remove (desativa) uma triagem criada pelo usuário autenticado.</summary>
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Excluir(int id, [FromQuery] int usuarioId)
+    public async Task<IActionResult> Excluir(int id)
     {
-        var (ok, erro) = await service.DesativarAsync(id, usuarioId);
+        var (ok, erro) = await service.DesativarAsync(User.GetUserId(), id);
         return ok ? Ok() : BadRequest(erro);
     }
 
@@ -51,37 +53,40 @@ public class TriagensController(TriagemService service) : ControllerBase
     [HttpPost("{id:int}/responder")]
     public async Task<IActionResult> Responder(int id, [FromBody] ResponderTriagemRequest req)
     {
-        var (resultado, erro) = await service.ResponderAsync(id, req);
+        var (resultado, erro) = await service.ResponderAsync(User.GetUserId(), id, req);
         return erro is null ? Ok(resultado) : BadRequest(erro);
     }
 
-    /// <summary>Histórico de aplicações de uma triagem pelo usuário.</summary>
+    /// <summary>Histórico de aplicações de uma triagem pelo usuário autenticado.</summary>
     [HttpGet("{id:int}/historico")]
-    public async Task<IActionResult> Historico(int id, [FromQuery] int usuarioId) =>
-        Ok(await service.HistoricoAsync(usuarioId, id));
+    public async Task<IActionResult> Historico(int id) =>
+        Ok(await service.HistoricoAsync(User.GetUserId(), id));
 }
 
-/// <summary>Rotas de compatibilidade com versões antigas do app + histórico geral.</summary>
+/// <summary>Rota de compatibilidade com versões antigas do app + histórico geral (sempre do usuário autenticado).</summary>
 [ApiController]
+[Authorize]
 [Route("api/triagem")]
 [EnableRateLimiting("api")]
 public class TriagemLegacyController(TriagemService service) : ControllerBase
 {
+    /// <summary>O id do usuário é ignorado: o histórico é sempre o do token autenticado (evita IDOR).</summary>
     [HttpGet("usuario/{usuarioId:int}")]
     public async Task<IActionResult> HistoricoDoUsuario(int usuarioId, [FromQuery] int? triagemModeloId) =>
-        Ok(await service.HistoricoAsync(usuarioId, triagemModeloId));
+        Ok(await service.HistoricoAsync(User.GetUserId(), triagemModeloId));
 }
 
 [ApiController]
+[Authorize]
 [Route("api/usuarios")]
 [EnableRateLimiting("api")]
 public class UsuariosController(TriagemService service) : ControllerBase
 {
-    /// <summary>Define quais triagens aparecem na home do usuário e em que ordem.</summary>
+    /// <summary>Define quais triagens aparecem na home do usuário autenticado.</summary>
     [HttpPut("{usuarioId:int}/home")]
     public async Task<IActionResult> ConfigurarHome(int usuarioId, [FromBody] ConfigurarHomeRequest req)
     {
-        await service.ConfigurarHomeAsync(usuarioId, req);
+        await service.ConfigurarHomeAsync(User.GetUserId(), req);
         return Ok();
     }
 }

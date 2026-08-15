@@ -11,3 +11,15 @@ publish/
 # Sistema
 *.log
 .DS_Store
+
+# Segredos (nunca versionar)
+.env
+*.env
+!.env.example
+
+# Assinatura Android / Firebase (nunca versionar)
+*.keystore
+*.jks
+google-services.json
+firebase-debug.log
+.firebase/

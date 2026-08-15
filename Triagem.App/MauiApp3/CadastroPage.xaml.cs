@@ -27,13 +27,14 @@ public partial class CadastroPage : ContentPage
 
             _enviando = true;
 
-            var (ok, erro) = await ApiService.RegistrarAsync(
+            var (usuario, erro) = await ApiService.RegistrarAsync(
                 Nome.Text.Trim(), Email.Text.Trim(), Senha.Text);
 
-            if (ok)
+            if (usuario is not null)
             {
-                await DisplayAlertAsync("Sucesso", "Cadastro realizado! Faça login para continuar.", "OK");
-                await Shell.Current.GoToAsync("..");
+                // Cadastro já autentica (a API devolve o token). Entra direto na home.
+                App.UsuarioLogado = usuario;
+                await Shell.Current.GoToAsync(nameof(HomePage));
             }
             else
             {

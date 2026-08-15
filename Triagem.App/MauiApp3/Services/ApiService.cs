@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using MauiApp3.Models;
@@ -22,13 +23,46 @@ public static class ApiService
     // Cache thread-safe com expiração (5 min para triagens, 10 min para histórico)
     private static readonly ConcurrentDictionary<string, (object Data, DateTime ExpiresAt)> Cache = new();
 
-    /// <summary>Emulador Android enxerga o host como 10.0.2.2; demais plataformas usam localhost.</summary>
-    public static string BaseUrl =>
+    // ⚠️ PRODUÇÃO: troque pela URL pública HTTPS da sua API .NET (ex.: Azure/VPS).
+    // Num celular real (instalado via Firebase), "localhost" é o próprio telefone —
+    // por isso o build de Release precisa apontar para um endereço público de verdade.
+    private const string UrlProducao = "https://SUA-API-DE-PRODUCAO.com";
+
+    /// <summary>
+    /// Endpoint da API. Em DEBUG usa o ambiente local; em RELEASE usa a URL de produção.
+    /// Pode ser sobrescrito em runtime via <see cref="BaseUrl"/>.
+    /// </summary>
+    public static string BaseUrl { get; set; } =
+#if DEBUG
         DeviceInfo.Platform == DevicePlatform.Android
             ? "http://10.0.2.2:5036"
             : "http://localhost:5036";
+#else
+        UrlProducao;
+#endif
 
-    private static T? GetCache<T>(string key)
+    /// <summary>Token JWT da sessão. Aplicado como Bearer em toda chamada autenticada.</summary>
+    public static void DefinirToken(string? token)
+    {
+        Http.DefaultRequestHeaders.Authorization =
+            string.IsNullOrWhiteSpace(token) ? null : new AuthenticationHeaderValue("Bearer", token);
+    }
+
+    /// <summary>Encerra a sessão: limpa token e cache local.</summary>
+    public static void Logout()
+    {
+        DefinirToken(null);
+        LimparCache();
+    }
+
+    /// <summary>Remove do cache local as entradas cujas chaves começam por qualquer um dos prefixos.</summary>
+    private static void InvalidarCache(params string[] prefixos)
+    {
+        foreach (var k in Cache.Keys.Where(k => prefixos.Any(k.StartsWith)).ToList())
+            Cache.TryRemove(k, out _);
+    }
+
+    private static T? GetCache<T>(string key) where T : class
     {
         if (Cache.TryGetValue(key, out var entry) && DateTime.UtcNow < entry.ExpiresAt)
             return (T)entry.Data;
@@ -48,18 +82,32 @@ public static class ApiService
 
     // ---------------- Auth ----------------
 
+    /// <summary>Resposta de autenticação da API: usuário + token JWT.</summary>
+    private record AuthResponse(int Id, string Nome, string Email, string Token, DateTime ExpiraEm);
+
     public static async Task<Usuario?> LoginAsync(string email, string senha)
     {
         var resp = await Http.PostAsJsonAsync($"{BaseUrl}/api/auth/login", new { email, senha }, JsonOptions);
         if (!resp.IsSuccessStatusCode) return null;
-        return await resp.Content.ReadFromJsonAsync<Usuario>(JsonOptions);
+        return await AutenticarAsync(resp);
     }
 
-    public static async Task<(bool Ok, string? Erro)> RegistrarAsync(string nome, string email, string senha)
+    public static async Task<(Usuario? Usuario, string? Erro)> RegistrarAsync(string nome, string email, string senha)
     {
         var resp = await Http.PostAsJsonAsync($"{BaseUrl}/api/auth/register", new { nome, email, senha }, JsonOptions);
-        if (resp.IsSuccessStatusCode) return (true, null);
-        return (false, await resp.Content.ReadAsStringAsync());
+        if (!resp.IsSuccessStatusCode)
+            return (null, await resp.Content.ReadAsStringAsync());
+        return (await AutenticarAsync(resp), null);
+    }
+
+    private static async Task<Usuario?> AutenticarAsync(HttpResponseMessage resp)
+    {
+        var auth = await resp.Content.ReadFromJsonAsync<AuthResponse>(JsonOptions);
+        if (auth is null) return null;
+
+        DefinirToken(auth.Token);
+        LimparCache(); // sessão nova: descarta cache de qualquer usuário anterior
+        return new Usuario { Id = auth.Id, Nome = auth.Nome, Email = auth.Email };
     }
 
     // ---------------- Triagens ----------------
@@ -92,8 +140,7 @@ public static class ApiService
         var resp = await Http.PostAsJsonAsync($"{BaseUrl}/api/triagens", payload, JsonOptions);
         if (resp.IsSuccessStatusCode)
         {
-            // Invalidar cache de listagem (será refeito no próximo acesso)
-            foreach (var k in Cache.Keys.Where(k => k.StartsWith("triagens_") || k.StartsWith("historico_")).ToList()) Cache.TryRemove(k, out _);
+            InvalidarCache("triagens_", "historico_");
             return (true, null);
         }
         return (false, await resp.Content.ReadAsStringAsync());
@@ -104,22 +151,20 @@ public static class ApiService
         var resp = await Http.PutAsJsonAsync($"{BaseUrl}/api/triagens/{id}", payload, JsonOptions);
         if (resp.IsSuccessStatusCode)
         {
-            // Invalidar cache de detalhe e listagem
             Cache.TryRemove($"triagem_{id}", out _);
-            foreach (var k in Cache.Keys.Where(k => k.StartsWith("triagens_") || k.StartsWith("historico_")).ToList()) Cache.TryRemove(k, out _);
+            InvalidarCache("triagens_", "historico_");
             return (true, null);
         }
         return (false, await resp.Content.ReadAsStringAsync());
     }
 
-    public static async Task<(bool Ok, string? Erro)> ExcluirTriagemAsync(int id, int usuarioId)
+    public static async Task<(bool Ok, string? Erro)> ExcluirTriagemAsync(int id)
     {
-        var resp = await Http.DeleteAsync($"{BaseUrl}/api/triagens/{id}?usuarioId={usuarioId}");
+        var resp = await Http.DeleteAsync($"{BaseUrl}/api/triagens/{id}");
         if (resp.IsSuccessStatusCode)
         {
-            // Invalidar cache de detalhe e listagem
             Cache.TryRemove($"triagem_{id}", out _);
-            foreach (var k in Cache.Keys.Where(k => k.StartsWith("triagens_") || k.StartsWith("historico_")).ToList()) Cache.TryRemove(k, out _);
+            InvalidarCache("triagens_", "historico_");
             return (true, null);
         }
         return (false, await resp.Content.ReadAsStringAsync());
@@ -134,8 +179,7 @@ public static class ApiService
             return (null, await resp.Content.ReadAsStringAsync());
 
         // novo resultado gravado: invalida o histórico em cache
-        foreach (var k in Cache.Keys.Where(k => k.StartsWith("historico_")).ToList())
-            Cache.TryRemove(k, out _);
+        InvalidarCache("historico_");
 
         return (await resp.Content.ReadFromJsonAsync<ResultadoTriagem>(JsonOptions), null);
     }

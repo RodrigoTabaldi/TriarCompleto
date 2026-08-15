@@ -5,6 +5,9 @@ public record RegisterRequest(string Nome, string Email, string Senha);
 public record LoginRequest(string Email, string Senha);
 public record UsuarioResponse(int Id, string Nome, string Email);
 
+/// <summary>Resposta de login/cadastro: dados do usuário + JWT para autenticar as demais chamadas.</summary>
+public record AuthResponse(int Id, string Nome, string Email, string Token, DateTime ExpiraEm);
+
 // ---------- Triagem (modelos/templates) ----------
 public record PerguntaDto(int Id, string Texto, int Peso, int Ordem);
 public record FaixaDto(int Id, string Titulo, string Recomendacao, int PontuacaoMin, int PontuacaoMax, string Cor, int Ordem);
@@ -22,7 +25,7 @@ public record PerguntaInput(string Texto, int Peso);
 public record FaixaInput(string Titulo, string Recomendacao, int PontuacaoMin, int PontuacaoMax, string? Cor);
 
 public record CriarTriagemRequest(
-    int UsuarioId, string Titulo, string PublicoAlvo, string? Descricao, string? Icone,
+    string Titulo, string PublicoAlvo, string? Descricao, string? Icone,
     List<PerguntaInput> Perguntas, List<FaixaInput> Faixas);
 
 // ---------- Home ----------
@@ -32,7 +35,7 @@ public record ConfigurarHomeRequest(List<HomeItemInput> Itens);
 // ---------- Execução de triagem ----------
 public record RespostaInput(int PerguntaId, bool Valor);
 public record ResponderTriagemRequest(
-    int UsuarioId, string NomePaciente, int Idade, string Sexo,
+    string NomePaciente, int Idade, string Sexo,
     List<RespostaInput> Respostas);
 
 public record ResultadoResponse(
@@ -45,5 +48,5 @@ public record ResultadoResponse(
 public record HistoricoItem(
     int Id, int TriagemModeloId, string TituloTriagem,
     string Nome, int Idade, string Sexo,
-    int Pontuacao, int PontuacaoMaxima, string Resultado, string Risco,
+    int Pontuacao, int PontuacaoMaxima, string Resultado,
     string Cor, DateTime Data);

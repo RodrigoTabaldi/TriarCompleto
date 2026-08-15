@@ -15,14 +15,14 @@ services:
     container_name: triar-sqlserver
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "Triar@2026Forte"
+      MSSQL_SA_PASSWORD: "${SA_PASSWORD:?defina SA_PASSWORD no arquivo .env}"
       MSSQL_PID: "Express"
     ports:
       - "1433:1433"
     volumes:
       - triar-sql-data:/var/opt/mssql
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Triar@2026Forte' -C -Q 'SELECT 1' || exit 1"]
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -46,8 +46,9 @@ services:
     container_name: triar-api-1
     environment:
       ASPNETCORE_ENVIRONMENT: "Production"
-      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=TriarDb;User Id=sa;Password=Triar@2026Forte;TrustServerCertificate=True;Encrypt=True"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=TriarDb;User Id=sa;Password=${SA_PASSWORD:?defina SA_PASSWORD no arquivo .env};TrustServerCertificate=True;Encrypt=True"
       ConnectionStrings__Redis: "redis:6379"
+      Jwt__Key: "${JWT_KEY:?defina JWT_KEY (>=32 caracteres) no arquivo .env}"
     depends_on:
       sqlserver:
         condition: service_healthy

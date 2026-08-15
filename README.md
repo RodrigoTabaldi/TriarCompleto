@@ -28,11 +28,25 @@ App MAUI ──► nginx (load balancer :5036) ──► api1 / api2 (ASP.NET Co
 - **Rate limiting**: política geral (100 req/10s por IP), política de autenticação anti força-bruta (10 req/min por IP) e limite global (300 req/10s), além do rate limit de borda no nginx (30 r/s).
 - **Load balancer**: nginx com `least_conn`, health-based failover (`proxy_next_upstream`) e 2 instâncias da API.
 - **Resiliência**: `EnableRetryOnFailure` no EF Core, retry de inicialização aguardando o SQL Server, health checks em `/health`.
-- **Segurança**: senhas com PBKDF2 (SHA-256, 100 mil iterações, salt aleatório), validação de autoria nas triagens personalizadas.
+- **Segurança**:
+  - **Autenticação JWT** — login/cadastro emitem um token; **todos** os endpoints de dados exigem `Authorization: Bearer <token>`. A identidade do usuário vem sempre do token, nunca de um `usuarioId` enviado pelo cliente (fecha IDOR).
+  - Senhas com PBKDF2 (SHA-256, 100 mil iterações, salt aleatório); mínimo de 8 caracteres.
+  - **Segredos fora do código**: senha do banco e chave JWT vêm de variáveis de ambiente (`.env` no Docker), nunca versionadas.
+  - **CORS restrito** por lista de origens (`Cors:AllowedOrigins`) e `X-Forwarded-For` aceito só de proxies confiáveis (evita spoof do rate limit).
+  - Validação de autoria nas triagens personalizadas.
 
 ## Como rodar
 
 ### Opção 1 — Docker (recomendada: sobe tudo)
+
+Primeiro crie o arquivo de segredos a partir do exemplo e preencha os valores:
+
+```bash
+cp .env.example .env
+# edite .env: defina SA_PASSWORD (senha forte) e JWT_KEY (>= 32 caracteres)
+```
+
+Depois suba tudo:
 
 ```bash
 docker compose up -d --build
@@ -90,16 +104,20 @@ seu servidor e rode a API com `dotnet run`.
 
 | Método | Rota | Descrição |
 |---|---|---|
-| POST | `/api/auth/register` | Cadastro |
-| POST | `/api/auth/login` | Login |
-| GET | `/api/triagens?usuarioId=` | Lista triagens do usuário |
+| POST | `/api/auth/register` | Cadastro (retorna token JWT) |
+| POST | `/api/auth/login` | Login (retorna token JWT) |
+| GET | `/api/triagens` | Lista triagens do usuário autenticado |
 | GET | `/api/triagens/{id}` | Perguntas (pesos) + faixas |
 | POST | `/api/triagens` | Cria triagem personalizada |
 | PUT | `/api/triagens/{id}` | Edita triagem própria |
-| DELETE | `/api/triagens/{id}?usuarioId=` | Remove triagem própria |
+| DELETE | `/api/triagens/{id}` | Remove triagem própria |
 | POST | `/api/triagens/{id}/responder` | Calcula e grava o resultado |
-| GET | `/api/triagem/usuario/{id}` | Histórico (filtro `?triagemModeloId=`) |
+| GET | `/api/triagem/usuario/{id}` | Histórico do usuário autenticado (filtro `?triagemModeloId=`) |
 | PUT | `/api/usuarios/{id}/home` | Configura a home |
-| GET | `/health` | Health check |
+| GET | `/health` | Health check (público) |
+
+> Exceto `/api/auth/*` e `/health`, **todos os endpoints exigem** o cabeçalho
+> `Authorization: Bearer <token>`. O usuário é sempre o dono do token — parâmetros
+> de `usuarioId` na rota são ignorados por segurança.
 
 > Projeto acadêmico: os resultados das triagens são orientativos e não substituem avaliação profissional.

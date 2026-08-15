@@ -65,12 +65,12 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
         });
     }
 
-    public async Task<(TriagemModeloDetalhe? Detalhe, string? Erro)> CriarAsync(CriarTriagemRequest req)
+    public async Task<(TriagemModeloDetalhe? Detalhe, string? Erro)> CriarAsync(int usuarioId, CriarTriagemRequest req)
     {
         var erro = ValidarModelo(req.Titulo, req.Perguntas, req.Faixas);
         if (erro is not null) return (null, erro);
 
-        if (!await db.Usuarios.AnyAsync(u => u.Id == req.UsuarioId))
+        if (!await db.Usuarios.AnyAsync(u => u.Id == usuarioId))
             return (null, "Usuário não encontrado.");
 
         var modelo = new TriagemModelo
@@ -79,46 +79,42 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
             PublicoAlvo = string.IsNullOrWhiteSpace(req.PublicoAlvo) ? "Todas as idades" : req.PublicoAlvo.Trim(),
             Descricao = req.Descricao?.Trim() ?? "",
             Icone = string.IsNullOrWhiteSpace(req.Icone) ? "📋" : req.Icone.Trim(),
-            CriadorUsuarioId = req.UsuarioId,
-            Perguntas = req.Perguntas
-                .Select((p, i) => new Pergunta { Texto = p.Texto.Trim(), Peso = p.Peso, Ordem = i + 1 })
-                .ToList(),
-            Faixas = req.Faixas
-                .OrderBy(f => f.PontuacaoMin)
-                .Select((f, i) => new FaixaResultado
-                {
-                    Titulo = f.Titulo.Trim(),
-                    Recomendacao = f.Recomendacao?.Trim() ?? "",
-                    PontuacaoMin = f.PontuacaoMin,
-                    PontuacaoMax = f.PontuacaoMax,
-                    Cor = string.IsNullOrWhiteSpace(f.Cor) ? CorPadrao(i) : f.Cor!,
-                    Ordem = i + 1
-                }).ToList()
+            CriadorUsuarioId = usuarioId,
+            Ativa = true,
+            Perguntas = MapearPerguntas(req.Perguntas),
+            Faixas = MapearFaixas(req.Faixas)
         };
 
-        db.TriagemModelos.Add(modelo);
-
-        // triagem criada pelo usuário entra visível na home
-        modelo.Ativa = true;
-        await db.SaveChangesAsync();
-
-        db.UsuarioTriagensHome.Add(new UsuarioTriagemHome
+        // Uma transação garante que o modelo e a preferência de home sejam gravados
+        // juntos — sem risco de uma triagem "órfã" na home se a segunda gravação falhar.
+        var estrategia = db.Database.CreateExecutionStrategy();
+        await estrategia.ExecuteAsync(async () =>
         {
-            UsuarioId = req.UsuarioId,
-            TriagemModeloId = modelo.Id,
-            Visivel = true,
-            Ordem = 999
+            await using var tx = await db.Database.BeginTransactionAsync();
+
+            db.TriagemModelos.Add(modelo);
+            await db.SaveChangesAsync();
+
+            db.UsuarioTriagensHome.Add(new UsuarioTriagemHome
+            {
+                UsuarioId = usuarioId,
+                TriagemModeloId = modelo.Id,
+                Visivel = true,
+                Ordem = 999
+            });
+            await db.SaveChangesAsync();
+
+            await tx.CommitAsync();
         });
-        await db.SaveChangesAsync();
 
         await InvalidateCacheAsync();
         logger.LogInformation("Usuário {UsuarioId} criou a triagem {TriagemId} ({Titulo})",
-            req.UsuarioId, modelo.Id, modelo.Titulo);
+            usuarioId, modelo.Id, modelo.Titulo);
 
         return (await ObterDetalheAsync(modelo.Id), null);
     }
 
-    public async Task<(bool Ok, string? Erro)> AtualizarAsync(int id, CriarTriagemRequest req)
+    public async Task<(bool Ok, string? Erro)> AtualizarAsync(int usuarioId, int id, CriarTriagemRequest req)
     {
         var erro = ValidarModelo(req.Titulo, req.Perguntas, req.Faixas);
         if (erro is not null) return (false, erro);
@@ -129,7 +125,7 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
             .FirstOrDefaultAsync(t => t.Id == id && t.Ativa);
 
         if (modelo is null) return (false, "Triagem não encontrada.");
-        if (modelo.CriadorUsuarioId != req.UsuarioId)
+        if (modelo.CriadorUsuarioId != usuarioId)
             return (false, "Apenas o criador pode editar esta triagem.");
 
         modelo.Titulo = req.Titulo.Trim();
@@ -139,27 +135,15 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
 
         db.Perguntas.RemoveRange(modelo.Perguntas);
         db.FaixasResultado.RemoveRange(modelo.Faixas);
-        modelo.Perguntas = req.Perguntas
-            .Select((p, i) => new Pergunta { Texto = p.Texto.Trim(), Peso = p.Peso, Ordem = i + 1 })
-            .ToList();
-        modelo.Faixas = req.Faixas
-            .OrderBy(f => f.PontuacaoMin)
-            .Select((f, i) => new FaixaResultado
-            {
-                Titulo = f.Titulo.Trim(),
-                Recomendacao = f.Recomendacao?.Trim() ?? "",
-                PontuacaoMin = f.PontuacaoMin,
-                PontuacaoMax = f.PontuacaoMax,
-                Cor = string.IsNullOrWhiteSpace(f.Cor) ? CorPadrao(i) : f.Cor!,
-                Ordem = i + 1
-            }).ToList();
+        modelo.Perguntas = MapearPerguntas(req.Perguntas);
+        modelo.Faixas = MapearFaixas(req.Faixas);
 
         await db.SaveChangesAsync();
         await InvalidateCacheAsync();
         return (true, null);
     }
 
-    public async Task<(bool Ok, string? Erro)> DesativarAsync(int id, int usuarioId)
+    public async Task<(bool Ok, string? Erro)> DesativarAsync(int usuarioId, int id)
     {
         var modelo = await db.TriagemModelos.FirstOrDefaultAsync(t => t.Id == id);
         if (modelo is null) return (false, "Triagem não encontrada.");
@@ -205,7 +189,7 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
 
     // ---------------- Execução ----------------
 
-    public async Task<(ResultadoResponse? Resultado, string? Erro)> ResponderAsync(int triagemModeloId, ResponderTriagemRequest req)
+    public async Task<(ResultadoResponse? Resultado, string? Erro)> ResponderAsync(int usuarioId, int triagemModeloId, ResponderTriagemRequest req)
     {
         var modelo = await db.TriagemModelos
             .Include(t => t.Perguntas)
@@ -215,7 +199,7 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
         if (modelo is null) return (null, "Triagem não encontrada.");
         if (string.IsNullOrWhiteSpace(req.NomePaciente)) return (null, "Informe o nome da pessoa avaliada.");
         if (req.Idade is < 0 or > 130) return (null, "Idade inválida.");
-        if (!await db.Usuarios.AnyAsync(u => u.Id == req.UsuarioId)) return (null, "Usuário não encontrado.");
+        if (!await db.Usuarios.AnyAsync(u => u.Id == usuarioId)) return (null, "Usuário não encontrado.");
 
         var perguntasPorId = modelo.Perguntas.ToDictionary(p => p.Id);
         var pontuacao = 0;
@@ -240,7 +224,7 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
         var resultado = new TriagemResultado
         {
             TriagemModeloId = modelo.Id,
-            UsuarioId = req.UsuarioId,
+            UsuarioId = usuarioId,
             NomePaciente = req.NomePaciente.Trim(),
             Idade = req.Idade,
             Sexo = req.Sexo?.Trim() ?? "",
@@ -277,10 +261,30 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
             .Select(r => new HistoricoItem(
                 r.Id, r.TriagemModeloId, r.TriagemModelo!.Titulo,
                 r.NomePaciente, r.Idade, r.Sexo,
-                r.Pontuacao, r.PontuacaoMaxima, r.Classificacao, r.Classificacao,
+                r.Pontuacao, r.PontuacaoMaxima, r.Classificacao,
                 r.Cor, r.Data))
             .ToListAsync();
     }
+
+    // ---------------- Mapeamento (compartilhado por Criar/Atualizar) ----------------
+
+    private static List<Pergunta> MapearPerguntas(List<PerguntaInput> perguntas) =>
+        perguntas
+            .Select((p, i) => new Pergunta { Texto = p.Texto.Trim(), Peso = p.Peso, Ordem = i + 1 })
+            .ToList();
+
+    private static List<FaixaResultado> MapearFaixas(List<FaixaInput> faixas) =>
+        faixas
+            .OrderBy(f => f.PontuacaoMin)
+            .Select((f, i) => new FaixaResultado
+            {
+                Titulo = f.Titulo.Trim(),
+                Recomendacao = f.Recomendacao?.Trim() ?? "",
+                PontuacaoMin = f.PontuacaoMin,
+                PontuacaoMax = f.PontuacaoMax,
+                Cor = string.IsNullOrWhiteSpace(f.Cor) ? CorPadrao(i) : f.Cor!,
+                Ordem = i + 1
+            }).ToList();
 
     // ---------------- Validação ----------------
 

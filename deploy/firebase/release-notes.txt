@@ -1,0 +1,7 @@
+Triar — primeira versão de teste.
+
+- Login e cadastro com autenticação segura.
+- 6 triagens padrão + criação de triagens personalizadas.
+- Histórico por triagem.
+
+Obrigado por testar! Envie seu feedback.

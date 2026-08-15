@@ -95,14 +95,14 @@ public partial class HomePage : ContentPage
     private async void ExcluirTriagem(object? sender, EventArgs e)
     {
         if ((sender as BindableObject)?.BindingContext is not TriagemResumo t) return;
-        if (App.UsuarioLogado is not { } usuario) return;
+        if (App.UsuarioLogado is null) return;
 
         var confirmar = await DisplayAlertAsync("Excluir triagem",
             $"Deseja realmente excluir \"{t.Titulo}\"? O histórico já realizado será mantido.",
             "Excluir", "Cancelar");
         if (!confirmar) return;
 
-        var (ok, erro) = await ApiService.ExcluirTriagemAsync(t.Id, usuario.Id);
+        var (ok, erro) = await ApiService.ExcluirTriagemAsync(t.Id);
         if (ok)
         {
             _todas.Remove(t);
@@ -123,6 +123,7 @@ public partial class HomePage : ContentPage
         if (!confirmar) return;
 
         App.UsuarioLogado = null;
+        ApiService.Logout(); // limpa o token JWT e o cache local da sessão
         await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
     }
 

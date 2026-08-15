@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -10,9 +11,12 @@ namespace Triagem.API.Controllers;
 
 [ApiController]
 [Route("api/auth")]
+[AllowAnonymous]
 [EnableRateLimiting("auth")]
-public class AuthController(TriagemDbContext db, ILogger<AuthController> logger) : ControllerBase
+public class AuthController(TriagemDbContext db, TokenService tokens, ILogger<AuthController> logger) : ControllerBase
 {
+    private const int SenhaMinima = 8;
+
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req)
     {
@@ -21,8 +25,8 @@ public class AuthController(TriagemDbContext db, ILogger<AuthController> logger)
             string.IsNullOrWhiteSpace(req.Senha))
             return BadRequest("Preencha nome, email e senha.");
 
-        if (req.Senha.Length < 4)
-            return BadRequest("A senha deve ter pelo menos 4 caracteres.");
+        if (req.Senha.Length < SenhaMinima)
+            return BadRequest($"A senha deve ter pelo menos {SenhaMinima} caracteres.");
 
         var email = req.Email.Trim().ToLowerInvariant();
 
@@ -40,7 +44,7 @@ public class AuthController(TriagemDbContext db, ILogger<AuthController> logger)
         await db.SaveChangesAsync();
 
         logger.LogInformation("Novo usuário cadastrado: {Email}", email);
-        return Ok(new UsuarioResponse(usuario.Id, usuario.Nome, usuario.Email));
+        return Ok(Autenticar(usuario));
     }
 
     [HttpPost("login")]
@@ -55,6 +59,12 @@ public class AuthController(TriagemDbContext db, ILogger<AuthController> logger)
         if (usuario is null || !PasswordHasher.Verify(req.Senha, usuario.SenhaHash))
             return Unauthorized("Email ou senha inválidos.");
 
-        return Ok(new UsuarioResponse(usuario.Id, usuario.Nome, usuario.Email));
+        return Ok(Autenticar(usuario));
+    }
+
+    private AuthResponse Autenticar(Usuario usuario)
+    {
+        var (token, expiraEm) = tokens.Gerar(usuario);
+        return new AuthResponse(usuario.Id, usuario.Nome, usuario.Email, token, expiraEm);
     }
 }

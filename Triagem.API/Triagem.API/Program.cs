@@ -1,14 +1,19 @@
+using System.Net;
+using System.Text;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Triagem.API.Data;
 using Triagem.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ---------- Banco de dados (SQL Server) ----------
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection não configurada.");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException("ConnectionStrings:DefaultConnection não configurada.");
 
 builder.Services.AddDbContext<TriagemDbContext>(options =>
     options.UseSqlServer(connectionString, sql =>
@@ -41,6 +46,33 @@ else
     builder.Services.AddDistributedMemoryCache();
 }
 builder.Services.AddSingleton<CacheService>();
+
+// ---------- Autenticação (JWT) ----------
+// A chave vem de configuração/ambiente (Jwt:Key) — nunca versionada.
+var jwt = builder.Configuration.GetSection("Jwt").Get<JwtOptions>() ?? new JwtOptions();
+if (string.IsNullOrWhiteSpace(jwt.Key) || jwt.Key.Length < 32)
+    throw new InvalidOperationException(
+        "Jwt:Key ausente ou fraca (mínimo 32 caracteres). Configure via variável de ambiente Jwt__Key.");
+
+builder.Services.AddSingleton(jwt);
+builder.Services.AddScoped<TokenService>();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwt.Issuer,
+            ValidAudience = jwt.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key)),
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+    });
+builder.Services.AddAuthorization();
 
 // O OutputCache é usado apenas em rotas explicitamente marcadas — nunca como política
 // global, para não servir respostas velhas logo após uma escrita.
@@ -94,20 +126,35 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // ---------- CORS ----------
+// Origens liberadas vêm de "Cors:AllowedOrigins". Sem configuração explícita
+// (ex.: apps MAUI nativos, que não enviam Origin), nenhuma origem web é liberada.
+var origensPermitidas = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
-    options.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+    options.AddDefaultPolicy(p =>
+    {
+        if (origensPermitidas.Length > 0)
+            p.WithOrigins(origensPermitidas).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+    }));
 
 // ---------- Health checks ----------
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<TriagemDbContext>("sqlserver");
 
-// aceita X-Forwarded-For do load balancer (nginx)
+// aceita X-Forwarded-For apenas de proxies confiáveis (o nginx/rede docker),
+// para que o rate limit por IP não seja burlável via spoof do header.
+// "ForwardedHeaders:KnownProxies" (IPs) e "ForwardedHeaders:KnownNetworks" (CIDR "ip/prefixo").
 builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(o =>
 {
     o.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
         | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
-    o.KnownNetworks.Clear();
-    o.KnownProxies.Clear();
+    o.ForwardLimit = 2;
+
+    foreach (var ip in builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [])
+        if (IPAddress.TryParse(ip, out var addr)) o.KnownProxies.Add(addr);
+
+    foreach (var cidr in builder.Configuration.GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? [])
+        if (IPNetwork.TryParse(cidr, out var rede))
+            o.KnownIPNetworks.Add(rede);
 });
 
 var app = builder.Build();
@@ -120,6 +167,8 @@ app.UseResponseCompression();
 app.UseCors();
 app.UseRateLimiter();
 app.UseOutputCache();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapOpenApi();
 app.MapControllers();

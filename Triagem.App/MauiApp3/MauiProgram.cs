@@ -14,7 +14,6 @@ namespace MauiApp3
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
-            var usuario = App.UsuarioLogado;
 #if DEBUG
             builder.Logging.AddDebug();
 #endif
