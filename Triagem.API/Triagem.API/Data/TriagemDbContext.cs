@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Triagem.API.Models;
+using Triagem.API.Services;
 
 namespace Triagem.API.Data;
 
-public class TriagemDbContext(DbContextOptions<TriagemDbContext> options) : DbContext(options)
+public class TriagemDbContext(DbContextOptions<TriagemDbContext> options, FieldEncryptionService encryptor) : DbContext(options)
 {
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<TriagemModelo> TriagemModelos => Set<TriagemModelo>();
@@ -68,7 +69,12 @@ public class TriagemDbContext(DbContextOptions<TriagemDbContext> options) : DbCo
         mb.Entity<TriagemResultado>(e =>
         {
             e.ToTable("TriagemResultados");
-            e.Property(r => r.NomePaciente).HasMaxLength(150);
+            // Nome do paciente é criptografado em repouso (AES-256-GCM) — o dado é
+            // sensível de saúde e o SQL Server Express deste projeto não suporta TDE.
+            // MaxLength maior que o original (150) para acomodar nonce+tag+base64.
+            e.Property(r => r.NomePaciente)
+                .HasConversion(v => encryptor.Encrypt(v), v => encryptor.Decrypt(v))
+                .HasMaxLength(500);
             e.Property(r => r.Sexo).HasMaxLength(30);
             e.Property(r => r.Classificacao).HasMaxLength(120);
             e.Property(r => r.Recomendacao).HasMaxLength(600);

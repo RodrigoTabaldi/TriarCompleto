@@ -5,10 +5,28 @@ namespace MauiApp3;
 public partial class LoginPage : ContentPage
 {
     private bool _entrando;
+    private bool _tentouRestaurarSessao;
 
     public LoginPage()
     {
         InitializeComponent();
+    }
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+
+        // Só tenta uma vez por instância da página: depois de um logout explícito o
+        // usuário volta para cá com a sessão já limpa do SecureStorage, então a
+        // segunda tentativa (ex. ao navegar de volta) não deve reentrar em loop.
+        if (_tentouRestaurarSessao) return;
+        _tentouRestaurarSessao = true;
+
+        var usuario = await ApiService.RestaurarSessaoAsync();
+        if (usuario is null) return;
+
+        App.UsuarioLogado = usuario;
+        await Shell.Current.GoToAsync($"//{nameof(HomePage)}");
     }
 
     private async void Entrar(object? sender, EventArgs e)

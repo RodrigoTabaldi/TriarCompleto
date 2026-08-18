@@ -9,8 +9,11 @@ com perguntas de **sim/não com pesos configuráveis** e **faixas de resultado p
 TriarCompleto/
 ├── Triagem.App/MauiApp3/      # App .NET MAUI (Android, iOS, Windows, macOS)
 ├── Triagem.API/Triagem.API/   # API ASP.NET Core (.NET 10)
+├── Triagem.API.Tests/         # Testes automatizados (xUnit) da API
 ├── database/script.sql        # Script de referência do banco (SQL Server)
-├── deploy/nginx/nginx.conf    # Load balancer (nginx)
+├── deploy/nginx/nginx.conf    # Load balancer (nginx, HTTP — uso local/dev)
+├── deploy/nginx/nginx.conf.prod.example  # Referência de config com TLS para produção
+├── .github/workflows/ci.yml   # CI: build + testes da API a cada push/PR
 └── docker-compose.yml         # Sobe SQL Server + Redis + 2 APIs + load balancer
 ```
 
@@ -29,11 +32,15 @@ App MAUI ──► nginx (load balancer :5036) ──► api1 / api2 (ASP.NET Co
 - **Load balancer**: nginx com `least_conn`, health-based failover (`proxy_next_upstream`) e 2 instâncias da API.
 - **Resiliência**: `EnableRetryOnFailure` no EF Core, retry de inicialização aguardando o SQL Server, health checks em `/health`.
 - **Segurança**:
-  - **Autenticação JWT** — login/cadastro emitem um token; **todos** os endpoints de dados exigem `Authorization: Bearer <token>`. A identidade do usuário vem sempre do token, nunca de um `usuarioId` enviado pelo cliente (fecha IDOR).
+  - **Autenticação JWT** — login/cadastro emitem um token; **todos** os endpoints de dados exigem `Authorization: Bearer <token>`. A identidade do usuário vem sempre do token, nunca de um `usuarioId` enviado pelo cliente (fecha IDOR) — inclusive na leitura de detalhe de uma triagem (`GET /api/triagens/{id}`), que só retorna triagens padrão do sistema ou criadas pelo próprio usuário autenticado.
   - Senhas com PBKDF2 (SHA-256, 100 mil iterações, salt aleatório); mínimo de 8 caracteres.
-  - **Segredos fora do código**: senha do banco e chave JWT vêm de variáveis de ambiente (`.env` no Docker), nunca versionadas.
+  - **Nome do paciente criptografado em repouso** (AES-256-GCM, chave em `DataProtection:Key`) — o SQL Server Express usado neste projeto não suporta Transparent Data Encryption, então a proteção do campo mais identificável do histórico é feita na camada de aplicação (ver `Triagem.API/Data/TriagemDbContext.cs`).
+  - **Segredos fora do código**: senha do banco, chave JWT e chave de criptografia vêm de variáveis de ambiente (`.env` no Docker), nunca versionadas.
   - **CORS restrito** por lista de origens (`Cors:AllowedOrigins`) e `X-Forwarded-For` aceito só de proxies confiáveis (evita spoof do rate limit).
+  - **SQL Server e Redis não publicam porta no host** no docker-compose — só nginx expõe a porta pública; os demais serviços só são alcançáveis pela rede interna do compose.
   - Validação de autoria nas triagens personalizadas.
+  - **Histórico paginado** (`pagina`/`tamanhoPagina`, teto de 200 itens por página) — evita que a consulta cresça sem limite conforme o histórico do usuário aumenta.
+  - **Sessão persistida no app** via SecureStorage (Keychain/Keystore/DPAPI conforme a plataforma) — o usuário não precisa logar de novo a cada abertura.
 
 ## Como rodar
 
@@ -43,7 +50,8 @@ Primeiro crie o arquivo de segredos a partir do exemplo e preencha os valores:
 
 ```bash
 cp .env.example .env
-# edite .env: defina SA_PASSWORD (senha forte) e JWT_KEY (>= 32 caracteres)
+# edite .env: defina SA_PASSWORD (senha forte), JWT_KEY e DATA_PROTECTION_KEY
+# (>= 32 caracteres cada, aleatórias e DIFERENTES entre si)
 ```
 
 Depois suba tudo:
@@ -112,12 +120,32 @@ seu servidor e rode a API com `dotnet run`.
 | PUT | `/api/triagens/{id}` | Edita triagem própria |
 | DELETE | `/api/triagens/{id}` | Remove triagem própria |
 | POST | `/api/triagens/{id}/responder` | Calcula e grava o resultado |
-| GET | `/api/triagem/usuario/{id}` | Histórico do usuário autenticado (filtro `?triagemModeloId=`) |
+| GET | `/api/triagens/{id}/historico` | Histórico de uma triagem (paginado: `?pagina=&tamanhoPagina=`, máx. 200/página) |
+| GET | `/api/triagem/usuario/{id}` | Histórico do usuário autenticado (filtro `?triagemModeloId=`, paginado: `?pagina=&tamanhoPagina=`) |
 | PUT | `/api/usuarios/{id}/home` | Configura a home |
 | GET | `/health` | Health check (público) |
 
 > Exceto `/api/auth/*` e `/health`, **todos os endpoints exigem** o cabeçalho
 > `Authorization: Bearer <token>`. O usuário é sempre o dono do token — parâmetros
-> de `usuarioId` na rota são ignorados por segurança.
+> de `usuarioId` na rota são ignorados por segurança, e `GET /api/triagens/{id}`
+> só retorna triagens padrão do sistema ou pertencentes ao próprio usuário do token.
 
 > Projeto acadêmico: os resultados das triagens são orientativos e não substituem avaliação profissional.
+
+## Testes
+
+A API tem uma suíte de testes automatizados (`Triagem.API.Tests`, xUnit) cobrindo a
+lógica de negócio de `TriagemService` — validação de modelo, cálculo de pontuação e
+classificação, autorização de escrita (editar/excluir só pelo criador), paginação do
+histórico e, especificamente, um teste de regressão para a restrição de acesso de
+`ObterDetalheAsync` (garante que uma triagem privada de um usuário não é visível para
+outro) — além de `PasswordHasher`, `TokenService`, `ClaimsPrincipalExtensions` e
+`FieldEncryptionService`. Rodar localmente:
+
+```bash
+dotnet test Triagem.API.Tests/Triagem.API.Tests.csproj
+```
+
+Um workflow do GitHub Actions (`.github/workflows/ci.yml`) roda build + testes a cada
+push/PR na branch `main`. O app MAUI não entra no CI (build multiplataforma exige
+workloads pesados por runner); veja o comentário no próprio workflow.

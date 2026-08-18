@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test-api:
+    name: Build + testes (Triagem.API)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restaurar (com lockfile)
+        run: dotnet restore Triagem.API.Tests/Triagem.API.Tests.csproj --locked-mode
+
+      - name: Build (Release)
+        run: dotnet build Triagem.API.Tests/Triagem.API.Tests.csproj --no-restore -c Release
+
+      - name: Testes
+        run: dotnet test Triagem.API.Tests/Triagem.API.Tests.csproj --no-build -c Release --logger "trx;LogFileName=test-results.trx"
+
+      - name: Checar dependências com vulnerabilidades conhecidas
+        run: dotnet list Triagem.API/Triagem.API/Triagem.API.csproj package --vulnerable --include-transitive
+
+      - name: Publicar resultados dos testes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/TestResults/*.trx"
+
+  # O app .NET MAUI (Triagem.App/MauiApp3) não entra neste pipeline: build multi-
+  # plataforma (Android/iOS/Windows/macOS) exige os workloads do MAUI instalados por
+  # runner (JDK, Android SDK, Xcode em macOS-only para iOS/MacCatalyst), o que é caro
+  # e frágil para rodar em toda alteração. Se o app crescer, considerar um job
+  # separado, sob demanda, só para o alvo Android (o mais barato de configurar em CI).

@@ -21,7 +21,7 @@ public class TriagensController(TriagemService service) : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Obter(int id)
     {
-        var detalhe = await service.ObterDetalheAsync(id);
+        var detalhe = await service.ObterDetalheAsync(User.GetUserId(), id);
         return detalhe is null ? NotFound("Triagem não encontrada.") : Ok(detalhe);
     }
 
@@ -57,10 +57,10 @@ public class TriagensController(TriagemService service) : ControllerBase
         return erro is null ? Ok(resultado) : BadRequest(erro);
     }
 
-    /// <summary>Histórico de aplicações de uma triagem pelo usuário autenticado.</summary>
+    /// <summary>Histórico de aplicações de uma triagem pelo usuário autenticado (paginado).</summary>
     [HttpGet("{id:int}/historico")]
-    public async Task<IActionResult> Historico(int id) =>
-        Ok(await service.HistoricoAsync(User.GetUserId(), id));
+    public async Task<IActionResult> Historico(int id, [FromQuery] int pagina = 1, [FromQuery] int tamanhoPagina = 100) =>
+        Ok(await service.HistoricoAsync(User.GetUserId(), id, pagina, tamanhoPagina));
 }
 
 /// <summary>Rota de compatibilidade com versões antigas do app + histórico geral (sempre do usuário autenticado).</summary>
@@ -72,8 +72,9 @@ public class TriagemLegacyController(TriagemService service) : ControllerBase
 {
     /// <summary>O id do usuário é ignorado: o histórico é sempre o do token autenticado (evita IDOR).</summary>
     [HttpGet("usuario/{usuarioId:int}")]
-    public async Task<IActionResult> HistoricoDoUsuario(int usuarioId, [FromQuery] int? triagemModeloId) =>
-        Ok(await service.HistoricoAsync(User.GetUserId(), triagemModeloId));
+    public async Task<IActionResult> HistoricoDoUsuario(
+        int usuarioId, [FromQuery] int? triagemModeloId, [FromQuery] int pagina = 1, [FromQuery] int tamanhoPagina = 100) =>
+        Ok(await service.HistoricoAsync(User.GetUserId(), triagemModeloId, pagina, tamanhoPagina));
 }
 
 [ApiController]

@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using MauiApp3.Services;
 
 namespace MauiApp3
 {
@@ -6,6 +7,8 @@ namespace MauiApp3
     {
         public static MauiApp CreateMauiApp()
         {
+            ApiService.GarantirConfiguradoEmRelease();
+
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()

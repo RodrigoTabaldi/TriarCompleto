@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Triagem.API.Data;
 using Triagem.API.Dtos;
@@ -5,9 +6,13 @@ using Triagem.API.Models;
 
 namespace Triagem.API.Services;
 
-public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<TriagemService> logger)
+public partial class TriagemService(TriagemDbContext db, CacheService cache, ILogger<TriagemService> logger)
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
+
+    [GeneratedRegex("^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$")]
+    private static partial Regex CorHexRegex();
+    private static readonly Regex CorHexValida = CorHexRegex();
 
     private Task InvalidateCacheAsync() => cache.BumpVersionAsync();
 
@@ -41,17 +46,24 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
         return resultado ?? [];
     }
 
-    public async Task<TriagemModeloDetalhe?> ObterDetalheAsync(int id)
+    /// <summary>
+    /// Detalhe de uma triagem (perguntas + faixas). Restrito às triagens padrão do
+    /// sistema (CriadorUsuarioId nulo) ou criadas pelo próprio usuarioId — mesma regra
+    /// de visibilidade de ListarParaUsuarioAsync, para não vazar triagens privadas de
+    /// outros usuários por enumeração de id (IDOR).
+    /// </summary>
+    public async Task<TriagemModeloDetalhe?> ObterDetalheAsync(int usuarioId, int id)
     {
         var versao = await cache.GetVersionAsync();
-        var chave = $"triar:triagens:v{versao}:detalhe:{id}";
+        var chave = $"triar:triagens:v{versao}:detalhe:{id}:usuario:{usuarioId}";
         return await cache.GetOrCreateAsync(chave, CacheTtl, async () =>
         {
             var t = await db.TriagemModelos
                 .AsNoTracking()
                 .Include(x => x.Perguntas)
                 .Include(x => x.Faixas)
-                .FirstOrDefaultAsync(x => x.Id == id && x.Ativa);
+                .FirstOrDefaultAsync(x => x.Id == id && x.Ativa &&
+                    (x.CriadorUsuarioId == null || x.CriadorUsuarioId == usuarioId));
 
             if (t is null) return null;
 
@@ -111,7 +123,7 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
         logger.LogInformation("Usuário {UsuarioId} criou a triagem {TriagemId} ({Titulo})",
             usuarioId, modelo.Id, modelo.Titulo);
 
-        return (await ObterDetalheAsync(modelo.Id), null);
+        return (await ObterDetalheAsync(usuarioId, modelo.Id), null);
     }
 
     public async Task<(bool Ok, string? Erro)> AtualizarAsync(int usuarioId, int id, CriarTriagemRequest req)
@@ -246,8 +258,19 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
             resultado.Classificacao, resultado.Recomendacao, resultado.Cor, resultado.Data), null);
     }
 
-    public async Task<List<HistoricoItem>> HistoricoAsync(int usuarioId, int? triagemModeloId = null)
+    private const int TamanhoPaginaPadrao = 100;
+    private const int TamanhoPaginaMaximo = 200;
+
+    /// <summary>
+    /// Histórico do usuário, paginado (mais recentes primeiro) para evitar que a
+    /// consulta e a resposta cresçam sem limite conforme o histórico aumenta.
+    /// </summary>
+    public async Task<List<HistoricoItem>> HistoricoAsync(
+        int usuarioId, int? triagemModeloId = null, int pagina = 1, int tamanhoPagina = TamanhoPaginaPadrao)
     {
+        pagina = Math.Max(pagina, 1);
+        tamanhoPagina = Math.Clamp(tamanhoPagina, 1, TamanhoPaginaMaximo);
+
         var query = db.TriagemResultados
             .AsNoTracking()
             .Include(r => r.TriagemModelo)
@@ -256,14 +279,24 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
         if (triagemModeloId is not null)
             query = query.Where(r => r.TriagemModeloId == triagemModeloId);
 
-        return await query
+        var resultado = await query
             .OrderByDescending(r => r.Data)
+            .Skip((pagina - 1) * tamanhoPagina)
+            .Take(tamanhoPagina)
             .Select(r => new HistoricoItem(
                 r.Id, r.TriagemModeloId, r.TriagemModelo!.Titulo,
                 r.NomePaciente, r.Idade, r.Sexo,
                 r.Pontuacao, r.PontuacaoMaxima, r.Classificacao,
                 r.Cor, r.Data))
             .ToListAsync();
+
+        // Trilha de auditoria mínima: quem acessou dados de pacientes (nome + respostas
+        // de saúde), quando e quantos registros — sem logar o conteúdo sensível em si.
+        logger.LogInformation(
+            "Usuário {UsuarioId} acessou o histórico (triagemModeloId={TriagemModeloId}, página={Pagina}, {Quantidade} registro(s))",
+            usuarioId, triagemModeloId, pagina, resultado.Count);
+
+        return resultado;
     }
 
     // ---------------- Mapeamento (compartilhado por Criar/Atualizar) ----------------
@@ -298,6 +331,8 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
         if (faixas is null || faixas.Count < 2) return "Defina pelo menos duas faixas de resultado.";
         if (faixas.Any(f => string.IsNullOrWhiteSpace(f.Titulo))) return "Toda faixa de resultado precisa de um título.";
         if (faixas.Any(f => f.PontuacaoMin > f.PontuacaoMax)) return "Em cada faixa, a pontuação mínima deve ser menor ou igual à máxima.";
+        if (faixas.Any(f => !string.IsNullOrWhiteSpace(f.Cor) && !CorHexValida.IsMatch(f.Cor)))
+            return "A cor de cada faixa deve ser um hexadecimal válido (ex.: #10B981).";
 
         var ordenadas = faixas.OrderBy(f => f.PontuacaoMin).ToList();
         for (var i = 1; i < ordenadas.Count; i++)

@@ -27,6 +27,7 @@ public static class ApiService
     // Num celular real (instalado via Firebase), "localhost" é o próprio telefone —
     // por isso o build de Release precisa apontar para um endereço público de verdade.
     private const string UrlProducao = "https://SUA-API-DE-PRODUCAO.com";
+    private const string MarcadorPlaceholder = "SUA-API-DE-PRODUCAO";
 
     /// <summary>
     /// Endpoint da API. Em DEBUG usa o ambiente local; em RELEASE usa a URL de produção.
@@ -41,6 +42,25 @@ public static class ApiService
         UrlProducao;
 #endif
 
+    /// <summary>
+    /// Falha alto e cedo (na inicialização) se um build de Release for compilado sem
+    /// substituir <see cref="UrlProducao"/> pela URL real. Sem isso, o app compilava
+    /// silenciosamente e só falhava mais tarde, na tela de login, com uma mensagem de
+    /// rede genérica difícil de associar à causa real.
+    /// </summary>
+    public static void GarantirConfiguradoEmRelease()
+    {
+#if !DEBUG
+        if (BaseUrl.Contains(MarcadorPlaceholder, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "ApiService.UrlProducao ainda é o placeholder de exemplo. " +
+                "Configure a URL pública HTTPS real da API antes de gerar um build de Release " +
+                "(veja deploy/firebase/README.md, Passo 0).");
+        }
+#endif
+    }
+
     /// <summary>Token JWT da sessão. Aplicado como Bearer em toda chamada autenticada.</summary>
     public static void DefinirToken(string? token)
     {
@@ -48,11 +68,76 @@ public static class ApiService
             string.IsNullOrWhiteSpace(token) ? null : new AuthenticationHeaderValue("Bearer", token);
     }
 
-    /// <summary>Encerra a sessão: limpa token e cache local.</summary>
+    /// <summary>Encerra a sessão: limpa token, cache local e a sessão persistida no dispositivo.</summary>
     public static void Logout()
     {
         DefinirToken(null);
         LimparCache();
+        SecureStorage.Default.RemoveAll();
+    }
+
+    // ---------------- Sessão persistida (SecureStorage) ----------------
+    // O token e os dados do usuário logado são salvos no armazenamento seguro do
+    // dispositivo (Keychain/Keystore/DPAPI conforme a plataforma) para que o usuário
+    // não precise logar de novo toda vez que o app é fechado e reaberto.
+
+    private const string ChaveToken = "triar_token";
+    private const string ChaveExpiraEm = "triar_expira_em";
+    private const string ChaveUsuarioId = "triar_usuario_id";
+    private const string ChaveUsuarioNome = "triar_usuario_nome";
+    private const string ChaveUsuarioEmail = "triar_usuario_email";
+
+    private static async Task PersistirSessaoAsync(Usuario usuario, string token, DateTime expiraEm)
+    {
+        await SecureStorage.Default.SetAsync(ChaveToken, token);
+        await SecureStorage.Default.SetAsync(ChaveExpiraEm, expiraEm.ToString("O"));
+        await SecureStorage.Default.SetAsync(ChaveUsuarioId, usuario.Id.ToString());
+        await SecureStorage.Default.SetAsync(ChaveUsuarioNome, usuario.Nome ?? "");
+        await SecureStorage.Default.SetAsync(ChaveUsuarioEmail, usuario.Email ?? "");
+    }
+
+    /// <summary>
+    /// Tenta restaurar a sessão salva no dispositivo. Retorna o usuário e já aplica o
+    /// token em <see cref="Http"/> se houver uma sessão válida e não expirada; caso
+    /// contrário, limpa qualquer resíduo e retorna null (o app volta para o login).
+    /// </summary>
+    public static async Task<Usuario?> RestaurarSessaoAsync()
+    {
+        try
+        {
+            var token = await SecureStorage.Default.GetAsync(ChaveToken);
+            var expiraEmTexto = await SecureStorage.Default.GetAsync(ChaveExpiraEm);
+
+            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(expiraEmTexto))
+                return null;
+
+            if (!DateTime.TryParse(expiraEmTexto, null,
+                    System.Globalization.DateTimeStyles.RoundtripKind, out var expiraEm) ||
+                expiraEm <= DateTime.UtcNow)
+            {
+                SecureStorage.Default.RemoveAll();
+                return null;
+            }
+
+            var idTexto = await SecureStorage.Default.GetAsync(ChaveUsuarioId);
+            if (!int.TryParse(idTexto, out var id))
+                return null;
+
+            DefinirToken(token);
+            return new Usuario
+            {
+                Id = id,
+                Nome = await SecureStorage.Default.GetAsync(ChaveUsuarioNome),
+                Email = await SecureStorage.Default.GetAsync(ChaveUsuarioEmail)
+            };
+        }
+        catch
+        {
+            // Chave de criptografia do SecureStorage pode ter sido invalidada pelo SO
+            // (ex.: restauração de backup em outro dispositivo) — trata como sessão
+            // ausente em vez de derrubar a inicialização do app.
+            return null;
+        }
     }
 
     /// <summary>Remove do cache local as entradas cujas chaves começam por qualquer um dos prefixos.</summary>
@@ -107,7 +192,9 @@ public static class ApiService
 
         DefinirToken(auth.Token);
         LimparCache(); // sessão nova: descarta cache de qualquer usuário anterior
-        return new Usuario { Id = auth.Id, Nome = auth.Nome, Email = auth.Email };
+        var usuario = new Usuario { Id = auth.Id, Nome = auth.Nome, Email = auth.Email };
+        await PersistirSessaoAsync(usuario, auth.Token, auth.ExpiraEm);
+        return usuario;
     }
 
     // ---------------- Triagens ----------------

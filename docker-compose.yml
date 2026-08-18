@@ -17,8 +17,10 @@ services:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "${SA_PASSWORD:?defina SA_PASSWORD no arquivo .env}"
       MSSQL_PID: "Express"
-    ports:
-      - "1433:1433"
+    # Sem "ports:": só api1/api2 (na rede interna do compose) precisam falar com o
+    # banco. Publicar 1433 no host expõe o SQL Server à rede/internet se o firewall
+    # do host não isolar a porta à parte. Para depurar localmente com um client SQL,
+    # use "docker compose exec sqlserver" ou publique só em 127.0.0.1 temporariamente.
     volumes:
       - triar-sql-data:/var/opt/mssql
     healthcheck:
@@ -32,8 +34,8 @@ services:
     image: redis:7-alpine
     container_name: triar-redis
     command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
-    ports:
-      - "6379:6379"
+    # Sem "ports:": Redis sem senha não deve ficar acessível fora da rede interna
+    # do compose (um Redis aberto na internet é um dos vetores de ataque mais comuns).
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -49,6 +51,7 @@ services:
       ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=TriarDb;User Id=sa;Password=${SA_PASSWORD:?defina SA_PASSWORD no arquivo .env};TrustServerCertificate=True;Encrypt=True"
       ConnectionStrings__Redis: "redis:6379"
       Jwt__Key: "${JWT_KEY:?defina JWT_KEY (>=32 caracteres) no arquivo .env}"
+      DataProtection__Key: "${DATA_PROTECTION_KEY:?defina DATA_PROTECTION_KEY (>=32 caracteres) no arquivo .env}"
     depends_on:
       sqlserver:
         condition: service_healthy

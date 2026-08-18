@@ -15,6 +15,11 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 if (string.IsNullOrWhiteSpace(connectionString))
     throw new InvalidOperationException("ConnectionStrings:DefaultConnection não configurada.");
 
+// ---------- Criptografia de campos sensíveis (nome do paciente em repouso) ----------
+// A chave vem de configuração/ambiente (DataProtection:Key) — nunca versionada.
+var dataProtection = builder.Configuration.GetSection("DataProtection").Get<DataProtectionOptions>() ?? new DataProtectionOptions();
+builder.Services.AddSingleton(new FieldEncryptionService(dataProtection));
+
 builder.Services.AddDbContext<TriagemDbContext>(options =>
     options.UseSqlServer(connectionString, sql =>
     {
