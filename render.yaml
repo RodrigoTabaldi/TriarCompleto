@@ -1,0 +1,48 @@
+# Blueprint do Render — descreve o serviço como código, para que o deploy seja
+# reproduzível e revisável em vez de depender de cliques lembrados de memória.
+#
+# Uso: no painel do Render, "New" > "Blueprint" e aponte para este repositório.
+# Os segredos NÃO estão aqui (ver "sync: false" abaixo) — leia deploy/render/README.md.
+
+services:
+  - type: web
+    name: triar-api
+    runtime: docker
+    plan: free
+
+    # Escolha a região mais próxima da região do Azure SQL. Cada tela do app faz
+    # várias idas ao banco, então distância entre API e banco multiplica a latência.
+    # Pares recomendados: virginia <-> Azure East US 2 | oregon <-> Azure West US 2.
+    region: virginia
+
+    dockerfilePath: ./Triagem.API/Triagem.API/Dockerfile
+    dockerContext: ./Triagem.API/Triagem.API
+
+    # Liveness puro: NÃO consulta o banco. O Render bate aqui de forma recorrente —
+    # se isso tocasse o Azure SQL, o banco nunca entraria em auto-pause e a cota
+    # mensal gratuita se esgotaria em poucos dias.
+    healthCheckPath: /health/live
+
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+
+      # O Render põe um proxy próprio na frente do container, com IP interno que não
+      # dá para listar de antemão. Ver a explicação de segurança em Program.cs.
+      - key: ForwardedHeaders__TrustPlatformProxy
+        value: "true"
+
+      # Deixe "true" no primeiro deploy para criar as tabelas e as 6 triagens padrão.
+      # Depois que o banco existir, MUDE PARA "false": senão cada despertar da API
+      # acorda o Azure SQL junto e consome a cota mensal à toa.
+      - key: Database__SeedOnStartup
+        value: "true"
+
+      # ---- Segredos: preencher no painel do Render, nunca neste arquivo ----
+      # "sync: false" faz o Render pedir o valor na criação e mantê-lo fora do Git.
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: Jwt__Key
+        sync: false
+      - key: DataProtection__Key
+        sync: false

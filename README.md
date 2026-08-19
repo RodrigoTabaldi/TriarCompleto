@@ -125,6 +125,26 @@ Se você já tem um SQL Server instalado (Express ou completo), ajuste a
 `ConnectionStrings:DefaultConnection` no `appsettings.Development.json` para o
 seu servidor e rode a API com `dotnet run`.
 
+## Publicar em produção (nuvem)
+
+**Banco no Azure SQL + API no Render** — passo a passo completo em
+[`deploy/render/README.md`](deploy/render/README.md), e a infraestrutura da API
+descrita como código em [`render.yaml`](render.yaml).
+
+O projeto já vem preparado para isso:
+
+- A API honra a variável `PORT` injetada pela plataforma.
+- Dois endpoints de saúde separados: **`/health/live`** (não toca o banco — é o que o
+  Render monitora) e **`/health`** (consulta o banco, para diagnóstico sob demanda).
+  A separação existe porque uma conexão ao Azure SQL serverless impede o auto-pause,
+  e um monitor periódico no endpoint errado consumiria a cota mensal em poucos dias.
+- `Database:SeedOnStartup` permite desligar a criação/seed do banco depois do primeiro
+  deploy, para que acordar a API não acorde o banco junto.
+- `ForwardedHeaders:TrustPlatformProxy` faz o rate limit por IP funcionar atrás do
+  proxy da plataforma sem abrir espaço para spoof do `X-Forwarded-For`.
+- OpenAPI fica restrito a Development; a imagem Docker roda como usuário sem
+  privilégios e usa restore com lock file.
+
 ## Funcionalidades
 
 - **Login / cadastro** de usuários.
