@@ -8,7 +8,7 @@ com perguntas de **sim/não com pesos configuráveis** e **faixas de resultado p
 ```
 TriarCompleto/
 ├── Triagem.App/MauiApp3/      # App .NET MAUI (Android, iOS, Windows, macOS)
-├── Triagem.API/Triagem.API/   # API ASP.NET Core (.NET 10)
+├── Triagem.API/Triagem.API/   # API ASP.NET Core (.NET 8)
 ├── Triagem.API.Tests/         # Testes automatizados (xUnit) da API
 ├── database/script.sql        # Script de referência do banco (SQL Server)
 ├── deploy/nginx/nginx.conf    # Load balancer (nginx, HTTP — uso local/dev)
@@ -43,6 +43,37 @@ App MAUI ──► nginx (load balancer :5036) ──► api1 / api2 (ASP.NET Co
   - **Sessão persistida no app** via SecureStorage (Keychain/Keystore/DPAPI conforme a plataforma) — o usuário não precisa logar de novo a cada abertura.
 
 ## Como rodar
+
+### Opção 0 — APK de demonstração (Android, sem API e sem internet)
+
+Para demonstrar o app sem subir nada: `publish/Triar-demo-1.0.apk`.
+
+É um build de Release compilado com `-p:TriarModoLocal=true`, que troca a API por um
+**banco SQLite dentro do próprio aparelho** (`Services/BancoLocal.cs`). Cadastro, login,
+catálogo de triagens, execução com pesos e faixas, histórico e configuração da home
+funcionam offline; os dados ficam só no aparelho e somem se o app for desinstalado.
+
+- **Instalação**: copie o `.apk` para o celular e abra-o. O Android pedirá para permitir
+  a instalação de fontes desconhecidas (é um APK assinado fora da Play Store).
+- **Requisitos**: Android 5.0 (API 21) ou superior, arquitetura **arm64** (todo celular
+  atual) — o pacote traz `arm64-v8a` e `x86_64` (este último para emulador).
+- **Conta pronta**: `demo@triar.com` / `triar1234`, que já vem com histórico de exemplo.
+  Também dá para criar uma conta nova na hora pelo próprio app.
+
+Para gerar de novo (o keystore de demonstração está em `deploy/firebase/`, fora do
+controle de versão):
+
+```bash
+export TRIAR_KEYSTORE=".../deploy/firebase/triar-demo.keystore"
+export TRIAR_KEY_ALIAS=triar-demo TRIAR_KEY_PASS=... TRIAR_STORE_PASS=...
+dotnet publish Triagem.App/MauiApp3/MauiApp3.csproj -f net10.0-android -c Release \
+  -p:TriarModoLocal=true -p:AndroidPackageFormat=apk
+```
+
+> Sem `-p:TriarModoLocal=true` nada muda: o app continua consumindo a Triagem.API
+> normalmente, como descrito nas opções abaixo. A chave em `deploy/firebase/` serve só
+> para a demonstração — para publicar na Play Store, gere uma chave própria com senha
+> secreta, porque a chave de assinatura de um app publicado não pode ser trocada depois.
 
 ### Opção 1 — Docker (recomendada: sobe tudo)
 

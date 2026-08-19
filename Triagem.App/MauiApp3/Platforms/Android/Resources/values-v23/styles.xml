@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- API 23+: barra de status branca pede ícones escuros. -->
+    <style name="Maui.MainTheme.NoActionBar" parent="Triar.MainTheme.Base">
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

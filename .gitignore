@@ -23,3 +23,7 @@ publish/
 google-services.json
 firebase-debug.log
 .firebase/
+
+# Pacotes gerados (APK/AAB de demonstração)
+*.apk
+*.aab

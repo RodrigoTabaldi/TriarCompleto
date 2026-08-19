@@ -26,7 +26,12 @@ public partial class LoginPage : ContentPage
         if (usuario is null) return;
 
         App.UsuarioLogado = usuario;
-        await Shell.Current.GoToAsync($"//{nameof(HomePage)}");
+
+        // Rota relativa, e não "//HomePage": a HomePage é registrada por
+        // Routing.RegisterRoute (rota global), e o Shell não aceita rota global como
+        // única página da pilha — a forma absoluta lançava exceção e derrubava o app
+        // sempre que havia uma sessão salva para restaurar.
+        await Shell.Current.GoToAsync(nameof(HomePage));
     }
 
     private async void Entrar(object? sender, EventArgs e)

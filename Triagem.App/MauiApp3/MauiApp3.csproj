@@ -20,6 +20,13 @@
 		<Nullable>enable</Nullable>
 		<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
 
+		<!-- Builds Debug de Android normalmente usam Fast Deployment: os assemblies
+		     .NET não vão dentro do APK, o Visual Studio os envia à parte ao instalar
+		     via F5. Um APK Debug instalado fora do VS (sideload manual) abre sem eles
+		     e crasha na hora ("No assemblies found..."). Embutir sempre evita isso —
+		     o app fica maior, mas funciona sozinho fora do IDE. -->
+		<EmbedAssembliesIntoApk Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">true</EmbedAssembliesIntoApk>
+
 		<!-- Enable XAML source generation for faster build times and improved performance.
 		     This generates C# code from XAML at compile time instead of runtime inflation.
 		     To disable, remove this line.
@@ -53,23 +60,39 @@
 	     passe por variáveis de ambiente na hora do build (veja deploy/firebase/README.md). -->
 	<PropertyGroup Condition="'$(Configuration)' == 'Release' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<AndroidPackageFormat>aab</AndroidPackageFormat>
-		<AndroidKeyStore Condition="'$(AndroidSigningKeyStore)' != ''">true</AndroidKeyStore>
+		<!-- A condição olha TRIAR_KEYSTORE, e não AndroidSigningKeyStore: esta última
+		     só recebe valor na linha seguinte, então condicioná-la a si mesma nunca
+		     ligava a assinatura. -->
+		<AndroidKeyStore Condition="'$(TRIAR_KEYSTORE)' != ''">true</AndroidKeyStore>
 		<AndroidSigningKeyStore>$(TRIAR_KEYSTORE)</AndroidSigningKeyStore>
 		<AndroidSigningKeyAlias>$(TRIAR_KEY_ALIAS)</AndroidSigningKeyAlias>
 		<AndroidSigningKeyPass>$(TRIAR_KEY_PASS)</AndroidSigningKeyPass>
 		<AndroidSigningStorePass>$(TRIAR_STORE_PASS)</AndroidSigningStorePass>
 	</PropertyGroup>
 
+	<!-- ===== Modo local (APK de demonstração, sem API) ===== -->
+	<!-- Compilando com -p:TriarModoLocal=true, o app usa o BancoLocal (SQLite no
+	     próprio aparelho) no lugar da API: instala e funciona sem servidor e sem rede.
+	     Sem esse parâmetro nada muda — o app continua consumindo a Triagem.API. -->
+	<PropertyGroup Condition="'$(TriarModoLocal)' == 'true'">
+		<DefineConstants>$(DefineConstants);MODO_LOCAL</DefineConstants>
+	</PropertyGroup>
+
 	<ItemGroup>
-		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#FFFFFF" />
+		<!-- App Icon (marca Triar sobre fundo branco, conforme a paleta).
+		     No Android o ícone é recortado por uma máscara adaptativa (só ~66% do
+		     canvas aparece), então lá a marca vai menor; nas outras plataformas não
+		     há máscara e ela ocupa mais área para ficar legível em 16/32 px. -->
+		<MauiIcon Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'"
+		          Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#FFFFFF" />
+		<MauiIcon Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'"
+		          Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg-full.svg" Color="#FFFFFF" />
 
 		<!-- Splash Screen -->
 		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#FFFFFF" BaseSize="220,220" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
-		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
 		
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
@@ -80,6 +103,9 @@
 
 	<ItemGroup>
 		<PackageReference Include="ClosedXML" Version="0.105.0" />
+		<!-- Banco local do app (modo demonstração, sem API). -->
+		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
+		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
 	</ItemGroup>
