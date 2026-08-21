@@ -8,28 +8,47 @@ namespace Triagem.API.Data;
 /// </summary>
 public static class DbSeeder
 {
+    /// <summary>
+    /// Aplica as EF Migrations pendentes (cria o banco do zero se necessário) e, se
+    /// ainda não houver nenhuma, popula as 6 triagens padrão do sistema.
+    /// </summary>
     public static async Task SeedAsync(TriagemDbContext db)
     {
-        await db.Database.EnsureCreatedAsync();
-
-        // Várias instâncias da API podem subir ao mesmo tempo (load balancer);
-        // o applock do SQL Server garante que só uma execute o seed.
+        // Várias instâncias da API podem subir ao mesmo tempo (load balancer); o
+        // applock do SQL Server garante que só uma aplique migrations e semeie por
+        // vez — as demais esperam a lock e encontram o trabalho já feito.
+        //
+        // O lock é preso à SESSÃO, não à transação: MigrateAsync gerencia suas
+        // próprias transações por migration internamente, então não pode rodar
+        // aninhado dentro de uma transação externa aberta por este método. Por isso a
+        // conexão é aberta e mantida manualmente durante todo o método — se o EF Core
+        // fechasse e reabrisse a conexão entre comandos (o padrão dele quando não é o
+        // chamador quem abriu), o lock de sessão seria liberado no meio do caminho.
         var strategy = db.Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>
         {
-            await using var tx = await db.Database.BeginTransactionAsync();
-
-            await db.Database.ExecuteSqlRawAsync(
-                "EXEC sp_getapplock @Resource = 'TriarSeed', @LockMode = 'Exclusive', " +
-                "@LockOwner = 'Transaction', @LockTimeout = 60000;");
-
-            if (!await db.TriagemModelos.AnyAsync())
+            var connection = db.Database.GetDbConnection();
+            await connection.OpenAsync();
+            try
             {
-                db.TriagemModelos.AddRange(CriarModelosPadrao());
-                await db.SaveChangesAsync();
-            }
+                await db.Database.ExecuteSqlRawAsync(
+                    "EXEC sp_getapplock @Resource = 'TriarSeed', @LockMode = 'Exclusive', " +
+                    "@LockOwner = 'Session', @LockTimeout = 60000;");
 
-            await tx.CommitAsync();
+                await db.Database.MigrateAsync();
+
+                if (!await db.TriagemModelos.AnyAsync())
+                {
+                    db.TriagemModelos.AddRange(CriarModelosPadrao());
+                    await db.SaveChangesAsync();
+                }
+            }
+            finally
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    "EXEC sp_releaseapplock @Resource = 'TriarSeed', @LockOwner = 'Session';");
+                await connection.CloseAsync();
+            }
         });
     }
 

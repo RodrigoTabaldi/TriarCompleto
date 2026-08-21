@@ -102,12 +102,19 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="ClosedXML" Version="0.105.0" />
+		<PackageReference Include="ClosedXML" Version="0.105.1" />
 		<!-- Banco local do app (modo demonstração, sem API). -->
-		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
+		<PackageReference Include="sqlite-net-pcl" Version="1.11.285" />
+		<!-- SQLitePCLRaw.bundle_green 2.1.11 é, no momento, a última versão publicada —
+		     e carrega um SQLite anterior ao 3.50.2, vulnerável ao CVE-2025-6965
+		     (GHSA-2m69-gcr7-jv3q, alta severidade). Não há build corrigida disponível
+		     ainda (first_patched_version: null na advisory); atualizar assim que o
+		     mantenedor publicar uma. Risco prático aqui é baixo — todo acesso ao
+		     SQLite local passa pelo ORM parametrizado (sqlite-net-pcl), sem SQL
+		     montado por concatenação nem dado de rede alcançando o banco local. -->
 		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.11" />
 	</ItemGroup>
 
 	<ItemGroup>

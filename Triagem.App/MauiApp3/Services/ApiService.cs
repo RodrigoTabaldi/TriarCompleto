@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -106,6 +107,18 @@ public static class ApiService
         _usuarioAtualId = 0;
         SecureStorage.Default.RemoveAll();
     }
+
+    /// <summary>
+    /// Indica se a exceção capturada veio de um HTTP 401 (token expirado ou inválido).
+    /// O JWT dura 12h e não há refresh token: quando expira em uso, GetFromJsonAsync e
+    /// EnsureSuccessStatusCode lançam HttpRequestException. Sem checar isso, as telas
+    /// mostravam "Verifique se a API está no ar" — uma mensagem que aponta para a causa
+    /// errada quando o problema real é a sessão vencida. Páginas devem checar isto no
+    /// catch e, se verdadeiro, chamar <see cref="Logout"/> e voltar para o login em vez
+    /// de exibir o erro genérico de rede.
+    /// </summary>
+    public static bool EhSessaoExpirada(Exception ex) =>
+        ex is HttpRequestException { StatusCode: HttpStatusCode.Unauthorized };
 
     // ---------------- Sessão persistida (SecureStorage) ----------------
     // O token e os dados do usuário logado são salvos no armazenamento seguro do
@@ -355,7 +368,16 @@ public static class ApiService
 
     // ---------------- Histórico ----------------
 
-    public static async Task<List<HistoricoItem>> HistoricoAsync(int usuarioId, int? triagemId = null)
+    /// <summary>Tamanho de página consumido pelo app — casa com o padrão da API (100, teto 200).</summary>
+    public const int TamanhoPaginaHistorico = 100;
+
+    /// <summary>
+    /// Uma página do histórico (mais recentes primeiro). A tela consome isto de forma
+    /// incremental (rolagem) em vez de carregar tudo de uma vez — ver HistoricoPage.
+    /// Só a primeira página é cacheada: cachear páginas seguintes acumularia no
+    /// processo o histórico inteiro do usuário à medida que ele rola a lista.
+    /// </summary>
+    public static async Task<List<HistoricoItem>> HistoricoAsync(int usuarioId, int? triagemId = null, int pagina = 1)
     {
         if (ModoLocal) return await BancoLocal.HistoricoAsync(usuarioId, triagemId);
 
@@ -363,15 +385,40 @@ public static class ApiService
             ? $"historico_{usuarioId}_{triagemId}"
             : $"historico_{usuarioId}";
 
-        var cached = GetCache<List<HistoricoItem>>(cacheKey);
-        if (cached is not null) return cached;
+        if (pagina == 1)
+        {
+            var cached = GetCache<List<HistoricoItem>>(cacheKey);
+            if (cached is not null) return cached;
+        }
 
-        var url = $"{BaseUrl}/api/triagem/usuario/{usuarioId}";
-        if (triagemId is not null) url += $"?triagemModeloId={triagemId}";
+        var url = $"{BaseUrl}/api/triagem/usuario/{usuarioId}?pagina={pagina}&tamanhoPagina={TamanhoPaginaHistorico}";
+        if (triagemId is not null) url += $"&triagemModeloId={triagemId}";
 
         var result = await Http.GetFromJsonAsync<List<HistoricoItem>>(url, JsonOptions) ?? [];
-        SetCache(cacheKey, result, TimeSpan.FromMinutes(10));
+        if (pagina == 1) SetCache(cacheKey, result, TimeSpan.FromMinutes(10));
         return result;
+    }
+
+    /// <summary>
+    /// Busca TODAS as páginas do histórico. Usado apenas pela exportação para Excel:
+    /// antes, a exportação reaproveitava só a primeira página já carregada na tela, então
+    /// um usuário com mais de 100 triagens aplicadas recebia uma planilha "do histórico"
+    /// que na verdade estava incompleta, sem qualquer aviso disso.
+    /// </summary>
+    public static async Task<List<HistoricoItem>> HistoricoCompletoAsync(int usuarioId, int? triagemId = null)
+    {
+        if (ModoLocal) return await BancoLocal.HistoricoAsync(usuarioId, triagemId);
+
+        var todos = new List<HistoricoItem>();
+        for (var pagina = 1; pagina <= 1000; pagina++) // teto de segurança: 100k registros
+        {
+            var itensDaPagina = await HistoricoAsync(usuarioId, triagemId, pagina);
+            if (itensDaPagina.Count == 0) break;
+
+            todos.AddRange(itensDaPagina);
+            if (itensDaPagina.Count < TamanhoPaginaHistorico) break;
+        }
+        return todos;
     }
 
     // ---------------- Home ----------------

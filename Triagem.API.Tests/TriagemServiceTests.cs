@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Triagem.API.Data;
 using Triagem.API.Dtos;
 using Triagem.API.Models;
@@ -284,6 +285,127 @@ public class TriagemServiceTests
 
         Assert.Null(resultado);
         Assert.Equal("Idade inválida.", erro);
+    }
+
+    // ---------------- Regressão do IDOR (POST /api/triagens/{id}/responder) ----------------
+
+    [Fact]
+    public async Task ResponderAsync_TriagemPrivadaDeOutroUsuario_RetornaErro()
+    {
+        // Antes desta correção, ResponderAsync carregava a triagem sem checar
+        // visibilidade: o usuário B conseguia responder a triagem privada de A e
+        // recebia de volta título/classificação/recomendação dela — um IDOR completo,
+        // mesmo com ObterDetalheAsync já fechado para o mesmo cenário.
+        var (_, service, usuarioA, usuarioB) = await NovoCenarioComDoisUsuariosAsync();
+        var (criada, erro) = await service.CriarAsync(usuarioA, RequestValido());
+        Assert.Null(erro);
+
+        var respostas = new ResponderTriagemRequest(
+            NomePaciente: "Paciente do B", Idade: 30, Sexo: "M",
+            Respostas: [new RespostaInput(criada!.Perguntas[0].Id, true)]);
+
+        var (resultado, erroResposta) = await service.ResponderAsync(usuarioB, criada.Id, respostas);
+
+        Assert.Null(resultado);
+        Assert.Equal("Triagem não encontrada.", erroResposta);
+    }
+
+    [Fact]
+    public async Task ResponderAsync_PeloProprioCriador_Funciona()
+    {
+        var (_, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+        var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
+
+        var respostas = new ResponderTriagemRequest(
+            NomePaciente: "Paciente do A", Idade: 30, Sexo: "M",
+            Respostas: [new RespostaInput(criada!.Perguntas[0].Id, true)]);
+
+        var (resultado, erro) = await service.ResponderAsync(usuarioA, criada.Id, respostas);
+
+        Assert.Null(erro);
+        Assert.NotNull(resultado);
+    }
+
+    [Fact]
+    public async Task ResponderAsync_TriagemPadraoDoSistema_VisivelParaQualquerUsuario()
+    {
+        var db = TestHelpers.NovoDbContext();
+        var service = TestHelpers.NovoService(db);
+        var usuario = new Usuario { Nome = "Ana", Email = "ana-responder@teste.com", SenhaHash = "x" };
+        db.Usuarios.Add(usuario);
+
+        var padrao = new TriagemModelo
+        {
+            Titulo = "Triagem Padrão",
+            PublicoAlvo = "Todas as idades",
+            CriadorUsuarioId = null,
+            Ativa = true,
+            Perguntas = [new Pergunta { Texto = "P1", Peso = 1, Ordem = 1 }],
+            Faixas =
+            [
+                new FaixaResultado { Titulo = "Baixo", PontuacaoMin = 0, PontuacaoMax = 0, Ordem = 1 },
+                new FaixaResultado { Titulo = "Alto", PontuacaoMin = 1, PontuacaoMax = 1, Ordem = 2 }
+            ]
+        };
+        db.TriagemModelos.Add(padrao);
+        await db.SaveChangesAsync();
+
+        var respostas = new ResponderTriagemRequest(
+            NomePaciente: "Paciente", Idade: 30, Sexo: "F",
+            Respostas: [new RespostaInput(padrao.Perguntas[0].Id, true)]);
+
+        var (resultado, erro) = await service.ResponderAsync(usuario.Id, padrao.Id, respostas);
+
+        Assert.Null(erro);
+        Assert.NotNull(resultado);
+    }
+
+    // ---------------- Autorização em ConfigurarHomeAsync ----------------
+
+    [Fact]
+    public async Task ConfigurarHomeAsync_ComTriagemPrivadaDeOutroUsuario_IgnoraOItem()
+    {
+        // Antes desta correção, ConfigurarHomeAsync gravava uma linha de preferência
+        // para QUALQUER TriagemModeloId enviado, sem checar se era visível ao usuário
+        // — o usuário B conseguia referenciar, na própria home, uma triagem privada de
+        // A (linha órfã) ou um id inexistente (violação de FK virando HTTP 500).
+        var (db, service, usuarioA, usuarioB) = await NovoCenarioComDoisUsuariosAsync();
+        var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
+
+        var (ok, erro) = await service.ConfigurarHomeAsync(usuarioB,
+            new ConfigurarHomeRequest([new HomeItemInput(criada!.Id, true, 1)]));
+
+        Assert.True(ok);
+        Assert.Null(erro);
+        Assert.False(await db.UsuarioTriagensHome.AnyAsync(h => h.UsuarioId == usuarioB && h.TriagemModeloId == criada.Id));
+    }
+
+    [Fact]
+    public async Task ConfigurarHomeAsync_ComTriagemVisivel_GravaAPreferencia()
+    {
+        var (db, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+        var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
+
+        var (ok, erro) = await service.ConfigurarHomeAsync(usuarioA,
+            new ConfigurarHomeRequest([new HomeItemInput(criada!.Id, false, 5)]));
+
+        Assert.True(ok);
+        Assert.Null(erro);
+        var pref = await db.UsuarioTriagensHome.SingleAsync(h => h.UsuarioId == usuarioA && h.TriagemModeloId == criada.Id);
+        Assert.False(pref.Visivel);
+        Assert.Equal(5, pref.Ordem);
+    }
+
+    [Fact]
+    public async Task ConfigurarHomeAsync_ComMaisItensQueOLimite_RetornaErro()
+    {
+        var (_, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+
+        var itens = Enumerable.Range(1, 201).Select(i => new HomeItemInput(i, true, i)).ToList();
+        var (ok, erro) = await service.ConfigurarHomeAsync(usuarioA, new ConfigurarHomeRequest(itens));
+
+        Assert.False(ok);
+        Assert.NotNull(erro);
     }
 
     // ---------------- Histórico paginado ----------------

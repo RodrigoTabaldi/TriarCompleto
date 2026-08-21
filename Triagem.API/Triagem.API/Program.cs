@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 using Triagem.API.Data;
 using Triagem.API.Services;
 
@@ -25,8 +26,11 @@ if (string.IsNullOrWhiteSpace(connectionString))
 
 // ---------- Criptografia de campos sensíveis (nome do paciente em repouso) ----------
 // A chave vem de configuração/ambiente (DataProtection:Key) — nunca versionada.
+// "ChavesAnteriores" (opcional) mantém chaves de uma rotação passada disponíveis só
+// para leitura, para que trocar a chave não torne ilegíveis os registros já gravados.
 var dataProtection = builder.Configuration.GetSection("DataProtection").Get<DataProtectionOptions>() ?? new DataProtectionOptions();
-builder.Services.AddSingleton(new FieldEncryptionService(dataProtection));
+builder.Services.AddSingleton(sp =>
+    new FieldEncryptionService(dataProtection, sp.GetRequiredService<ILogger<FieldEncryptionService>>()));
 
 builder.Services.AddDbContext<TriagemDbContext>(options =>
     options.UseSqlServer(connectionString, sql =>
@@ -57,12 +61,26 @@ if (!string.IsNullOrWhiteSpace(redisConnection))
         o.Configuration = redisConnection;
         o.InstanceName = "triar:";
     });
+
+    // Conexão direta (fora do IDistributedCache) usada só pelo DistributedRateLimiter,
+    // que precisa de INCR/EXPIRE atômicos — operação que a abstração IDistributedCache
+    // não expõe.
+    builder.Services.AddSingleton<IConnectionMultiplexer>(
+        _ => ConnectionMultiplexer.Connect(redisConnection));
 }
 else
 {
     builder.Services.AddDistributedMemoryCache();
 }
 builder.Services.AddSingleton<CacheService>();
+
+// ---------- Rate limiter distribuído (política "auth") ----------
+// Sem IConnectionMultiplexer registrado (sem Redis configurado), DistributedRateLimiter
+// recebe null e simplesmente não atua — o limitador em memória do ASP.NET Core abaixo
+// já é exato nesse cenário (processo único).
+builder.Services.AddSingleton(sp => new DistributedRateLimiter(
+    sp.GetService<IConnectionMultiplexer>(),
+    sp.GetRequiredService<ILogger<DistributedRateLimiter>>()));
 
 // ---------- Autenticação (JWT) ----------
 // A chave vem de configuração/ambiente (Jwt:Key) — nunca versionada.

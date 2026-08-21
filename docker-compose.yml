@@ -43,12 +43,35 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # Serviço de inicialização, roda uma vez e sai: cria o banco TriarDb e o login
+  # dedicado "triar_app" (db_datareader + db_datawriter + db_ddladmin, restrito a
+  # TriarDb — ver deploy/sql/init-app-login.sql) usando 'sa' só aqui, nunca exposto
+  # à API. Sem isto, api1/api2 precisariam de 'sa' para se conectar, herdando
+  # controle total da instância SQL Server caso a aplicação seja comprometida.
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: triar-db-init
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      SA_PASSWORD: "${SA_PASSWORD:?defina SA_PASSWORD no arquivo .env}"
+      APP_DB_PASSWORD: "${APP_DB_PASSWORD:?defina APP_DB_PASSWORD no arquivo .env}"
+    volumes:
+      - ./deploy/sql/init-app-login.sql:/init-app-login.sql:ro
+    entrypoint:
+      [
+        "/bin/sh", "-c",
+        "/opt/mssql-tools18/bin/sqlcmd -S sqlserver,1433 -U sa -P \"$$SA_PASSWORD\" -C -v AppDbPassword=\"$$APP_DB_PASSWORD\" -i /init-app-login.sql"
+      ]
+    restart: "no"
+
   api1: &api
     build: ./Triagem.API/Triagem.API
     container_name: triar-api-1
     environment:
       ASPNETCORE_ENVIRONMENT: "Production"
-      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=TriarDb;User Id=sa;Password=${SA_PASSWORD:?defina SA_PASSWORD no arquivo .env};TrustServerCertificate=True;Encrypt=True"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=TriarDb;User Id=triar_app;Password=${APP_DB_PASSWORD:?defina APP_DB_PASSWORD no arquivo .env};TrustServerCertificate=True;Encrypt=True"
       ConnectionStrings__Redis: "redis:6379"
       Jwt__Key: "${JWT_KEY:?defina JWT_KEY (>=32 caracteres) no arquivo .env}"
       DataProtection__Key: "${DATA_PROTECTION_KEY:?defina DATA_PROTECTION_KEY (>=32 caracteres) no arquivo .env}"
@@ -57,6 +80,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      # Requer Docker Compose v2.20+ (suporte a service_completed_successfully).
+      db-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
       interval: 10s
@@ -74,6 +100,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
       api1:
         condition: service_healthy
 

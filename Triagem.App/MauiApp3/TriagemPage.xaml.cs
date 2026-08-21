@@ -67,6 +67,15 @@ public partial class TriagemPage : ContentPage
         }
         catch (Exception ex)
         {
+            if (ApiService.EhSessaoExpirada(ex))
+            {
+                App.UsuarioLogado = null;
+                ApiService.Logout();
+                await DisplayAlertAsync("Sessão expirada", "Faça login novamente para continuar.", "OK");
+                await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+                return;
+            }
+
             await DisplayAlertAsync("Erro",
                 $"Não foi possível carregar a triagem. Verifique se a API está no ar.\n\n{ex.Message}", "OK");
         }

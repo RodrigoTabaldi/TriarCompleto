@@ -20,10 +20,20 @@ public static class PasswordHasher
     {
         var partes = hashArmazenado.Split('.');
         if (partes.Length != 3) return false;
+        if (!int.TryParse(partes[0], out var iteracoes) || iteracoes <= 0) return false;
 
-        var iteracoes = int.Parse(partes[0]);
-        var salt = Convert.FromBase64String(partes[1]);
-        var esperado = Convert.FromBase64String(partes[2]);
+        byte[] salt, esperado;
+        try
+        {
+            salt = Convert.FromBase64String(partes[1]);
+            esperado = Convert.FromBase64String(partes[2]);
+        }
+        catch (FormatException)
+        {
+            // Hash armazenado corrompido/malformado: falha de autenticação limpa em
+            // vez de exceção não tratada estourando até o controller.
+            return false;
+        }
 
         var key = Rfc2898DeriveBytes.Pbkdf2(senha, salt, iteracoes, HashAlgorithmName.SHA256, esperado.Length);
         return CryptographicOperations.FixedTimeEquals(key, esperado);

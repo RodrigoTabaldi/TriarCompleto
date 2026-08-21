@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using MauiApp3.Models;
 using SQLite;
 
@@ -451,6 +452,10 @@ public static partial class BancoLocal
 
     // ---------------- Validação (espelha a da API) ----------------
 
+    [GeneratedRegex("^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$")]
+    private static partial Regex CorHexRegex();
+    private static readonly Regex CorHexValida = CorHexRegex();
+
     private static string? ValidarModelo(CriarTriagemInput req)
     {
         if (string.IsNullOrWhiteSpace(req.Titulo)) return "Informe o título da triagem.";
@@ -465,6 +470,8 @@ public static partial class BancoLocal
         if (faixas is null || faixas.Count < 2) return "Defina pelo menos duas faixas de resultado.";
         if (faixas.Any(f => string.IsNullOrWhiteSpace(f.Titulo))) return "Toda faixa de resultado precisa de um título.";
         if (faixas.Any(f => f.PontuacaoMin > f.PontuacaoMax)) return "Em cada faixa, a pontuação mínima deve ser menor ou igual à máxima.";
+        if (faixas.Any(f => !string.IsNullOrWhiteSpace(f.Cor) && !CorHexValida.IsMatch(f.Cor)))
+            return "A cor de cada faixa deve ser um hexadecimal válido (ex.: #10B981).";
 
         var ordenadas = faixas.OrderBy(f => f.PontuacaoMin).ToList();
         for (var i = 1; i < ordenadas.Count; i++)

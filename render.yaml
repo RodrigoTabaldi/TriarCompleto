@@ -40,9 +40,18 @@ services:
 
       # ---- Segredos: preencher no painel do Render, nunca neste arquivo ----
       # "sync: false" faz o Render pedir o valor na criação e mantê-lo fora do Git.
+      #
+      # ConnectionStrings__DefaultConnection: use um login do Azure SQL com permissão
+      # restrita ao banco da aplicação (db_datareader + db_datawriter + db_ddladmin,
+      # este último necessário porque a API aplica EF Migrations na própria
+      # inicialização — ver DbSeeder.SeedAsync), nunca a conta administradora do
+      # servidor Azure SQL.
       - key: ConnectionStrings__DefaultConnection
         sync: false
       - key: Jwt__Key
         sync: false
       - key: DataProtection__Key
         sync: false
+      # Opcional: chave(s) de uma rotação anterior de DataProtection__Key, mantidas só
+      # para leitura (ver FieldEncryptionService). Defina DataProtection__ChavesAnteriores__0,
+      # __1 etc. no painel do Render somente quando for rotacionar a chave.

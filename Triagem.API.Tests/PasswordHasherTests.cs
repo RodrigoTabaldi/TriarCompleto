@@ -37,4 +37,23 @@ public class PasswordHasherTests
     {
         Assert.False(PasswordHasher.Verify("qualquer", "formato-invalido-sem-pontos"));
     }
+
+    [Fact]
+    public void Verify_ComIteracoesNaoNumericas_RetornaFalseSemLancar()
+    {
+        Assert.False(PasswordHasher.Verify("qualquer", "abc.c2FsdA==.aGFzaA=="));
+    }
+
+    [Fact]
+    public void Verify_ComSaltOuHashNaoBase64_RetornaFalseSemLancar()
+    {
+        Assert.False(PasswordHasher.Verify("qualquer", "100000.não-é-base64!.também-não!"));
+    }
+
+    [Fact]
+    public void Verify_ComIteracoesZeroOuNegativas_RetornaFalseSemLancar()
+    {
+        Assert.False(PasswordHasher.Verify("qualquer", "0.c2FsdA==.aGFzaA=="));
+        Assert.False(PasswordHasher.Verify("qualquer", "-5.c2FsdA==.aGFzaA=="));
+    }
 }

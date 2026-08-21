@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Triagem.API.Data;
@@ -9,12 +10,22 @@ namespace Triagem.API.Services;
 public partial class TriagemService(TriagemDbContext db, CacheService cache, ILogger<TriagemService> logger)
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
+    private const int MaxItensHome = 200;
 
     [GeneratedRegex("^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$")]
     private static partial Regex CorHexRegex();
     private static readonly Regex CorHexValida = CorHexRegex();
 
     private Task InvalidateCacheAsync() => cache.BumpVersionAsync();
+
+    /// <summary>
+    /// Regra única de visibilidade de uma triagem para um usuário: padrão do sistema
+    /// (CriadorUsuarioId nulo) ou criada por ele mesmo. Usada em toda leitura/escrita
+    /// que recebe um id de triagem vindo do cliente, para que nenhum caminho novo possa
+    /// esquecer a checagem e reabrir IDOR (ver ObterDetalheAsync, ResponderAsync).
+    /// </summary>
+    private static Expression<Func<TriagemModelo, bool>> VisivelPara(int usuarioId) =>
+        t => t.CriadorUsuarioId == null || t.CriadorUsuarioId == usuarioId;
 
     // ---------------- Modelos ----------------
 
@@ -55,15 +66,39 @@ public partial class TriagemService(TriagemDbContext db, CacheService cache, ILo
     public async Task<TriagemModeloDetalhe?> ObterDetalheAsync(int usuarioId, int id)
     {
         var versao = await cache.GetVersionAsync();
-        var chave = $"triar:triagens:v{versao}:detalhe:{id}:usuario:{usuarioId}";
+
+        // Para as triagens padrão do sistema (CriadorUsuarioId nulo), o conteúdo do
+        // detalhe é idêntico para qualquer usuário — Padrao é sempre true e
+        // CriadorUsuarioId sempre null, então não há nada usuário-dependente na
+        // resposta. Sem esta checagem, cada uma das poucas triagens padrão gerava uma
+        // entrada de cache por usuário que já a acessou (6 triagens × N usuários),
+        // acelerando a evicção de entradas úteis num Redis com memória limitada.
+        // Para triagens privadas a partição por usuário é mantida (só o dono acessa a
+        // própria, então não há multiplicação real ali) — a checagem de acesso
+        // continua sempre aplicada dentro da consulta, então um resultado incorreto
+        // aqui no máximo perde o atalho de cache compartilhado, nunca abre acesso.
+        var idsPadrao = await cache.GetOrCreateAsync(
+            $"triar:triagens:v{versao}:ids-padrao",
+            CacheTtl,
+            async () => await db.TriagemModelos
+                .AsNoTracking()
+                .Where(t => t.Ativa && t.CriadorUsuarioId == null)
+                .Select(t => t.Id)
+                .ToListAsync());
+
+        var chave = idsPadrao is not null && idsPadrao.Contains(id)
+            ? $"triar:triagens:v{versao}:detalhe:{id}"
+            : $"triar:triagens:v{versao}:detalhe:{id}:usuario:{usuarioId}";
+
         return await cache.GetOrCreateAsync(chave, CacheTtl, async () =>
         {
             var t = await db.TriagemModelos
                 .AsNoTracking()
                 .Include(x => x.Perguntas)
                 .Include(x => x.Faixas)
-                .FirstOrDefaultAsync(x => x.Id == id && x.Ativa &&
-                    (x.CriadorUsuarioId == null || x.CriadorUsuarioId == usuarioId));
+                .Where(x => x.Id == id && x.Ativa)
+                .Where(VisivelPara(usuarioId))
+                .FirstOrDefaultAsync();
 
             if (t is null) return null;
 
@@ -170,13 +205,28 @@ public partial class TriagemService(TriagemDbContext db, CacheService cache, ILo
 
     // ---------------- Home ----------------
 
-    public async Task ConfigurarHomeAsync(int usuarioId, ConfigurarHomeRequest req)
+    public async Task<(bool Ok, string? Erro)> ConfigurarHomeAsync(int usuarioId, ConfigurarHomeRequest req)
     {
+        if (req.Itens.Count > MaxItensHome)
+            return (false, $"Máximo de {MaxItensHome} itens por requisição.");
+
+        // Sem isto, o cliente podia gravar preferência de home para QUALQUER
+        // TriagemModeloId — inclusive de triagem privada de outro usuário (linha órfã,
+        // sem vazamento de conteúdo pois a leitura já filtra) ou inexistente
+        // (DbUpdateException por violação de FK, virando HTTP 500 não tratado).
+        var idsVisiveis = (await db.TriagemModelos
+            .Where(VisivelPara(usuarioId))
+            .Select(t => t.Id)
+            .ToListAsync())
+            .ToHashSet();
+
+        var itensValidos = req.Itens.Where(i => idsVisiveis.Contains(i.TriagemModeloId)).ToList();
+
         var existentes = await db.UsuarioTriagensHome
             .Where(h => h.UsuarioId == usuarioId)
             .ToDictionaryAsync(h => h.TriagemModeloId);
 
-        foreach (var item in req.Itens)
+        foreach (var item in itensValidos)
         {
             if (existentes.TryGetValue(item.TriagemModeloId, out var h))
             {
@@ -197,16 +247,22 @@ public partial class TriagemService(TriagemDbContext db, CacheService cache, ILo
 
         await db.SaveChangesAsync();
         await InvalidateCacheAsync();
+        return (true, null);
     }
 
     // ---------------- Execução ----------------
 
     public async Task<(ResultadoResponse? Resultado, string? Erro)> ResponderAsync(int usuarioId, int triagemModeloId, ResponderTriagemRequest req)
     {
+        // Mesma regra de visibilidade de ObterDetalheAsync: sem ela, qualquer usuário
+        // autenticado poderia responder (e ler de volta título/classificação/recomendação
+        // de) uma triagem privada de outro usuário só sabendo o id — IDOR.
         var modelo = await db.TriagemModelos
             .Include(t => t.Perguntas)
             .Include(t => t.Faixas)
-            .FirstOrDefaultAsync(t => t.Id == triagemModeloId && t.Ativa);
+            .Where(t => t.Id == triagemModeloId && t.Ativa)
+            .Where(VisivelPara(usuarioId))
+            .FirstOrDefaultAsync();
 
         if (modelo is null) return (null, "Triagem não encontrada.");
         if (string.IsNullOrWhiteSpace(req.NomePaciente)) return (null, "Informe o nome da pessoa avaliada.");
@@ -271,9 +327,12 @@ public partial class TriagemService(TriagemDbContext db, CacheService cache, ILo
         pagina = Math.Max(pagina, 1);
         tamanhoPagina = Math.Clamp(tamanhoPagina, 1, TamanhoPaginaMaximo);
 
+        // Sem Include: a projeção Select abaixo já referencia r.TriagemModelo.Titulo,
+        // o que faz o EF Core gerar o JOIN necessário sozinho. Include aqui não muda o
+        // SQL gerado (é ignorado quando há projeção) — só sugeria uma materialização
+        // que não ocorre.
         var query = db.TriagemResultados
             .AsNoTracking()
-            .Include(r => r.TriagemModelo)
             .Where(r => r.UsuarioId == usuarioId);
 
         if (triagemModeloId is not null)

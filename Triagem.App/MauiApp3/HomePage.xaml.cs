@@ -55,9 +55,23 @@ public partial class HomePage : ContentPage
         }
         catch (Exception ex)
         {
+            if (ApiService.EhSessaoExpirada(ex))
+            {
+                await TratarSessaoExpiradaAsync();
+                return;
+            }
+
             await DisplayAlertAsync("Erro",
                 $"Não foi possível carregar as triagens. Verifique se a API está no ar.\n\n{ex.Message}", "OK");
         }
+    }
+
+    private async Task TratarSessaoExpiradaAsync()
+    {
+        App.UsuarioLogado = null;
+        ApiService.Logout();
+        await DisplayAlertAsync("Sessão expirada", "Faça login novamente para continuar.", "OK");
+        await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
     }
 
     private void AplicarFiltro()
@@ -158,6 +172,12 @@ public partial class HomePage : ContentPage
         }
         catch (Exception ex)
         {
+            if (ApiService.EhSessaoExpirada(ex))
+            {
+                await TratarSessaoExpiradaAsync();
+                return;
+            }
+
             await DisplayAlertAsync("Erro", ex.Message, "OK");
         }
     }

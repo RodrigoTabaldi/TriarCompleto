@@ -87,7 +87,7 @@ public class UsuariosController(TriagemService service) : ControllerBase
     [HttpPut("{usuarioId:int}/home")]
     public async Task<IActionResult> ConfigurarHome(int usuarioId, [FromBody] ConfigurarHomeRequest req)
     {
-        await service.ConfigurarHomeAsync(User.GetUserId(), req);
-        return Ok();
+        var (ok, erro) = await service.ConfigurarHomeAsync(User.GetUserId(), req);
+        return ok ? Ok() : BadRequest(erro);
     }
 }

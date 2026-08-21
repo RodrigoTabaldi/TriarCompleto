@@ -8,9 +8,11 @@ com perguntas de **sim/não com pesos configuráveis** e **faixas de resultado p
 ```
 TriarCompleto/
 ├── Triagem.App/MauiApp3/      # App .NET MAUI (Android, iOS, Windows, macOS)
-├── Triagem.API/Triagem.API/   # API ASP.NET Core (.NET 8)
+├── Triagem.API/Triagem.API/   # API ASP.NET Core (.NET 10)
 ├── Triagem.API.Tests/         # Testes automatizados (xUnit) da API
-├── database/script.sql        # Script de referência do banco (SQL Server)
+├── Triagem.API/Triagem.API/Data/Migrations/  # EF Migrations — fonte de verdade do schema
+├── database/script.sql        # Script gerado das migrations (`dotnet ef migrations script`)
+├── deploy/sql/init-app-login.sql  # Cria o login dedicado da API no docker-compose (nunca 'sa')
 ├── deploy/nginx/nginx.conf    # Load balancer (nginx, HTTP — uso local/dev)
 ├── deploy/nginx/nginx.conf.prod.example  # Referência de config com TLS para produção
 ├── .github/workflows/ci.yml   # CI: build + testes da API a cada push/PR
@@ -28,19 +30,21 @@ App MAUI ──► nginx (load balancer :5036) ──► api1 / api2 (ASP.NET Co
 ```
 
 - **Cache**: em camadas — **Redis** como cache distribuído (compartilhado entre api1/api2, invalidação por versão) quando `ConnectionStrings:Redis` está configurada; o docker-compose já sobe o Redis. Sem Redis (ex.: rodando local com LocalDB), a API cai automaticamente para cache em memória. O app MAUI ainda tem cache local próprio (5–10 min) para reduzir chamadas à API.
-- **Rate limiting**: política geral (100 req/10s por IP), política de autenticação anti força-bruta (10 req/min por IP) e limite global (300 req/10s), além do rate limit de borda no nginx (30 r/s).
+- **Rate limiting**: política geral (100 req/10s por IP), política de autenticação anti força-bruta (10 req/min por IP, reforçada por um contador distribuído no Redis — ver `DistributedRateLimiter` — para não dobrar de efeito com 2 instâncias) e limite global (300 req/10s), além do rate limit de borda no nginx (30 r/s, agora cobrindo também `/health`).
 - **Load balancer**: nginx com `least_conn`, health-based failover (`proxy_next_upstream`) e 2 instâncias da API.
 - **Resiliência**: `EnableRetryOnFailure` no EF Core, retry de inicialização aguardando o SQL Server, health checks em `/health`.
+- **Schema versionado**: EF Migrations (`Triagem.API/Data/Migrations`) são a única fonte de verdade do schema, aplicadas pela própria API na inicialização (`Database.MigrateAsync`); `database/script.sql` é gerado a partir delas (`dotnet ef migrations script`), nunca editado à mão.
 - **Segurança**:
-  - **Autenticação JWT** — login/cadastro emitem um token; **todos** os endpoints de dados exigem `Authorization: Bearer <token>`. A identidade do usuário vem sempre do token, nunca de um `usuarioId` enviado pelo cliente (fecha IDOR) — inclusive na leitura de detalhe de uma triagem (`GET /api/triagens/{id}`), que só retorna triagens padrão do sistema ou criadas pelo próprio usuário autenticado.
-  - Senhas com PBKDF2 (SHA-256, 100 mil iterações, salt aleatório); mínimo de 8 caracteres.
-  - **Nome do paciente criptografado em repouso** (AES-256-GCM, chave em `DataProtection:Key`) — o SQL Server Express usado neste projeto não suporta Transparent Data Encryption, então a proteção do campo mais identificável do histórico é feita na camada de aplicação (ver `Triagem.API/Data/TriagemDbContext.cs`).
+  - **Autenticação JWT** — login/cadastro emitem um token; **todos** os endpoints de dados exigem `Authorization: Bearer <token>`. A identidade do usuário vem sempre do token, nunca de um `usuarioId` enviado pelo cliente (fecha IDOR) em toda operação que referencia uma triagem — leitura de detalhe, resposta/execução e configuração da home incluídas —, restrita às triagens padrão do sistema ou criadas pelo próprio usuário autenticado.
+  - Senhas com PBKDF2 (SHA-256, 100 mil iterações, salt aleatório, comparação em tempo constante); mínimo de 8 caracteres. O login sempre executa o PBKDF2, mesmo com email inexistente (contra um hash fictício de mesmo custo), para não vazar por timing quais emails têm conta.
+  - **Nome do paciente criptografado em repouso** (AES-256-GCM, chave em `DataProtection:Key`, com suporte a `DataProtection:ChavesAnteriores` para rotação sem perda de dados) — o SQL Server Express usado neste projeto não suporta Transparent Data Encryption, então a proteção do campo mais identificável do histórico é feita na camada de aplicação (ver `Triagem.API/Data/TriagemDbContext.cs`).
   - **Segredos fora do código**: senha do banco, chave JWT e chave de criptografia vêm de variáveis de ambiente (`.env` no Docker), nunca versionadas.
+  - **Login dedicado no banco**: no docker-compose, a API se conecta como `triar_app` (permissão restrita ao banco `TriarDb`), nunca como `sa` — ver serviço `db-init`.
   - **CORS restrito** por lista de origens (`Cors:AllowedOrigins`) e `X-Forwarded-For` aceito só de proxies confiáveis (evita spoof do rate limit).
   - **SQL Server e Redis não publicam porta no host** no docker-compose — só nginx expõe a porta pública; os demais serviços só são alcançáveis pela rede interna do compose.
   - Validação de autoria nas triagens personalizadas.
-  - **Histórico paginado** (`pagina`/`tamanhoPagina`, teto de 200 itens por página) — evita que a consulta cresça sem limite conforme o histórico do usuário aumenta.
-  - **Sessão persistida no app** via SecureStorage (Keychain/Keystore/DPAPI conforme a plataforma) — o usuário não precisa logar de novo a cada abertura.
+  - **Histórico paginado** (`pagina`/`tamanhoPagina`, teto de 200 itens por página) — evita que a consulta cresça sem limite conforme o histórico do usuário aumenta; o app consome a paginação de verdade (rolagem incremental), e a exportação para Excel busca todas as páginas antes de gerar a planilha.
+  - **Sessão persistida no app** via SecureStorage (Keychain/Keystore/DPAPI conforme a plataforma) — o usuário não precisa logar de novo a cada abertura; se o token expirar em uso (dura 12h), o app trata como sessão encerrada e volta ao login, em vez de mostrar um erro de rede genérico.
 
 ## Como rodar
 
@@ -81,7 +85,7 @@ Primeiro crie o arquivo de segredos a partir do exemplo e preencha os valores:
 
 ```bash
 cp .env.example .env
-# edite .env: defina SA_PASSWORD (senha forte), JWT_KEY e DATA_PROTECTION_KEY
+# edite .env: defina SA_PASSWORD, APP_DB_PASSWORD, JWT_KEY e DATA_PROTECTION_KEY
 # (>= 32 caracteres cada, aleatórias e DIFERENTES entre si)
 ```
 
@@ -91,8 +95,10 @@ Depois suba tudo:
 docker compose up -d --build
 ```
 
-A API fica em `http://localhost:5036` (mesma porta que o app usa). O banco é criado
-e populado com 6 triagens padrão automaticamente na primeira execução.
+A API fica em `http://localhost:5036` (mesma porta que o app usa). Ao subir, o serviço
+`db-init` cria o banco `TriarDb` e um login dedicado (`triar_app`, com permissão restrita
+a esse banco — a API nunca se conecta como `sa`); em seguida a própria API aplica as
+EF Migrations e popula as 6 triagens padrão automaticamente na primeira execução.
 
 ### Opção 2 — Sem Docker (SQL Server LocalDB)
 
@@ -118,6 +124,19 @@ com a carga de trabalho ".NET desktop" / "ASP.NET" do Visual Studio.
 3. Com a API rodando, rode o app MAUI pelo Visual Studio (projeto `MauiApp3`),
    escolhendo Windows ou Android.
    - No emulador Android a API é acessada via `10.0.2.2:5036` (já configurado no `ApiService`).
+
+**Alterando o modelo de dados**: depois de mudar uma entidade em `Triagem.API/Models`,
+gere uma nova migration em vez de editar `database/script.sql` à mão:
+
+```bash
+dotnet tool restore   # instala o dotnet-ef (só na primeira vez; manifesto em .config/dotnet-tools.json)
+dotnet ef migrations add NomeDaMigration \
+  --project Triagem.API/Triagem.API/Triagem.API.csproj \
+  --startup-project Triagem.API/Triagem.API/Triagem.API.csproj
+dotnet ef migrations script --idempotent -o database/script.sql \
+  --project Triagem.API/Triagem.API/Triagem.API.csproj \
+  --startup-project Triagem.API/Triagem.API/Triagem.API.csproj
+```
 
 ### Opção 3 — SQL Server próprio
 
@@ -188,10 +207,12 @@ O projeto já vem preparado para isso:
 A API tem uma suíte de testes automatizados (`Triagem.API.Tests`, xUnit) cobrindo a
 lógica de negócio de `TriagemService` — validação de modelo, cálculo de pontuação e
 classificação, autorização de escrita (editar/excluir só pelo criador), paginação do
-histórico e, especificamente, um teste de regressão para a restrição de acesso de
-`ObterDetalheAsync` (garante que uma triagem privada de um usuário não é visível para
-outro) — além de `PasswordHasher`, `TokenService`, `ClaimsPrincipalExtensions` e
-`FieldEncryptionService`. Rodar localmente:
+histórico e testes de regressão para a restrição de acesso a triagem privada em
+`ObterDetalheAsync`, `ResponderAsync` e `ConfigurarHomeAsync` (garantem que uma
+triagem privada de um usuário não é visível, respondível nem referenciável por
+outro) — além de `PasswordHasher` (incluindo hash armazenado malformado),
+`TokenService`, `ClaimsPrincipalExtensions` e `FieldEncryptionService` (incluindo
+dado legado em texto plano e rotação de chave). Rodar localmente:
 
 ```bash
 dotnet test Triagem.API.Tests/Triagem.API.Tests.csproj

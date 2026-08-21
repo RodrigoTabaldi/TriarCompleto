@@ -36,7 +36,12 @@
         </Border>
 
         <!-- LISTA -->
-        <CollectionView Grid.Row="1" x:Name="Lista" Margin="15" SelectionMode="None">
+        <!-- RemainingItemsThreshold: dispara RemainingItemsThresholdReached quando faltam
+             10 itens para o fim da lista, para carregar a próxima página do histórico
+             antes que o usuário alcance o final (rolagem incremental). -->
+        <CollectionView Grid.Row="1" x:Name="Lista" Margin="15" SelectionMode="None"
+                         RemainingItemsThreshold="10"
+                         RemainingItemsThresholdReached="CarregarProximaPagina">
 
             <CollectionView.EmptyView>
                 <VerticalStackLayout Padding="30" Spacing="8" VerticalOptions="Center">
@@ -89,6 +94,11 @@
                     </Border>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
+
+            <CollectionView.Footer>
+                <ActivityIndicator x:Name="IndicadorCarregandoMais" IsRunning="False" IsVisible="False"
+                                    Color="#10B981" Margin="0,10"/>
+            </CollectionView.Footer>
         </CollectionView>
     </Grid>
 </ContentPage>
