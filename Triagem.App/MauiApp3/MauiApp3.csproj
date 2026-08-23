@@ -1,0 +1,148 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net10.0-android</TargetFrameworks>
+		<TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+
+		<!-- Note for MacCatalyst:
+		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
+		When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
+		The Mac App Store will NOT accept apps with ONLY maccatalyst-arm64 indicated;
+		either BOTH runtimes must be indicated or ONLY macatalyst-x64. -->
+		<!-- For example: <RuntimeIdentifiers>maccatalyst-x64;maccatalyst-arm64</RuntimeIdentifiers> -->
+
+		<OutputType>Exe</OutputType>
+		<RootNamespace>MauiApp3</RootNamespace>
+		<UseMaui>true</UseMaui>
+		<SingleProject>true</SingleProject>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+
+		<!-- Builds Debug de Android normalmente usam Fast Deployment: os assemblies
+		     .NET não vão dentro do APK, o Visual Studio os envia à parte ao instalar
+		     via F5. Um APK Debug instalado fora do VS (sideload manual) abre sem eles
+		     e crasha na hora ("No assemblies found..."). Embutir sempre evita isso —
+		     o app fica maior, mas funciona sozinho fora do IDE. -->
+		<EmbedAssembliesIntoApk Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">true</EmbedAssembliesIntoApk>
+
+		<!-- Enable XAML source generation for faster build times and improved performance.
+		     This generates C# code from XAML at compile time instead of runtime inflation.
+		     To disable, remove this line.
+		     For individual files, you can override by setting Inflator metadata:
+		       <MauiXaml Update="MyPage.xaml" Inflator="Default" /> (reverts to defaults: Runtime for Debug, XamlC for Release)
+		       <MauiXaml Update="MyPage.xaml" Inflator="Runtime" /> (force runtime inflation) -->
+		<MauiXamlInflator>SourceGen</MauiXamlInflator>
+
+		<!-- Display name -->
+		<ApplicationTitle>Triar</ApplicationTitle>
+
+		<!-- App Identifier -->
+		<ApplicationId>com.triar.app</ApplicationId>
+
+		<!-- Versions -->
+		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+		<ApplicationVersion>1</ApplicationVersion>
+
+		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
+		<WindowsPackageType>None</WindowsPackageType>
+
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+	</PropertyGroup>
+
+	<!-- ===== Build de RELEASE do Android (Firebase App Distribution / Play) ===== -->
+	<!-- Gera .aab e assina com o keystore. Os segredos NÃO ficam no projeto:
+	     passe por variáveis de ambiente na hora do build (veja deploy/firebase/README.md). -->
+	<PropertyGroup Condition="'$(Configuration)' == 'Release' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<AndroidPackageFormat>aab</AndroidPackageFormat>
+		<!-- A condição olha TRIAR_KEYSTORE, e não AndroidSigningKeyStore: esta última
+		     só recebe valor na linha seguinte, então condicioná-la a si mesma nunca
+		     ligava a assinatura. -->
+		<AndroidKeyStore Condition="'$(TRIAR_KEYSTORE)' != ''">true</AndroidKeyStore>
+		<AndroidSigningKeyStore>$(TRIAR_KEYSTORE)</AndroidSigningKeyStore>
+		<AndroidSigningKeyAlias>$(TRIAR_KEY_ALIAS)</AndroidSigningKeyAlias>
+		<AndroidSigningKeyPass>$(TRIAR_KEY_PASS)</AndroidSigningKeyPass>
+		<AndroidSigningStorePass>$(TRIAR_STORE_PASS)</AndroidSigningStorePass>
+	</PropertyGroup>
+
+	<!-- ===== Modo local (APK de demonstração, sem API) ===== -->
+	<!-- Compilando com -p:TriarModoLocal=true, o app usa o BancoLocal (SQLite no
+	     próprio aparelho) no lugar da API: instala e funciona sem servidor e sem rede.
+	     Sem esse parâmetro nada muda — o app continua consumindo a Triagem.API. -->
+	<PropertyGroup Condition="'$(TriarModoLocal)' == 'true'">
+		<DefineConstants>$(DefineConstants);MODO_LOCAL</DefineConstants>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- App Icon (marca Triar sobre fundo branco, conforme a paleta).
+		     No Android o ícone é recortado por uma máscara adaptativa (só ~66% do
+		     canvas aparece), então lá a marca vai menor; nas outras plataformas não
+		     há máscara e ela ocupa mais área para ficar legível em 16/32 px. -->
+		<MauiIcon Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'"
+		          Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#FFFFFF" />
+		<MauiIcon Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'"
+		          Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg-full.svg" Color="#FFFFFF" />
+
+		<!-- Splash Screen -->
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#FFFFFF" BaseSize="220,220" />
+
+		<!-- Images -->
+		<MauiImage Include="Resources\Images\*" />
+		
+		<!-- Custom Fonts -->
+		<MauiFont Include="Resources\Fonts\*" />
+
+		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
+		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="ClosedXML" Version="0.105.1" />
+		<!-- Banco local do app (modo demonstração, sem API). -->
+		<PackageReference Include="sqlite-net-pcl" Version="1.11.285" />
+		<!-- SQLitePCLRaw.bundle_green foi descontinuado pelo mantenedor na v3.0 (a
+		     versão travada em 2.1.11 carregava um SQLite anterior ao 3.50.2, vulnerável
+		     ao CVE-2025-6965 / GHSA-2m69-gcr7-jv3q, severidade alta). A substituição
+		     recomendada oficialmente (ver v3.md do repositório SQLitePCL.raw) é o par
+		     abaixo: config.e_sqlite3 registra o provider automaticamente (sem mudança de
+		     código) e SourceGear.sqlite3 é o binário nativo, agora versionado pela
+		     própria versão do SQLite embutido — 3.53.4 já corrige o CVE. -->
+		<PackageReference Include="SQLitePCLRaw.config.e_sqlite3" Version="3.0.5" />
+		<PackageReference Include="SourceGear.sqlite3" Version="3.53.4" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.11" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Update="HomePage.xaml.cs">
+	    <DependentUpon>HomePage.xaml</DependentUpon>
+	  </Compile>
+	  <Compile Update="Loginpage.xaml.cs">
+	    <DependentUpon>Loginpage.xaml</DependentUpon>
+	  </Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <MauiXaml Update="CadastroPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="HistoricoPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="HomePage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Loginpage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="TriagemPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	</ItemGroup>
+
+</Project>

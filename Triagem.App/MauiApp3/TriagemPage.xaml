@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MauiApp3.TriagemPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:models="clr-namespace:MauiApp3.Models"
+    BackgroundColor="#F5F7F6"
+    Shell.NavBarIsVisible="False">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="18"
+                             MaximumWidthRequest="820"
+                             HorizontalOptions="Fill">
+
+            <!-- VOLTAR -->
+            <HorizontalStackLayout Spacing="8">
+                <Label Text="←" FontSize="22" TextColor="#10B981" FontAttributes="Bold"/>
+                <Label Text="Voltar para a home" TextColor="#10B981" FontAttributes="Bold" VerticalOptions="Center"/>
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="VoltarHome"/>
+                </HorizontalStackLayout.GestureRecognizers>
+            </HorizontalStackLayout>
+
+            <Image Source="logo.png" HeightRequest="70" HorizontalOptions="Center"/>
+
+            <!-- CABEÇALHO DA TRIAGEM -->
+            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="18" Shadow="0,3,14,#0000001A">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="15">
+                    <Border BackgroundColor="#E6F6F1" StrokeThickness="0" StrokeShape="RoundRectangle 100"
+                            HeightRequest="64" WidthRequest="64">
+                        <Label x:Name="IconeTriagem" Text="🩺" FontSize="30"
+                               HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Border>
+
+                    <VerticalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                        <Label x:Name="TituloTriagem" FontSize="20" FontAttributes="Bold" TextColor="#0F172A"/>
+                        <Label x:Name="ProgressoTexto" Text="Pergunta 0 de 0" FontSize="13" TextColor="#6B7280"/>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <ProgressBar x:Name="BarraProgresso" Progress="0" ProgressColor="#10B981"/>
+                            <Label x:Name="ProgressoPercentual" Grid.Column="1" Text="0%" FontSize="13"
+                                   TextColor="#374151" VerticalOptions="Center"/>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Grid>
+            </Border>
+
+            <!-- DADOS INICIAIS -->
+            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="18" Shadow="0,2,10,#00000015">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Dados iniciais" FontSize="18" FontAttributes="Bold" TextColor="#0F172A"/>
+
+                    <Label Text="Nome completo" TextColor="#374151"/>
+                    <Border Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10,0">
+                        <Entry x:Name="Nome" Placeholder="Digite o nome"
+                               TextColor="Black" PlaceholderColor="#9CA3AF" BackgroundColor="Transparent"/>
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Idade" TextColor="#374151"/>
+                            <Border Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10,0">
+                                <Entry x:Name="Idade" Placeholder="Digite a idade" Keyboard="Numeric"
+                                       TextColor="Black" PlaceholderColor="#9CA3AF" BackgroundColor="Transparent"/>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="6">
+                            <Label Text="Sexo" TextColor="#374151"/>
+                            <Border Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10,0">
+                                <Picker x:Name="Sexo" Title="Selecione" TextColor="Black" BackgroundColor="Transparent">
+                                    <Picker.ItemsSource>
+                                        <x:Array Type="{x:Type x:String}">
+                                            <x:String>Feminino</x:String>
+                                            <x:String>Masculino</x:String>
+                                            <x:String>Outro</x:String>
+                                            <x:String>Prefiro não informar</x:String>
+                                        </x:Array>
+                                    </Picker.ItemsSource>
+                                </Picker>
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- PERGUNTAS -->
+            <Label Text="Perguntas da triagem" FontSize="18" FontAttributes="Bold" TextColor="#0F172A"/>
+
+            <VerticalStackLayout x:Name="ListaPerguntas" Spacing="12">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="models:PerguntaRespondivel">
+                        <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="18" Shadow="0,2,10,#00000012">
+                            <VerticalStackLayout Spacing="12">
+
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                    <Border BackgroundColor="#10B981" StrokeThickness="0" StrokeShape="RoundRectangle 100"
+                                            HeightRequest="32" WidthRequest="32" VerticalOptions="Start">
+                                        <Label Text="{Binding Numero}" TextColor="White" FontAttributes="Bold"
+                                               HorizontalOptions="Center" VerticalOptions="Center"/>
+                                    </Border>
+                                    <Label Grid.Column="1" Text="{Binding Texto}" FontSize="15"
+                                           TextColor="#0F172A" LineBreakMode="WordWrap" VerticalOptions="Center"/>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                    <Button Text="Sim"
+                                            Clicked="ResponderSim"
+                                            CornerRadius="10" HeightRequest="44"
+                                            BorderWidth="1.5" BorderColor="#CBD5E1"
+                                            BackgroundColor="White" TextColor="#374151">
+                                        <Button.Triggers>
+                                            <DataTrigger TargetType="Button" Binding="{Binding SimSelecionado}" Value="True">
+                                                <Setter Property="BackgroundColor" Value="#10B981"/>
+                                                <Setter Property="TextColor" Value="White"/>
+                                                <Setter Property="BorderColor" Value="#10B981"/>
+                                            </DataTrigger>
+                                        </Button.Triggers>
+                                    </Button>
+
+                                    <Button Grid.Column="1" Text="Não"
+                                            Clicked="ResponderNao"
+                                            CornerRadius="10" HeightRequest="44"
+                                            BorderWidth="1.5" BorderColor="#CBD5E1"
+                                            BackgroundColor="White" TextColor="#374151">
+                                        <Button.Triggers>
+                                            <DataTrigger TargetType="Button" Binding="{Binding NaoSelecionado}" Value="True">
+                                                <Setter Property="BackgroundColor" Value="#0F172A"/>
+                                                <Setter Property="TextColor" Value="White"/>
+                                                <Setter Property="BorderColor" Value="#0F172A"/>
+                                            </DataTrigger>
+                                        </Button.Triggers>
+                                    </Button>
+                                </Grid>
+
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+            <!-- AÇÕES -->
+            <Button Text="🗑 Limpar respostas"
+                    Clicked="Limpar"
+                    BackgroundColor="White"
+                    BorderColor="#10B981" BorderWidth="1.5"
+                    TextColor="#10B981"
+                    CornerRadius="12" HeightRequest="48"/>
+
+            <Button Text="Finalizar ✓"
+                    Clicked="Finalizar"
+                    BackgroundColor="#10B981"
+                    TextColor="White"
+                    FontAttributes="Bold"
+                    FontSize="16"
+                    CornerRadius="12" HeightRequest="52"/>
+
+            <BoxView HeightRequest="20" Color="Transparent"/>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

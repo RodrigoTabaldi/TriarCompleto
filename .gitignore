@@ -1,0 +1,29 @@
+# Build
+bin/
+obj/
+publish/
+
+# IDE
+.vs/
+.idea/
+*.user
+
+# Sistema
+*.log
+.DS_Store
+
+# Segredos (nunca versionar)
+.env
+*.env
+!.env.example
+
+# Assinatura Android / Firebase (nunca versionar)
+*.keystore
+*.jks
+google-services.json
+firebase-debug.log
+.firebase/
+
+# Pacotes gerados (APK/AAB de demonstração)
+*.apk
+*.aab

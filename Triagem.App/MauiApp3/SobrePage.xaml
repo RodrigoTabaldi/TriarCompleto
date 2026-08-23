@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MauiApp3.SobrePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    BackgroundColor="#F5F7F6"
+    Shell.NavBarIsVisible="False">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="18"
+                             MaximumWidthRequest="700"
+                             HorizontalOptions="Fill">
+
+            <HorizontalStackLayout Spacing="8">
+                <Label Text="←" FontSize="22" TextColor="#10B981" FontAttributes="Bold"/>
+                <Label Text="Voltar" TextColor="#10B981" FontAttributes="Bold" VerticalOptions="Center"/>
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="Voltar"/>
+                </HorizontalStackLayout.GestureRecognizers>
+            </HorizontalStackLayout>
+
+            <Image Source="logo.png" HeightRequest="90" HorizontalOptions="Center"/>
+
+            <Label Text="Sobre o projeto" FontSize="24" FontAttributes="Bold"
+                   TextColor="#0F172A" HorizontalOptions="Center"/>
+
+            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="20" Shadow="0,3,14,#0000001A">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="O que é o Triar?" FontAttributes="Bold" FontSize="17" TextColor="#0F172A"/>
+                    <Label TextColor="#374151" FontSize="14"
+                           Text="O Triar é um aplicativo de triagens em saúde desenvolvido para fins acadêmicos. Ele permite aplicar questionários de sim ou não com pesos configuráveis e obter uma classificação imediata do resultado, ajudando a orientar a busca por atendimento profissional."/>
+
+                    <Label Text="Como as triagens funcionam?" FontAttributes="Bold" FontSize="17" TextColor="#0F172A"/>
+                    <Label TextColor="#374151" FontSize="14"
+                           Text="Cada pergunta respondida com “Sim” soma o seu peso à pontuação final. A pontuação é comparada com as faixas de resultado configuradas na triagem (por exemplo: baixo, moderado e alto risco), e o app exibe a classificação e uma recomendação."/>
+
+                    <Label Text="Crie suas próprias triagens" FontAttributes="Bold" FontSize="17" TextColor="#0F172A"/>
+                    <Label TextColor="#374151" FontSize="14"
+                           Text="Além das triagens padrão, você pode criar triagens personalizadas: defina as perguntas, o peso de cada uma e as faixas de resultado. Suas triagens ficam salvas na home e podem ser aplicadas em quantas pessoas você quiser."/>
+
+                    <Label Text="Aviso importante" FontAttributes="Bold" FontSize="17" TextColor="#EF4444"/>
+                    <Label TextColor="#374151" FontSize="14"
+                           Text="Os resultados são apenas uma orientação inicial e não substituem consulta, diagnóstico ou tratamento realizados por profissionais de saúde."/>
+                </VerticalStackLayout>
+            </Border>
+
+            <BoxView HeightRequest="20" Color="Transparent"/>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

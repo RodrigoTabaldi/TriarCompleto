@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MauiApp3.CriarTriagemPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:models="clr-namespace:MauiApp3.Models"
+    BackgroundColor="#F5F7F6"
+    Shell.NavBarIsVisible="False">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="18"
+                             MaximumWidthRequest="820"
+                             HorizontalOptions="Fill">
+
+            <!-- VOLTAR -->
+            <HorizontalStackLayout Spacing="8">
+                <Label Text="←" FontSize="22" TextColor="#10B981" FontAttributes="Bold"/>
+                <Label Text="Voltar" TextColor="#10B981" FontAttributes="Bold" VerticalOptions="Center"/>
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="Voltar"/>
+                </HorizontalStackLayout.GestureRecognizers>
+            </HorizontalStackLayout>
+
+            <Image Source="logo.png" HeightRequest="60" HorizontalOptions="Center"/>
+
+            <Label x:Name="TituloPagina" Text="Criar sua triagem"
+                   FontSize="24" FontAttributes="Bold" TextColor="#0F172A"/>
+            <Label Text="Monte uma triagem personalizada: perguntas de sim ou não com pesos e faixas de resultado configuráveis."
+                   FontSize="14" TextColor="#6B7280"/>
+
+            <!-- DADOS GERAIS -->
+            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="18" Shadow="0,2,10,#00000015">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Dados da triagem" FontSize="18" FontAttributes="Bold" TextColor="#0F172A"/>
+
+                    <Label Text="Título *" TextColor="#374151"/>
+                    <Border Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10,0">
+                        <Entry x:Name="Titulo" Placeholder="Ex.: Triagem de Sono"
+                               TextColor="Black" PlaceholderColor="#9CA3AF" BackgroundColor="Transparent"/>
+                    </Border>
+
+                    <Label Text="Público alvo" TextColor="#374151"/>
+                    <Border Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10,0">
+                        <Entry x:Name="PublicoAlvo" Placeholder="Ex.: Adolescentes e adultos"
+                               TextColor="Black" PlaceholderColor="#9CA3AF" BackgroundColor="Transparent"/>
+                    </Border>
+
+                    <Label Text="Descrição" TextColor="#374151"/>
+                    <Border Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10,0">
+                        <Entry x:Name="Descricao" Placeholder="Explique o objetivo desta triagem"
+                               TextColor="Black" PlaceholderColor="#9CA3AF" BackgroundColor="Transparent"/>
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- PERGUNTAS -->
+            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="18" Shadow="0,2,10,#00000015">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Perguntas (sim / não)" FontSize="18" FontAttributes="Bold" TextColor="#0F172A"/>
+                    <Label Text="Cada resposta “Sim” soma o peso da pergunta à pontuação final."
+                           FontSize="13" TextColor="#6B7280"/>
+
+                    <VerticalStackLayout x:Name="ListaPerguntas" Spacing="10">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="models:PerguntaEditavel">
+                                <Border Stroke="#E5E7EB" StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="12">
+                                    <Grid ColumnDefinitions="Auto,*,90,Auto" ColumnSpacing="10" RowDefinitions="Auto,Auto">
+
+                                        <Border BackgroundColor="#10B981" StrokeThickness="0" StrokeShape="RoundRectangle 100"
+                                                HeightRequest="30" WidthRequest="30" VerticalOptions="Center">
+                                            <Label Text="{Binding Numero}" TextColor="White" FontAttributes="Bold" FontSize="13"
+                                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                                        </Border>
+
+                                        <Border Grid.Column="1" Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="8,0">
+                                            <Entry Text="{Binding Texto, Mode=TwoWay}"
+                                                   Placeholder="Texto da pergunta"
+                                                   TextColor="Black" PlaceholderColor="#9CA3AF" BackgroundColor="Transparent"/>
+                                        </Border>
+
+                                        <Border Grid.Column="2" Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="8,0">
+                                            <Entry Text="{Binding Peso, Mode=TwoWay}"
+                                                   Placeholder="Peso" Keyboard="Numeric"
+                                                   TextColor="Black" PlaceholderColor="#9CA3AF" BackgroundColor="Transparent"/>
+                                        </Border>
+
+                                        <Button Grid.Column="3" Text="✕"
+                                                Clicked="RemoverPergunta"
+                                                BackgroundColor="#FEE2E2" TextColor="#EF4444"
+                                                CornerRadius="8" WidthRequest="38" HeightRequest="38"/>
+
+                                        <Label Grid.Row="1" Grid.Column="2" Text="peso" FontSize="10"
+                                               TextColor="#9CA3AF" HorizontalOptions="Center"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+
+                    <Button Text="＋ Adicionar pergunta"
+                            Clicked="AdicionarPergunta"
+                            BackgroundColor="#E6F6F1" TextColor="#10B981" FontAttributes="Bold"
+                            CornerRadius="10" HeightRequest="44"/>
+
+                    <Label x:Name="PesoTotalLabel" Text="Pontuação máxima possível: 0"
+                           FontSize="13" FontAttributes="Bold" TextColor="#374151"/>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- FAIXAS DE RESULTADO -->
+            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="18" Shadow="0,2,10,#00000015">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Faixas de resultado (metas)" FontSize="18" FontAttributes="Bold" TextColor="#0F172A"/>
+                    <Label Text="Defina o resultado exibido para cada intervalo de pontuação. As faixas devem cobrir de 0 até a pontuação máxima, sem sobreposição."
+                           FontSize="13" TextColor="#6B7280"/>
+
+                    <VerticalStackLayout x:Name="ListaFaixas" Spacing="10">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="models:FaixaEditavel">
+                                <Border Stroke="#E5E7EB" StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="12">
+                                    <VerticalStackLayout Spacing="8">
+
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                            <Border Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="8,0">
+                                                <Entry Text="{Binding Titulo, Mode=TwoWay}"
+                                                       Placeholder="Título (ex.: Baixo risco)"
+                                                       TextColor="Black" PlaceholderColor="#9CA3AF" BackgroundColor="Transparent"/>
+                                            </Border>
+                                            <Button Grid.Column="1" Text="✕"
+                                                    Clicked="RemoverFaixa"
+                                                    BackgroundColor="#FEE2E2" TextColor="#EF4444"
+                                                    CornerRadius="8" WidthRequest="38" HeightRequest="38"/>
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="Auto,90,Auto,90,*" ColumnSpacing="8">
+                                            <Label Text="De" VerticalOptions="Center" TextColor="#374151"/>
+                                            <Border Grid.Column="1" Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="8,0">
+                                                <Entry Text="{Binding Min, Mode=TwoWay}" Keyboard="Numeric"
+                                                       TextColor="Black" BackgroundColor="Transparent"/>
+                                            </Border>
+                                            <Label Grid.Column="2" Text="até" VerticalOptions="Center" TextColor="#374151"/>
+                                            <Border Grid.Column="3" Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="8,0">
+                                                <Entry Text="{Binding Max, Mode=TwoWay}" Keyboard="Numeric"
+                                                       TextColor="Black" BackgroundColor="Transparent"/>
+                                            </Border>
+                                            <Label Grid.Column="4" Text="pontos" VerticalOptions="Center" FontSize="12" TextColor="#9CA3AF"/>
+                                        </Grid>
+
+                                        <Border Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="8,0">
+                                            <Entry Text="{Binding Recomendacao, Mode=TwoWay}"
+                                                   Placeholder="Recomendação exibida no resultado"
+                                                   TextColor="Black" PlaceholderColor="#9CA3AF" BackgroundColor="Transparent"/>
+                                        </Border>
+
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+
+                    <Button Text="＋ Adicionar faixa"
+                            Clicked="AdicionarFaixa"
+                            BackgroundColor="#E6F6F1" TextColor="#10B981" FontAttributes="Bold"
+                            CornerRadius="10" HeightRequest="44"/>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- SALVAR -->
+            <Button x:Name="BotaoSalvar"
+                    Text="Salvar triagem ✓"
+                    Clicked="Salvar"
+                    BackgroundColor="#10B981" TextColor="White"
+                    FontAttributes="Bold" FontSize="16"
+                    CornerRadius="12" HeightRequest="52"/>
+
+            <BoxView HeightRequest="20" Color="Transparent"/>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
