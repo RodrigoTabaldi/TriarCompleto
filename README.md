@@ -197,6 +197,4 @@ outro) — além de `PasswordHasher`, `TokenService`, `ClaimsPrincipalExtensions
 dotnet test Triagem.API.Tests/Triagem.API.Tests.csproj
 ```
 
-Um workflow do GitHub Actions (`.github/workflows/ci.yml`) roda build + testes a cada
-push/PR na branch `main`. O app MAUI não entra no CI (build multiplataforma exige
-workloads pesados por runner); veja o comentário no próprio workflow.
+
