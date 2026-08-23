@@ -31,12 +31,21 @@ public static class ApiService
     /// constante MODO_LOCAL — o mesmo código-fonte gera tanto o APK de demonstração
     /// offline quanto o app normal que consome a API.
     /// </summary>
-    public static bool ModoLocal { get; } =
+    private static readonly bool CompiladoEmModoLocal =
 #if MODO_LOCAL
         true;
 #else
         false;
 #endif
+
+    /// <summary>
+    /// Além do build de demonstração (<see cref="CompiladoEmModoLocal"/>), a Triagem
+    /// Individual também passa a usar o <see cref="BancoLocal"/> em tempo de execução,
+    /// mesmo em builds normais que falam com a API — ver <see cref="IniciarModoIndividualAsync"/>.
+    /// </summary>
+    private static bool _forcarModoLocalIndividual;
+
+    public static bool ModoLocal => CompiladoEmModoLocal || _forcarModoLocalIndividual;
 
     /// <summary>
     /// Id do usuário autenticado nesta sessão. No modo local faz o papel que o JWT faz
@@ -277,6 +286,37 @@ public static class ApiService
 
     /// <summary>Marcador gravado no lugar do JWT quando não há API. Nunca sai do aparelho.</summary>
     private const string TokenSessaoLocal = "sessao-local";
+
+    private const string ChaveUsuarioIndividualId = "triar_individual_usuario_id";
+
+    /// <summary>
+    /// Entra na Triagem Individual: sem login nem cadastro, sem passar pela API — as
+    /// triagens e o histórico ficam só no <see cref="BancoLocal"/> deste aparelho. Na
+    /// primeira vez cria uma conta local "fantasma" para dar um dono aos dados; nas
+    /// próximas aberturas reaproveita o mesmo id, então o que a pessoa já triou continua
+    /// disponível.
+    /// </summary>
+    public static async Task<Usuario> IniciarModoIndividualAsync()
+    {
+        _forcarModoLocalIndividual = true;
+        LimparCache();
+
+        var idSalvo = await SecureStorage.Default.GetAsync(ChaveUsuarioIndividualId);
+        if (int.TryParse(idSalvo, out var id))
+        {
+            var existente = await BancoLocal.ObterUsuarioAsync(id);
+            if (existente is not null)
+            {
+                _usuarioAtualId = existente.Id;
+                return existente;
+            }
+        }
+
+        var usuario = await BancoLocal.CriarUsuarioIndividualAsync();
+        _usuarioAtualId = usuario.Id;
+        await SecureStorage.Default.SetAsync(ChaveUsuarioIndividualId, usuario.Id.ToString());
+        return usuario;
+    }
 
     // ---------------- Triagens ----------------
 

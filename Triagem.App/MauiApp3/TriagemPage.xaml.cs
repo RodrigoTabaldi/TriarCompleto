@@ -72,7 +72,7 @@ public partial class TriagemPage : ContentPage
                 App.UsuarioLogado = null;
                 ApiService.Logout();
                 await DisplayAlertAsync("Sessão expirada", "Faça login novamente para continuar.", "OK");
-                await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+                await Shell.Current.GoToAsync($"//{nameof(EscolhaModoPage)}");
                 return;
             }
 

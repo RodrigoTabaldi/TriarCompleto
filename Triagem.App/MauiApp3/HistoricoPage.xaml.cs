@@ -113,7 +113,7 @@ public partial class HistoricoPage : ContentPage
         ApiService.Logout();
         App.UsuarioLogado = null;
         await DisplayAlertAsync("Sessão expirada", "Faça login novamente para continuar.", "OK");
-        await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+        await Shell.Current.GoToAsync($"//{nameof(EscolhaModoPage)}");
     }
 
     private async void ExportarExcel(object? sender, EventArgs e)

@@ -226,7 +226,8 @@
                         </FlexLayout>
                     </Border>
 
-                    <Button Text="Sair da conta"
+                    <Button x:Name="BotaoSair"
+                            Text="Sair da conta"
                             Clicked="Sair"
                             BackgroundColor="Transparent"
                             TextColor="#EF4444"

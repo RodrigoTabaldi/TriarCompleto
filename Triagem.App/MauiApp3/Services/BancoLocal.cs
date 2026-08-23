@@ -121,6 +121,34 @@ public static partial class BancoLocal
         return await db.Table<UsuarioLocal>().Where(u => u.Id == usuarioId).FirstOrDefaultAsync() is not null;
     }
 
+    public static async Task<Usuario?> ObterUsuarioAsync(int usuarioId)
+    {
+        var db = await ConexaoAsync();
+        var usuario = await db.Table<UsuarioLocal>().Where(u => u.Id == usuarioId).FirstOrDefaultAsync();
+        return usuario is null ? null : new Usuario { Id = usuario.Id, Nome = usuario.Nome, Email = usuario.Email };
+    }
+
+    /// <summary>
+    /// Cria a conta "fantasma" usada pela Triagem Individual: sem cadastro nem senha
+    /// visível ao usuário, existe apenas para dar um dono às triagens salvas no
+    /// próprio aparelho (mesma tabela/regras do modo com conta). Chamada uma única vez
+    /// por dispositivo; o id gerado é reaproveitado nas próximas aberturas do app.
+    /// </summary>
+    public static async Task<Usuario> CriarUsuarioIndividualAsync()
+    {
+        var db = await ConexaoAsync();
+
+        var usuario = new UsuarioLocal
+        {
+            Nome = "Você",
+            Email = $"individual-{Guid.NewGuid():N}@local.triar",
+            SenhaHash = HashSenha(Guid.NewGuid().ToString())
+        };
+        await db.InsertAsync(usuario);
+
+        return new Usuario { Id = usuario.Id, Nome = usuario.Nome, Email = usuario.Email };
+    }
+
     // ---------------- Catálogo de triagens ----------------
 
     public static async Task<List<TriagemResumo>> ListarTriagensAsync(int usuarioId)

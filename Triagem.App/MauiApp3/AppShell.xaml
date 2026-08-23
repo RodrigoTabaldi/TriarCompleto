@@ -5,9 +5,17 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:MauiApp3">
 
+    <!--
+        Um único ShellContent de raiz, igual ao app original: com dois ShellContent no
+        nível do Shell (EscolhaModoPage e LoginPage) o MAUI passa a tratá-los como itens
+        de flyout, e essa troca de chrome derruba o app no Windows (crash nativo 0xc000027b
+        dentro de Microsoft.UI.Xaml.dll logo na abertura). Todas as outras telas — LoginPage
+        incluída — são alcançadas por rota relativa via Routing.RegisterRoute, como já
+        acontecia com HomePage, CriarTriagemPage etc.
+    -->
     <ShellContent
-        Title="Login"
-        ContentTemplate="{DataTemplate local:LoginPage}"
-        Route="LoginPage" />
+        Title="Início"
+        ContentTemplate="{DataTemplate local:EscolhaModoPage}"
+        Route="EscolhaModoPage" />
 
 </Shell>

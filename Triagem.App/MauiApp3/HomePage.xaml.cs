@@ -19,10 +19,12 @@ public partial class HomePage : ContentPage
 
         if (App.UsuarioLogado is { } u)
         {
-            NomeUsuario.Text = u.Nome;
-            EmailUsuario.Text = u.Email;
+            NomeUsuario.Text = App.ModoIndividual ? "Triagem individual" : u.Nome;
+            EmailUsuario.Text = App.ModoIndividual ? "Dados salvos só neste aparelho" : u.Email;
             InicialUsuario.Text = string.IsNullOrEmpty(u.Nome) ? "U" : u.Nome[..1].ToUpper();
         }
+
+        BotaoSair.Text = App.ModoIndividual ? "← Trocar modo de triagem" : "Sair da conta";
     }
 
     protected override async void OnAppearing()
@@ -45,7 +47,7 @@ public partial class HomePage : ContentPage
         {
             if (App.UsuarioLogado is not { } usuario)
             {
-                await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+                await Shell.Current.GoToAsync($"//{nameof(EscolhaModoPage)}");
                 return;
             }
 
@@ -71,7 +73,7 @@ public partial class HomePage : ContentPage
         App.UsuarioLogado = null;
         ApiService.Logout();
         await DisplayAlertAsync("Sessão expirada", "Faça login novamente para continuar.", "OK");
-        await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+        await Shell.Current.GoToAsync($"//{nameof(EscolhaModoPage)}");
     }
 
     private void AplicarFiltro()
@@ -133,12 +135,27 @@ public partial class HomePage : ContentPage
 
     private async void Sair(object? sender, EventArgs e)
     {
+        if (App.ModoIndividual)
+        {
+            // Não é logout: as triagens continuam salvas no aparelho para a próxima
+            // vez que a pessoa escolher "Triagem Individual" de novo.
+            var trocar = await DisplayAlertAsync("Trocar modo",
+                "Voltar para a tela inicial? Suas triagens continuam salvas neste aparelho.",
+                "Voltar", "Cancelar");
+            if (!trocar) return;
+
+            App.UsuarioLogado = null;
+            App.ModoIndividual = false;
+            await Shell.Current.GoToAsync($"//{nameof(EscolhaModoPage)}");
+            return;
+        }
+
         var confirmar = await DisplayAlertAsync("Sair", "Deseja sair da sua conta?", "Sair", "Cancelar");
         if (!confirmar) return;
 
         App.UsuarioLogado = null;
         ApiService.Logout(); // limpa o token JWT e o cache local da sessão
-        await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+        await Shell.Current.GoToAsync($"//{nameof(EscolhaModoPage)}");
     }
 
     // ---------------- Edição da home ----------------

@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MauiApp3.EscolhaModoPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    BackgroundColor="#F5F7F6"
+    Shell.NavBarIsVisible="False">
+
+    <ScrollView>
+        <VerticalStackLayout
+            VerticalOptions="Center"
+            Padding="20"
+            Spacing="20">
+
+            <!-- CARD -->
+            <Border
+                BackgroundColor="White"
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 20"
+                Padding="30"
+                HorizontalOptions="Center"
+                MaximumWidthRequest="720"
+                WidthRequest="{OnPlatform Android=380, iOS=380, WinUI=720}"
+                Shadow="0,4,20,#00000020">
+
+                <VerticalStackLayout Spacing="20">
+
+                    <!-- LOGO -->
+                    <Image Source="logo.png" HeightRequest="70" HorizontalOptions="Center"/>
+
+                    <!-- TÍTULO -->
+                    <Label
+                        Text="Como você quer fazer a triagem?"
+                        FontSize="26"
+                        FontAttributes="Bold"
+                        HorizontalOptions="Center"
+                        HorizontalTextAlignment="Center"
+                        TextColor="#0F172A"/>
+
+                    <Label
+                        Text="Escolha o tipo de atendimento para continuar"
+                        FontSize="14"
+                        HorizontalOptions="Center"
+                        HorizontalTextAlignment="Center"
+                        TextColor="#6B7280"/>
+
+                    <!-- OPÇÕES -->
+                    <FlexLayout
+                        x:Name="LayoutOpcoes"
+                        Wrap="Wrap"
+                        JustifyContent="Center"
+                        AlignItems="Stretch"
+                        Margin="0,10,0,0">
+
+                        <!-- INDIVIDUAL -->
+                        <Border
+                            x:Name="CardIndividual"
+                            BackgroundColor="White"
+                            Stroke="#E5E7EB"
+                            StrokeThickness="1.5"
+                            StrokeShape="RoundRectangle 16"
+                            Padding="22"
+                            Margin="0,0,10,10"
+                            WidthRequest="300">
+
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="SelecionarIndividual"/>
+                            </Border.GestureRecognizers>
+
+                            <VerticalStackLayout Spacing="10">
+                                <Border
+                                    BackgroundColor="#E6F6F1"
+                                    StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 14"
+                                    HeightRequest="48" WidthRequest="48"
+                                    HorizontalOptions="Start">
+                                    <Image Source="icone_individual.png" WidthRequest="24" HeightRequest="24" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Border>
+
+                                <Label Text="Triagem Individual" FontSize="18" FontAttributes="Bold" TextColor="#0F172A"/>
+
+                                <Label
+                                    Text="Resultado exibido na hora, ideal para um atendimento rápido."
+                                    FontSize="13"
+                                    TextColor="#6B7280"/>
+
+                                <Border
+                                    BackgroundColor="#F3F4F6"
+                                    StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 100"
+                                    Padding="10,4"
+                                    HorizontalOptions="Start">
+                                    <HorizontalStackLayout Spacing="6">
+                                        <Image Source="icone_privado.png" WidthRequest="14" HeightRequest="14" VerticalOptions="Center"/>
+                                        <Label Text="Não salva dados" FontSize="11" TextColor="#374151" VerticalOptions="Center"/>
+                                    </HorizontalStackLayout>
+                                </Border>
+
+                                <Label Text="Selecionar →" TextColor="#10B981" FontAttributes="Bold" Margin="0,6,0,0">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="SelecionarIndividual"/>
+                                    </Label.GestureRecognizers>
+                                </Label>
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <!-- GRUPO -->
+                        <Border
+                            x:Name="CardGrupo"
+                            BackgroundColor="White"
+                            Stroke="#E5E7EB"
+                            StrokeThickness="1.5"
+                            StrokeShape="RoundRectangle 16"
+                            Padding="22"
+                            Margin="0,0,0,10"
+                            WidthRequest="300">
+
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="SelecionarGrupo"/>
+                            </Border.GestureRecognizers>
+
+                            <VerticalStackLayout Spacing="10">
+                                <Border
+                                    BackgroundColor="#E6F6F1"
+                                    StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 14"
+                                    HeightRequest="48" WidthRequest="48"
+                                    HorizontalOptions="Start">
+                                    <Image Source="icone_grupo.png" WidthRequest="26" HeightRequest="24" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Border>
+
+                                <Label Text="Triagem em Grupo" FontSize="18" FontAttributes="Bold" TextColor="#0F172A"/>
+
+                                <Label
+                                    Text="Faça a triagem de várias pessoas e acompanhe o histórico de cada uma."
+                                    FontSize="13"
+                                    TextColor="#6B7280"/>
+
+                                <Border
+                                    BackgroundColor="#F3F4F6"
+                                    StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 100"
+                                    Padding="10,4"
+                                    HorizontalOptions="Start">
+                                    <HorizontalStackLayout Spacing="6">
+                                        <Image Source="icone_salvar.png" WidthRequest="14" HeightRequest="14" VerticalOptions="Center"/>
+                                        <Label Text="Salva dados" FontSize="11" TextColor="#374151" VerticalOptions="Center"/>
+                                    </HorizontalStackLayout>
+                                </Border>
+
+                                <Label Text="Selecionar →" TextColor="#10B981" FontAttributes="Bold" Margin="0,6,0,0">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="SelecionarGrupo"/>
+                                    </Label.GestureRecognizers>
+                                </Label>
+                            </VerticalStackLayout>
+                        </Border>
+
+                    </FlexLayout>
+
+                    <!-- CONTINUAR -->
+                    <Button
+                        x:Name="BotaoContinuar"
+                        Text="Continuar"
+                        Clicked="Continuar"
+                        IsEnabled="False"
+                        BackgroundColor="#10B981"
+                        TextColor="White"
+                        FontAttributes="Bold"
+                        CornerRadius="10"
+                        HeightRequest="50"/>
+
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
