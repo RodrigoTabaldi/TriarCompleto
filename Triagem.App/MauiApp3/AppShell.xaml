@@ -6,8 +6,8 @@
     xmlns:local="clr-namespace:MauiApp3">
 
     <ShellContent
-        Title="Login"
-        ContentTemplate="{DataTemplate local:LoginPage}"
-        Route="LoginPage" />
+        Title="Início"
+        ContentTemplate="{DataTemplate local:EscolhaModoPage}"
+        Route="EscolhaModoPage" />
 
 </Shell>

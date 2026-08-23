@@ -122,6 +122,28 @@ public static partial class BancoLocal
 
     // ---------------- Catálogo de triagens ----------------
 
+    public static async Task<Usuario?> ObterUsuarioAsync(int usuarioId)
+    {
+        var db = await ConexaoAsync();
+        var usuario = await db.Table<UsuarioLocal>().Where(u => u.Id == usuarioId).FirstOrDefaultAsync();
+        return usuario is null ? null : new Usuario { Id = usuario.Id, Nome = usuario.Nome, Email = usuario.Email };
+    }
+
+    public static async Task<Usuario> CriarUsuarioIndividualAsync()
+    {
+        var db = await ConexaoAsync();
+
+        var usuario = new UsuarioLocal
+        {
+            Nome = "Você",
+            Email = $"individual-{Guid.NewGuid():N}@local.triar",
+            SenhaHash = HashSenha(Guid.NewGuid().ToString())
+        };
+        await db.InsertAsync(usuario);
+
+        return new Usuario { Id = usuario.Id, Nome = usuario.Nome, Email = usuario.Email };
+    }
+
     public static async Task<List<TriagemResumo>> ListarTriagensAsync(int usuarioId)
     {
         var db = await ConexaoAsync();

@@ -26,6 +26,7 @@ public partial class LoginPage : ContentPage
         if (usuario is null) return;
 
         App.UsuarioLogado = usuario;
+        App.ModoIndividual = false;
 
         // Rota relativa, e não "//HomePage": a HomePage é registrada por
         // Routing.RegisterRoute (rota global), e o Shell não aceita rota global como
@@ -57,6 +58,7 @@ public partial class LoginPage : ContentPage
             }
 
             App.UsuarioLogado = usuario;
+            App.ModoIndividual = false;
             Senha.Text = "";
 
             await Shell.Current.GoToAsync(nameof(HomePage));

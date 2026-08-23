@@ -36,6 +36,21 @@ public class TriagemResumo : ObservableBase
         set { if (Set(ref _modoEdicao, value)) Notificar(nameof(ModoNormal)); }
     }
     public bool ModoNormal => !ModoEdicao;
+
+    public string ImagemHome
+    {
+        get
+        {
+            var titulo = Titulo.ToLowerInvariant();
+            if (titulo.Contains("mental")) return "triagem_mental.png";
+            if (titulo.Contains("infantil") || titulo.Contains("criança") || titulo.Contains("crianca")) return "triagem_infantil.png";
+            if (titulo.Contains("mulher")) return "triagem_mulher.png";
+            if (titulo.Contains("idoso")) return "triagem_idoso.png";
+            if (titulo.Contains("respirat")) return "triagem_respiratoria.png";
+            if (titulo.Contains("clínica") || titulo.Contains("clinica") || titulo.Contains("geral")) return "triagem_clinica.png";
+            return "triagem_clinica.png";
+        }
+    }
 }
 
 public class PerguntaDto

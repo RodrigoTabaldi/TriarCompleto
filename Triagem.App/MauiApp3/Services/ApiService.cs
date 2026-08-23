@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -22,6 +23,7 @@ public static class ApiService
 
     // Cache thread-safe com expiração (5 min para triagens, 10 min para histórico)
     private static readonly ConcurrentDictionary<string, (object Data, DateTime ExpiresAt)> Cache = new();
+    private static bool _forcarModoLocalIndividual;
 
     /// <summary>
     /// Modo local (demonstração): o app não fala com API nenhuma e usa o
@@ -30,12 +32,13 @@ public static class ApiService
     /// constante MODO_LOCAL — o mesmo código-fonte gera tanto o APK de demonstração
     /// offline quanto o app normal que consome a API.
     /// </summary>
-    public static bool ModoLocal { get; } =
+    public static bool ModoLocal =>
 #if MODO_LOCAL
-        true;
+        true
 #else
-        false;
+        _forcarModoLocalIndividual
 #endif
+        ;
 
     /// <summary>
     /// Id do usuário autenticado nesta sessão. No modo local faz o papel que o JWT faz
@@ -106,6 +109,9 @@ public static class ApiService
         _usuarioAtualId = 0;
         SecureStorage.Default.RemoveAll();
     }
+
+    public static bool EhSessaoExpirada(Exception ex) =>
+        ex is HttpRequestException { StatusCode: HttpStatusCode.Unauthorized };
 
     // ---------------- Sessão persistida (SecureStorage) ----------------
     // O token e os dados do usuário logado são salvos no armazenamento seguro do
@@ -264,6 +270,30 @@ public static class ApiService
 
     /// <summary>Marcador gravado no lugar do JWT quando não há API. Nunca sai do aparelho.</summary>
     private const string TokenSessaoLocal = "sessao-local";
+
+    private const string ChaveUsuarioIndividualId = "triar_individual_usuario_id";
+
+    public static async Task<Usuario> IniciarModoIndividualAsync()
+    {
+        _forcarModoLocalIndividual = true;
+        LimparCache();
+
+        var idSalvo = await SecureStorage.Default.GetAsync(ChaveUsuarioIndividualId);
+        if (int.TryParse(idSalvo, out var id))
+        {
+            var existente = await BancoLocal.ObterUsuarioAsync(id);
+            if (existente is not null)
+            {
+                _usuarioAtualId = existente.Id;
+                return existente;
+            }
+        }
+
+        var usuario = await BancoLocal.CriarUsuarioIndividualAsync();
+        _usuarioAtualId = usuario.Id;
+        await SecureStorage.Default.SetAsync(ChaveUsuarioIndividualId, usuario.Id.ToString());
+        return usuario;
+    }
 
     // ---------------- Triagens ----------------
 

@@ -34,6 +34,7 @@ public partial class CadastroPage : ContentPage
             {
                 // Cadastro já autentica (a API devolve o token). Entra direto na home.
                 App.UsuarioLogado = usuario;
+                App.ModoIndividual = false;
                 await Shell.Current.GoToAsync(nameof(HomePage));
             }
             else
