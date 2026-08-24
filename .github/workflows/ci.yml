@@ -15,7 +15,7 @@ jobs:
       - name: Instalar .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "10.0.x"
+          dotnet-version: "10.0.400"
 
       - name: Restaurar (com lockfile)
         run: dotnet restore Triagem.API.Tests/Triagem.API.Tests.csproj --locked-mode
@@ -43,26 +43,38 @@ jobs:
 
   build-app-android:
     name: Build do app Android
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
       - name: Instalar .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "10.0.x"
+          dotnet-version: "10.0.400"
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
 
       - name: Instalar workload MAUI Android
-        run: dotnet workload install maui-android
+        run: dotnet workload install maui-android --skip-manifest-update
 
-      - name: Restaurar app com lockfile
-        run: dotnet restore Triagem.App/MauiApp3/MauiApp3.csproj --locked-mode -p:TargetFramework=net10.0-android
+      # O csproj inclui iOS/Mac/Windows somente fora do Linux. Um lockfile gerado no
+      # Windows contém grafos extras e não funciona em --locked-mode no runner Linux.
+      # Os pacotes diretos e o SDK permanecem fixados; somente o grafo Android é refeito.
+      - name: Restaurar app Android
+        # Não passe TargetFramework como propriedade global: ela também seria aplicada
+        # ao Triagem.Core (net10.0), gerando NETSDK1005. No Linux o csproj já expõe só Android.
+        run: dotnet restore Triagem.App/MauiApp3/MauiApp3.csproj --force-evaluate
 
       - name: Compilar app Android
         run: dotnet build Triagem.App/MauiApp3/MauiApp3.csproj -f net10.0-android -c Debug --no-restore
 
       - name: Checar dependências do app
-        run: dotnet list Triagem.App/MauiApp3/MauiApp3.csproj package --vulnerable --include-transitive
+        run: dotnet list Triagem.App/MauiApp3/MauiApp3.csproj package --vulnerable --include-transitive --no-restore
 
   secret-scan:
     name: Verificação de segredos
