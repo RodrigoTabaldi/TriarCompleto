@@ -14,18 +14,20 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private const string VersionKey = "triar:triagens:version";
 
-    /// <summary>Versão atual do cache de triagens. Retorna -1 se o cache estiver fora do ar.</summary>
-    public async Task<long> GetVersionAsync()
+    /// <summary>Token atual da geração do cache de triagens.</summary>
+    public async Task<string> GetVersionAsync()
     {
         try
         {
             var raw = await cache.GetStringAsync(VersionKey);
-            return raw is null ? 0 : long.Parse(raw);
+            return raw ?? "0";
         }
         catch (Exception ex)
         {
             logger.LogWarning("Cache indisponível ao ler versão: {Erro}", ex.Message);
-            return -1;
+            // Token único impede reutilizar uma entrada potencialmente velha quando o
+            // cache voltar durante a requisição.
+            return $"nocache-{Guid.NewGuid():N}";
         }
     }
 
@@ -34,9 +36,10 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
     {
         try
         {
-            var atual = await GetVersionAsync();
-            if (atual < 0) return; // cache fora do ar: nada a invalidar
-            await cache.SetStringAsync(VersionKey, (atual + 1).ToString());
+            // Uma nova geração aleatória exige uma única escrita. Diferentemente de
+            // ler+incrementar, duas instâncias concorrentes nunca reutilizam a geração
+            // publicada pela outra e nenhuma entrada intermediária volta a ser visível.
+            await cache.SetStringAsync(VersionKey, Guid.NewGuid().ToString("N"));
         }
         catch (Exception ex)
         {

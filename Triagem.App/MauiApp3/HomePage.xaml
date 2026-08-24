@@ -190,7 +190,7 @@
                                     <Label Text="Exibir na home" VerticalOptions="Center" TextColor="#374151"/>
                                     <Switch Grid.Column="1" IsToggled="{Binding VisivelNaHome, Mode=TwoWay}" OnColor="#009B72"/>
                                     <Button Grid.Column="2" Text="✎" Clicked="EditarTriagem" BackgroundColor="#E6F6F1" CornerRadius="8" WidthRequest="40" HeightRequest="40" IsVisible="{Binding MinhaAutoria}" SemanticProperties.Description="Editar triagem e sua imagem"/>
-                                    <Button Grid.Column="3" Text="🗑" Clicked="ExcluirTriagem" BackgroundColor="#FEE2E2" TextColor="#EF4444" CornerRadius="8" WidthRequest="40" HeightRequest="40" IsVisible="{Binding MinhaAutoria}"/>
+                                    <Button Grid.Column="3" Text="🗑" Clicked="ExcluirTriagem" BackgroundColor="#FEE2E2" TextColor="#EF4444" CornerRadius="8" WidthRequest="40" HeightRequest="40" IsVisible="{Binding MinhaAutoria}" SemanticProperties.Description="Excluir triagem"/>
                                 </Grid>
                             </VerticalStackLayout>
                         </Border>
@@ -317,7 +317,7 @@
                                         <Label Text="Exibir na home" VerticalOptions="Center" TextColor="#374151"/>
                                         <Switch Grid.Column="1" IsToggled="{Binding VisivelNaHome, Mode=TwoWay}" OnColor="#009B72"/>
                                         <Button Grid.Column="2" Text="✎" Clicked="EditarTriagem" BackgroundColor="#E6F6F1" CornerRadius="8" WidthRequest="40" HeightRequest="40" IsVisible="{Binding MinhaAutoria}" SemanticProperties.Description="Editar triagem e sua imagem"/>
-                                        <Button Grid.Column="3" Text="🗑" Clicked="ExcluirTriagem" BackgroundColor="#FEE2E2" TextColor="#EF4444" CornerRadius="8" WidthRequest="40" HeightRequest="40" IsVisible="{Binding MinhaAutoria}"/>
+                                        <Button Grid.Column="3" Text="🗑" Clicked="ExcluirTriagem" BackgroundColor="#FEE2E2" TextColor="#EF4444" CornerRadius="8" WidthRequest="40" HeightRequest="40" IsVisible="{Binding MinhaAutoria}" SemanticProperties.Description="Excluir triagem"/>
                                     </Grid>
                                 </VerticalStackLayout>
                             </Grid>

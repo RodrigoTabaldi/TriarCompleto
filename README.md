@@ -8,8 +8,10 @@ com perguntas de **sim/não com pesos configuráveis** e **faixas de resultado p
 ```
 TriarCompleto/
 ├── Triagem.App/MauiApp3/      # App .NET MAUI (Android, iOS, Windows, macOS)
-├── Triagem.API/Triagem.API/   # API ASP.NET Core (.NET 8)
+├── Triagem.API/Triagem.API/   # API ASP.NET Core (.NET 10)
+├── Triagem.Core/              # Regras e criptografia compartilhadas entre API e app
 ├── Triagem.API.Tests/         # Testes automatizados (xUnit) da API
+├── Triagem.Core.Tests/        # Testes das regras compartilhadas e da criptografia
 ├── database/script.sql        # Script de referência do banco (SQL Server)
 ├── deploy/nginx/nginx.conf    # Load balancer (nginx, HTTP — uso local/dev)
 ├── deploy/nginx/nginx.conf.prod.example  # Referência de config com TLS para produção
@@ -34,7 +36,7 @@ App MAUI ──► nginx (load balancer :5036) ──► api1 / api2 (ASP.NET Co
 - **Segurança**:
   - **Autenticação JWT** — login/cadastro emitem um token; **todos** os endpoints de dados exigem `Authorization: Bearer <token>`. A identidade do usuário vem sempre do token, nunca de um `usuarioId` enviado pelo cliente (fecha IDOR) — inclusive na leitura de detalhe de uma triagem (`GET /api/triagens/{id}`), que só retorna triagens padrão do sistema ou criadas pelo próprio usuário autenticado.
   - Senhas com PBKDF2 (SHA-256, 100 mil iterações, salt aleatório); mínimo de 8 caracteres.
-  - **Nome do paciente criptografado em repouso** (AES-256-GCM, chave em `DataProtection:Key`) — o SQL Server Express usado neste projeto não suporta Transparent Data Encryption, então a proteção do campo mais identificável do histórico é feita na camada de aplicação (ver `Triagem.API/Data/TriagemDbContext.cs`).
+  - **Dados clínicos criptografados em repouso** (AES-256-GCM, chave em `DataProtection:Key`) — nome, idade, sexo, pontuação, classificação, recomendação e respostas das novas gravações ficam em envelopes protegidos. Registros antigos são migrados em lotes na inicialização.
   - **Segredos fora do código**: senha do banco, chave JWT e chave de criptografia vêm de variáveis de ambiente (`.env` no Docker), nunca versionadas.
   - **CORS restrito** por lista de origens (`Cors:AllowedOrigins`) e `X-Forwarded-For` aceito só de proxies confiáveis (evita spoof do rate limit).
   - **SQL Server e Redis não publicam porta no host** no docker-compose — só nginx expõe a porta pública; os demais serviços só são alcançáveis pela rede interna do compose.
@@ -174,7 +176,8 @@ O projeto já vem preparado para isso:
 | GET | `/api/triagens/{id}/historico` | Histórico de uma triagem (paginado: `?pagina=&tamanhoPagina=`, máx. 200/página) |
 | GET | `/api/triagem/usuario/{id}` | Histórico do usuário autenticado (filtro `?triagemModeloId=`, paginado: `?pagina=&tamanhoPagina=`) |
 | PUT | `/api/usuarios/{id}/home` | Configura a home |
-| GET | `/health` | Health check (público) |
+| GET | `/health/live` | Liveness público, sem consultar o banco |
+| GET | `/health` | Readiness do banco (exige autenticação) |
 
 > Exceto `/api/auth/*` e `/health`, **todos os endpoints exigem** o cabeçalho
 > `Authorization: Bearer <token>`. O usuário é sempre o dono do token — parâmetros
@@ -194,7 +197,13 @@ outro) — além de `PasswordHasher`, `TokenService`, `ClaimsPrincipalExtensions
 `FieldEncryptionService`. Rodar localmente:
 
 ```bash
+dotnet test Triagem.Core.Tests/Triagem.Core.Tests.csproj
 dotnet test Triagem.API.Tests/Triagem.API.Tests.csproj
 ```
+
+O CI também coleta cobertura, compila o alvo Android, verifica dependências, procura
+segredos acidentalmente versionados e executa análise estática CodeQL. O esquema do
+SQL Server é evoluído por migrations do EF Core; bancos antigos criados por
+`EnsureCreated` recebem automaticamente o baseline antes das migrations seguintes.
 
 

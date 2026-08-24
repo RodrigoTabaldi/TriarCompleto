@@ -202,6 +202,23 @@ var app = builder.Build();
 // ---------- Pipeline ----------
 app.UseForwardedHeaders();
 
+// Identificador estável para relacionar logs do proxy, da API e do cliente sem
+// registrar conteúdo clínico. Aceita um valor externo curto ou usa o TraceIdentifier.
+app.Use(async (context, next) =>
+{
+    const string header = "X-Correlation-ID";
+    var recebido = context.Request.Headers[header].FirstOrDefault();
+    var correlationId = !string.IsNullOrWhiteSpace(recebido) && recebido.Length <= 100
+        ? recebido
+        : context.TraceIdentifier;
+
+    context.TraceIdentifier = correlationId;
+    context.Response.Headers[header] = correlationId;
+    var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Triar.Request");
+    using (logger.BeginScope(new Dictionary<string, object> { ["CorrelationId"] = correlationId }))
+        await next();
+});
+
 // HSTS instrui o navegador a nunca mais acessar este host em HTTP puro. Fora de
 // Development apenas: em dev o host é http://localhost e o header atrapalharia.
 if (!app.Environment.IsDevelopment())
@@ -249,7 +266,7 @@ app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthC
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     Predicate = c => c.Tags.Contains("db")
-});
+}).RequireAuthorization();
 
 app.MapGet("/", () => Results.Ok(new
 {
@@ -270,13 +287,14 @@ if (app.Configuration.GetValue("Database:SeedOnStartup", true))
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<TriagemDbContext>();
+    var encryptor = scope.ServiceProvider.GetRequiredService<FieldEncryptionService>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
     for (var tentativa = 1; ; tentativa++)
     {
         try
         {
-            await DbSeeder.SeedAsync(db);
+            await DbSeeder.SeedAsync(db, encryptor);
             logger.LogInformation("Banco de dados pronto.");
             break;
         }

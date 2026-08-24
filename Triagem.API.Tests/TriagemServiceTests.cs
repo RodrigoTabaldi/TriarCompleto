@@ -128,6 +128,20 @@ public class TriagemServiceTests
         Assert.Null(await service.ObterDetalheAsync(usuarioA, criada.Id));
     }
 
+    [Fact]
+    public async Task ConfigurarHomeAsync_ComTriagemPrivadaDeOutroUsuario_RejeitaSemGravar()
+    {
+        var (db, service, usuarioA, usuarioB) = await NovoCenarioComDoisUsuariosAsync();
+        var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
+
+        var erro = await service.ConfigurarHomeAsync(usuarioB,
+            new ConfigurarHomeRequest([new HomeItemInput(criada!.Id, true, 0)]));
+
+        Assert.Equal("A configuração contém uma triagem indisponível para este usuário.", erro);
+        Assert.DoesNotContain(db.UsuarioTriagensHome,
+            h => h.UsuarioId == usuarioB && h.TriagemModeloId == criada.Id);
+    }
+
     // ---------------- Validação de modelo ----------------
 
     [Theory]
@@ -257,6 +271,58 @@ public class TriagemServiceTests
     }
 
     [Fact]
+    public async Task ResponderAsync_ProtegeDadosClinicosEPreservaRespostaEHistorico()
+    {
+        var (db, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+        var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
+        var respostas = criada!.Perguntas.Select(p => new RespostaInput(p.Id, true)).ToList();
+
+        var (resultado, erro) = await service.ResponderAsync(usuarioA, criada.Id,
+            new ResponderTriagemRequest("Maria da Silva", 42, "F", respostas));
+
+        Assert.Null(erro);
+        Assert.Equal("Maria da Silva", resultado!.NomePaciente);
+
+        var persistido = Assert.Single(db.TriagemResultados);
+        Assert.Equal("", persistido.NomePaciente);
+        Assert.NotNull(persistido.DadosProtegidos);
+        Assert.DoesNotContain("Maria da Silva", persistido.DadosProtegidos);
+        Assert.All(persistido.Respostas, r =>
+        {
+            Assert.False(r.Valor);
+            Assert.NotNull(r.ValorProtegido);
+        });
+
+        var historico = await service.HistoricoAsync(usuarioA, criada.Id);
+        Assert.Equal("Maria da Silva", Assert.Single(historico).Nome);
+        Assert.Equal(resultado.Pontuacao, historico[0].Pontuacao);
+    }
+
+    [Fact]
+    public async Task CriarAsync_ImagemComAssinaturaIncompatível_RetornaErro()
+    {
+        var (_, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+        var imagemFalsa = "data:image/png;base64," + Convert.ToBase64String("não é png"u8.ToArray());
+
+        var (detalhe, erro) = await service.CriarAsync(usuarioA, RequestValido() with { Imagem = imagemFalsa });
+
+        Assert.Null(detalhe);
+        Assert.Equal("O conteúdo do arquivo não corresponde ao formato de imagem informado.", erro);
+    }
+
+    [Fact]
+    public async Task CriarAsync_ImagemPngVálida_ContinuaAceita()
+    {
+        var (_, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+        const string pngUmPixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+
+        var (detalhe, erro) = await service.CriarAsync(usuarioA, RequestValido() with { Imagem = pngUmPixel });
+
+        Assert.Null(erro);
+        Assert.Equal(pngUmPixel, detalhe!.Imagem);
+    }
+
+    [Fact]
     public async Task ResponderAsync_ComPerguntaQueNaoPertenceATriagem_RetornaErro()
     {
         var (_, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
@@ -270,6 +336,56 @@ public class TriagemServiceTests
 
         Assert.Null(resultado);
         Assert.Contains("não pertence a esta triagem", erro);
+    }
+
+    [Fact]
+    public async Task ResponderAsync_TriagemPrivadaDeOutroUsuario_RetornaNaoEncontrada()
+    {
+        var (_, service, usuarioA, usuarioB) = await NovoCenarioComDoisUsuariosAsync();
+        var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
+
+        var respostas = new ResponderTriagemRequest(
+            "Paciente", 30, "F",
+            criada!.Perguntas.Select(p => new RespostaInput(p.Id, false)).ToList());
+
+        var (resultado, erro) = await service.ResponderAsync(usuarioB, criada.Id, respostas);
+
+        Assert.Null(resultado);
+        Assert.Equal("Triagem não encontrada.", erro);
+    }
+
+    [Fact]
+    public async Task ResponderAsync_ComPerguntaDuplicada_RetornaErroSemGravarResultado()
+    {
+        var (db, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+        var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
+        var pergunta = criada!.Perguntas[0];
+
+        var respostas = new ResponderTriagemRequest(
+            "Paciente", 30, "F",
+            [new RespostaInput(pergunta.Id, true), new RespostaInput(pergunta.Id, true)]);
+
+        var (resultado, erro) = await service.ResponderAsync(usuarioA, criada.Id, respostas);
+
+        Assert.Null(resultado);
+        Assert.Equal("Cada pergunta deve ser respondida uma única vez.", erro);
+        Assert.Empty(db.TriagemResultados);
+    }
+
+    [Fact]
+    public async Task ResponderAsync_ComRespostaFaltando_RetornaErroSemGravarResultado()
+    {
+        var (db, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+        var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
+
+        var respostas = new ResponderTriagemRequest(
+            "Paciente", 30, "F", [new RespostaInput(criada!.Perguntas[0].Id, true)]);
+
+        var (resultado, erro) = await service.ResponderAsync(usuarioA, criada.Id, respostas);
+
+        Assert.Null(resultado);
+        Assert.Equal("Responda todas as perguntas da triagem uma única vez.", erro);
+        Assert.Empty(db.TriagemResultados);
     }
 
     [Fact]

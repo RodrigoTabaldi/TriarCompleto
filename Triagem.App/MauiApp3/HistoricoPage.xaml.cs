@@ -53,6 +53,7 @@ public partial class HistoricoPage : ContentPage
 
     private async void ExportarExcel(object? sender, EventArgs e)
     {
+        string? caminhoTemporario = null;
         try
         {
             if (_itens.Count == 0)
@@ -89,21 +90,30 @@ public partial class HistoricoPage : ContentPage
 
             planilha.Columns().AdjustToContents();
 
-            var caminho = Path.Combine(
+            caminhoTemporario = Path.Combine(
                 FileSystem.Current.AppDataDirectory,
                 $"Triagens_{DateTime.Now:ddMMyyyyHHmmss}.xlsx");
 
-            workbook.SaveAs(caminho);
+            workbook.SaveAs(caminhoTemporario);
 
             await Share.Default.RequestAsync(new ShareFileRequest
             {
                 Title = "Compartilhar Excel",
-                File = new ShareFile(caminho)
+                File = new ShareFile(caminhoTemporario)
             });
         }
         catch (Exception ex)
         {
             await DisplayAlertAsync("Erro", ex.Message, "OK");
+        }
+        finally
+        {
+            if (!string.IsNullOrWhiteSpace(caminhoTemporario) && File.Exists(caminhoTemporario))
+            {
+                try { File.Delete(caminhoTemporario); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
         }
     }
 

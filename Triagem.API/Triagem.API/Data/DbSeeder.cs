@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using System.Text.Json;
 using Triagem.API.Models;
+using Triagem.API.Services;
 
 namespace Triagem.API.Data;
 
@@ -8,13 +11,10 @@ namespace Triagem.API.Data;
 /// </summary>
 public static class DbSeeder
 {
-    public static async Task SeedAsync(TriagemDbContext db)
+    public static async Task SeedAsync(TriagemDbContext db, FieldEncryptionService encryptor)
     {
-        await db.Database.EnsureCreatedAsync();
-        await db.Database.ExecuteSqlRawAsync("""
-            IF COL_LENGTH('dbo.TriagemModelos', 'Imagem') IS NULL
-                ALTER TABLE dbo.TriagemModelos ADD Imagem NVARCHAR(MAX) NULL;
-            """);
+        await PrepararSchemaAsync(db);
+        await MigrarDadosClinicosLegadosAsync(db, encryptor);
 
         // Várias instâncias da API podem subir ao mesmo tempo (load balancer);
         // o applock do SQL Server garante que só uma execute o seed.
@@ -35,6 +35,118 @@ public static class DbSeeder
 
             await tx.CommitAsync();
         });
+    }
+
+    private static async Task MigrarDadosClinicosLegadosAsync(
+        TriagemDbContext db, FieldEncryptionService encryptor)
+    {
+        const int tamanhoLote = 200;
+
+        while (true)
+        {
+            var resultados = await db.TriagemResultados
+                .Where(r => r.DadosProtegidos == null)
+                .OrderBy(r => r.Id)
+                .Take(tamanhoLote)
+                .ToListAsync();
+            if (resultados.Count == 0) break;
+
+            foreach (var r in resultados)
+            {
+                var dados = new
+                {
+                    r.NomePaciente, r.Idade, r.Sexo, r.Pontuacao, r.PontuacaoMaxima,
+                    r.Classificacao, r.Recomendacao, r.Cor
+                };
+                r.DadosProtegidos = encryptor.Encrypt(JsonSerializer.Serialize(dados));
+                r.NomePaciente = "";
+                r.Idade = 0;
+                r.Sexo = "";
+                r.Pontuacao = 0;
+                r.PontuacaoMaxima = 0;
+                r.Classificacao = "";
+                r.Recomendacao = "";
+                r.Cor = "#000000";
+            }
+
+            await db.SaveChangesAsync();
+            db.ChangeTracker.Clear();
+        }
+
+        while (true)
+        {
+            var respostas = await db.RespostasDadas
+                .Where(r => r.ValorProtegido == null)
+                .OrderBy(r => r.Id)
+                .Take(tamanhoLote)
+                .ToListAsync();
+            if (respostas.Count == 0) break;
+
+            foreach (var r in respostas)
+            {
+                r.ValorProtegido = encryptor.Encrypt(r.Valor ? "1" : "0");
+                r.Valor = false;
+            }
+
+            await db.SaveChangesAsync();
+            db.ChangeTracker.Clear();
+        }
+    }
+
+    private static async Task PrepararSchemaAsync(TriagemDbContext db)
+    {
+        if (!await db.Database.CanConnectAsync())
+        {
+            await db.Database.MigrateAsync();
+            return;
+        }
+
+        var conexao = db.Database.GetDbConnection();
+        await db.Database.OpenConnectionAsync();
+        try
+        {
+            await using var bootstrapTx = await db.Database.BeginTransactionAsync();
+            await db.Database.ExecuteSqlRawAsync(
+                "EXEC sp_getapplock @Resource = 'TriarSchemaBootstrap', @LockMode = 'Exclusive', " +
+                "@LockOwner = 'Transaction', @LockTimeout = 60000;");
+
+            await using var comando = conexao.CreateCommand();
+            comando.Transaction = bootstrapTx.GetDbTransaction();
+            comando.CommandText = "SELECT CASE WHEN OBJECT_ID(N'dbo.Usuarios', N'U') IS NULL THEN 0 ELSE 1 END";
+            var esquemaLegado = Convert.ToInt32(await comando.ExecuteScalarAsync()) == 1;
+
+            if (esquemaLegado)
+            {
+                // Bancos de versões anteriores foram criados por EnsureCreated. Depois
+                // de completar a última coluna conhecida, registramos o baseline para
+                // que todas as próximas mudanças sejam migrations EF normais.
+                await db.Database.ExecuteSqlRawAsync("""
+                    IF COL_LENGTH('dbo.TriagemModelos', 'Imagem') IS NULL
+                        ALTER TABLE dbo.TriagemModelos ADD Imagem NVARCHAR(MAX) NULL;
+
+                    IF OBJECT_ID(N'[__EFMigrationsHistory]', N'U') IS NULL
+                    BEGIN
+                        CREATE TABLE [__EFMigrationsHistory] (
+                            [MigrationId] nvarchar(150) NOT NULL,
+                            [ProductVersion] nvarchar(32) NOT NULL,
+                            CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
+                        );
+                    END;
+
+                    IF NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = '20260824185226_InitialSchema')
+                        INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+                        VALUES ('20260824185226_InitialSchema', '10.0.0');
+                    """);
+            }
+
+            await bootstrapTx.CommitAsync();
+        }
+        finally
+        {
+            await db.Database.CloseConnectionAsync();
+        }
+
+        await db.Database.MigrateAsync();
     }
 
     private static List<TriagemModelo> CriarModelosPadrao()

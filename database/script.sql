@@ -78,7 +78,7 @@ CREATE TABLE dbo.TriagemResultados (
     Id              INT IDENTITY(1,1) PRIMARY KEY,
     TriagemModeloId INT NOT NULL REFERENCES dbo.TriagemModelos(Id),
     UsuarioId       INT NOT NULL REFERENCES dbo.Usuarios(Id) ON DELETE CASCADE,
-    NomePaciente    NVARCHAR(150) NOT NULL,
+    NomePaciente    NVARCHAR(500) NOT NULL,
     Idade           INT NOT NULL,
     Sexo            NVARCHAR(30) NOT NULL,
     Pontuacao       INT NOT NULL,
@@ -86,13 +86,18 @@ CREATE TABLE dbo.TriagemResultados (
     Classificacao   NVARCHAR(120) NOT NULL,
     Recomendacao    NVARCHAR(600) NOT NULL,
     Cor             NVARCHAR(9) NOT NULL DEFAULT '#10B981',
+    DadosProtegidos NVARCHAR(MAX) NULL,
     Data            DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_TriagemResultados_Usuario_Modelo')
-    CREATE INDEX IX_TriagemResultados_Usuario_Modelo
-        ON dbo.TriagemResultados (UsuarioId, TriagemModeloId);
+IF COL_LENGTH('dbo.TriagemResultados', 'DadosProtegidos') IS NULL
+    ALTER TABLE dbo.TriagemResultados ADD DadosProtegidos NVARCHAR(MAX) NULL;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_TriagemResultados_Usuario_Modelo_Data')
+    CREATE INDEX IX_TriagemResultados_Usuario_Modelo_Data
+        ON dbo.TriagemResultados (UsuarioId, TriagemModeloId, Data);
 GO
 
 IF OBJECT_ID('dbo.RespostasDadas') IS NULL
@@ -100,6 +105,11 @@ CREATE TABLE dbo.RespostasDadas (
     Id                 INT IDENTITY(1,1) PRIMARY KEY,
     TriagemResultadoId INT NOT NULL REFERENCES dbo.TriagemResultados(Id) ON DELETE CASCADE,
     PerguntaId         INT NOT NULL,
-    Valor              BIT NOT NULL
+    Valor              BIT NOT NULL,
+    ValorProtegido     NVARCHAR(200) NULL
 );
+GO
+
+IF COL_LENGTH('dbo.RespostasDadas', 'ValorProtegido') IS NULL
+    ALTER TABLE dbo.RespostasDadas ADD ValorProtegido NVARCHAR(200) NULL;
 GO

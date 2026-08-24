@@ -33,5 +33,5 @@ internal static class TestHelpers
             NullLogger<CacheService>.Instance);
 
     public static TriagemService NovoService(TriagemDbContext db) =>
-        new(db, NovoCacheService(), NullLogger<TriagemService>.Instance);
+        new(db, NovoCacheService(), NovoEncryptor(), NullLogger<TriagemService>.Instance);
 }

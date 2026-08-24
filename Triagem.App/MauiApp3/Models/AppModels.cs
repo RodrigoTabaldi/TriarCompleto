@@ -17,13 +17,24 @@ public class TriagemResumo : ObservableBase
 {
     private bool _visivelNaHome = true;
     private bool _modoEdicao;
+    private string? _imagem;
+    private ImageSource? _imagemHome;
 
     public int Id { get; set; }
     public string Titulo { get; set; } = "";
     public string PublicoAlvo { get; set; } = "";
     public string Descricao { get; set; } = "";
     public string Icone { get; set; } = "🩺";
-    public string? Imagem { get; set; }
+    public string? Imagem
+    {
+        get => _imagem;
+        set
+        {
+            if (!Set(ref _imagem, value)) return;
+            _imagemHome = null;
+            Notificar(nameof(ImagemHome));
+        }
+    }
     public bool Padrao { get; set; }
     public bool MinhaAutoria { get; set; }
     public int TotalPerguntas { get; set; }
@@ -42,8 +53,10 @@ public class TriagemResumo : ObservableBase
     {
         get
         {
+            if (_imagemHome is not null) return _imagemHome;
+
             if (!string.IsNullOrWhiteSpace(Imagem))
-                return TriagemImagem.CriarImageSource(Imagem, "triagem_clinica_profissional.png");
+                return _imagemHome = TriagemImagem.CriarImageSource(Imagem, "triagem_clinica_profissional.png");
 
             var titulo = Titulo.ToLowerInvariant();
             var arquivo = titulo.Contains("mental") ? "triagem_mental_profissional.png"
@@ -53,7 +66,7 @@ public class TriagemResumo : ObservableBase
                 : titulo.Contains("respirat") ? "triagem_respiratoria_profissional.png"
                 : "triagem_clinica_profissional.png";
 
-            return ImageSource.FromFile(arquivo);
+            return _imagemHome = ImageSource.FromFile(arquivo);
         }
     }
 }
@@ -114,6 +127,46 @@ public class TriagemDetalhe
     public int? CriadorUsuarioId { get; set; }
     public List<PerguntaDto> Perguntas { get; set; } = [];
     public List<FaixaDto> Faixas { get; set; } = [];
+}
+
+public sealed class PerguntaTriagemPayload
+{
+    public string Texto { get; set; } = "";
+    public int Peso { get; set; }
+}
+
+public sealed class FaixaTriagemPayload
+{
+    public string Titulo { get; set; } = "";
+    public string Recomendacao { get; set; } = "";
+    public int PontuacaoMin { get; set; }
+    public int PontuacaoMax { get; set; }
+    public string? Cor { get; set; }
+}
+
+public sealed class CriarTriagemPayload
+{
+    public string Titulo { get; set; } = "";
+    public string PublicoAlvo { get; set; } = "";
+    public string Descricao { get; set; } = "";
+    public string Icone { get; set; } = "📋";
+    public string? Imagem { get; set; }
+    public List<PerguntaTriagemPayload> Perguntas { get; set; } = [];
+    public List<FaixaTriagemPayload> Faixas { get; set; } = [];
+}
+
+public sealed class RespostaTriagemPayload
+{
+    public int PerguntaId { get; set; }
+    public bool Valor { get; set; }
+}
+
+public sealed class ResponderTriagemPayload
+{
+    public string NomePaciente { get; set; } = "";
+    public int Idade { get; set; }
+    public string Sexo { get; set; } = "";
+    public List<RespostaTriagemPayload> Respostas { get; set; } = [];
 }
 
 // ---------- Execução / resultado ----------

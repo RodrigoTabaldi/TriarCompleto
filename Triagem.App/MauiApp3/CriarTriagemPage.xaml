@@ -108,7 +108,7 @@
                                                    TextColor="Black" PlaceholderColor="#9CA3AF" BackgroundColor="Transparent"/>
                                         </Border>
 
-                                        <Button Grid.Column="3" Text="✕"
+                                        <Button Grid.Column="3" Text="✕" SemanticProperties.Description="Remover pergunta"
                                                 Clicked="RemoverPergunta"
                                                 BackgroundColor="#FEE2E2" TextColor="#EF4444"
                                                 CornerRadius="8" WidthRequest="38" HeightRequest="38"/>
@@ -150,7 +150,7 @@
                                                        Placeholder="Título (ex.: Baixo risco)"
                                                        TextColor="Black" PlaceholderColor="#9CA3AF" BackgroundColor="Transparent"/>
                                             </Border>
-                                            <Button Grid.Column="1" Text="✕"
+                                            <Button Grid.Column="1" Text="✕" SemanticProperties.Description="Remover faixa de resultado"
                                                     Clicked="RemoverFaixa"
                                                     BackgroundColor="#FEE2E2" TextColor="#EF4444"
                                                     CornerRadius="8" WidthRequest="38" HeightRequest="38"/>

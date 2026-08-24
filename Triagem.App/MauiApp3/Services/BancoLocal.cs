@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Net.Mail;
 using MauiApp3.Models;
 using SQLite;
+using Triagem.Core.Domain;
 
 namespace MauiApp3.Services;
 
@@ -44,6 +46,7 @@ public static partial class BancoLocal
         {
             if (_conexao is not null) return _conexao;
 
+            await LocalDataProtection.InicializarAsync();
             var conexao = new SQLiteAsyncConnection(CaminhoBanco,
                 SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.Create | SQLiteOpenFlags.FullMutex);
 
@@ -55,6 +58,9 @@ public static partial class BancoLocal
             await conexao.CreateTableAsync<HomePrefLocal>();
             await conexao.CreateTableAsync<ResultadoLocal>();
             await conexao.CreateTableAsync<RespostaLocal>();
+            await GarantirColunasProtegidasAsync(conexao);
+            await GarantirIndicesAsync(conexao);
+            await MigrarDadosClinicosLegadosAsync(conexao);
 
             await SemearAsync(conexao);
 
@@ -75,6 +81,89 @@ public static partial class BancoLocal
             await conexao.ExecuteAsync("ALTER TABLE triagem_modelos ADD COLUMN Imagem TEXT NULL");
     }
 
+    private static async Task GarantirColunasProtegidasAsync(SQLiteAsyncConnection conexao)
+    {
+        var resultadoProtegido = await conexao.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM pragma_table_info('resultados') WHERE name = 'DadosProtegidos'");
+        if (resultadoProtegido == 0)
+            await conexao.ExecuteAsync("ALTER TABLE resultados ADD COLUMN DadosProtegidos TEXT NULL");
+
+        var respostaProtegida = await conexao.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM pragma_table_info('respostas') WHERE name = 'ValorProtegido'");
+        if (respostaProtegida == 0)
+            await conexao.ExecuteAsync("ALTER TABLE respostas ADD COLUMN ValorProtegido TEXT NULL");
+    }
+
+    private static async Task GarantirIndicesAsync(SQLiteAsyncConnection conexao)
+    {
+        await conexao.ExecuteAsync("""
+            DELETE FROM home_prefs
+            WHERE Id NOT IN (
+                SELECT MIN(Id) FROM home_prefs GROUP BY UsuarioId, TriagemModeloId
+            )
+            """);
+        await conexao.ExecuteAsync(
+            "CREATE UNIQUE INDEX IF NOT EXISTS IX_home_prefs_usuario_triagem ON home_prefs (UsuarioId, TriagemModeloId)");
+        await conexao.ExecuteAsync(
+            "CREATE INDEX IF NOT EXISTS IX_resultados_usuario_triagem_data ON resultados (UsuarioId, TriagemModeloId, Data DESC)");
+    }
+
+    private static async Task MigrarDadosClinicosLegadosAsync(SQLiteAsyncConnection conexao)
+    {
+        const int tamanhoLote = 200;
+        while (true)
+        {
+            var resultados = await conexao.Table<ResultadoLocal>()
+                .Where(r => r.DadosProtegidos == null)
+                .Take(tamanhoLote)
+                .ToListAsync();
+            if (resultados.Count == 0) break;
+
+            foreach (var r in resultados)
+            {
+                var dados = new ResultadoSensivelLocal
+                {
+                    NomePaciente = r.NomePaciente,
+                    Idade = r.Idade,
+                    Sexo = r.Sexo,
+                    Pontuacao = r.Pontuacao,
+                    PontuacaoMaxima = r.PontuacaoMaxima,
+                    Classificacao = r.Classificacao,
+                    Recomendacao = r.Recomendacao,
+                    Cor = r.Cor
+                };
+                r.DadosProtegidos = LocalDataProtection.Proteger(JsonSerializer.Serialize(dados, JsonOptions));
+                r.NomePaciente = "";
+                r.Idade = 0;
+                r.Sexo = "";
+                r.Pontuacao = 0;
+                r.PontuacaoMaxima = 0;
+                r.Classificacao = "";
+                r.Recomendacao = "";
+                r.Cor = "#000000";
+            }
+
+            await conexao.RunInTransactionAsync(conn => conn.UpdateAll(resultados));
+        }
+
+        while (true)
+        {
+            var respostas = await conexao.Table<RespostaLocal>()
+                .Where(r => r.ValorProtegido == null)
+                .Take(tamanhoLote)
+                .ToListAsync();
+            if (respostas.Count == 0) break;
+
+            foreach (var r in respostas)
+            {
+                r.ValorProtegido = LocalDataProtection.Proteger(r.Valor ? "1" : "0");
+                r.Valor = false;
+            }
+
+            await conexao.RunInTransactionAsync(conn => conn.UpdateAll(respostas));
+        }
+    }
+
     // ---------------- Autenticação ----------------
 
     private const int SenhaMinima = 8;
@@ -86,6 +175,12 @@ public static partial class BancoLocal
 
         if (senha.Length < SenhaMinima)
             return (null, $"A senha deve ter pelo menos {SenhaMinima} caracteres.");
+        if (senha.Length > 256)
+            return (null, "A senha deve ter no máximo 256 caracteres.");
+        if (nome.Trim().Length > 120)
+            return (null, "O nome deve ter no máximo 120 caracteres.");
+        if (email.Trim().Length > 180 || !MailAddress.TryCreate(email.Trim(), out _))
+            return (null, "Informe um email válido.");
 
         var db = await ConexaoAsync();
         var emailNormalizado = email.Trim().ToLowerInvariant();
@@ -233,11 +328,8 @@ public static partial class BancoLocal
         };
     }
 
-    public static async Task<(bool Ok, string? Erro)> CriarTriagemAsync(int usuarioId, object payload)
+    public static async Task<(bool Ok, string? Erro)> CriarTriagemAsync(int usuarioId, CriarTriagemPayload req)
     {
-        var req = Converter<CriarTriagemInput>(payload);
-        if (req is null) return (false, "Não foi possível ler os dados da triagem.");
-
         var erro = ValidarModelo(req);
         if (erro is not null) return (false, erro);
 
@@ -254,25 +346,24 @@ public static partial class BancoLocal
             Ativa = true
         };
 
-        await db.InsertAsync(modelo);
-        await GravarPerguntasEFaixasAsync(db, modelo.Id, req);
-
-        await db.InsertAsync(new HomePrefLocal
+        await db.RunInTransactionAsync(conn =>
         {
-            UsuarioId = usuarioId,
-            TriagemModeloId = modelo.Id,
-            Visivel = true,
-            Ordem = 999
+            conn.Insert(modelo);
+            GravarPerguntasEFaixas(conn, modelo.Id, req);
+            conn.Insert(new HomePrefLocal
+            {
+                UsuarioId = usuarioId,
+                TriagemModeloId = modelo.Id,
+                Visivel = true,
+                Ordem = 999
+            });
         });
 
         return (true, null);
     }
 
-    public static async Task<(bool Ok, string? Erro)> AtualizarTriagemAsync(int usuarioId, int id, object payload)
+    public static async Task<(bool Ok, string? Erro)> AtualizarTriagemAsync(int usuarioId, int id, CriarTriagemPayload req)
     {
-        var req = Converter<CriarTriagemInput>(payload);
-        if (req is null) return (false, "Não foi possível ler os dados da triagem.");
-
         var erro = ValidarModelo(req);
         if (erro is not null) return (false, erro);
 
@@ -287,14 +378,16 @@ public static partial class BancoLocal
         modelo.Descricao = req.Descricao?.Trim() ?? "";
         modelo.Icone = string.IsNullOrWhiteSpace(req.Icone) ? modelo.Icone : req.Icone!.Trim();
         modelo.Imagem = NormalizarImagem(req.Imagem);
-        await db.UpdateAsync(modelo);
 
-        // As perguntas antigas são apagadas e regravadas (mesma estratégia da API).
-        // O histórico já realizado guarda a pontuação e a classificação calculadas na
-        // época, então continua legível mesmo com as perguntas trocadas.
-        await db.ExecuteAsync("DELETE FROM perguntas WHERE TriagemModeloId = ?", id);
-        await db.ExecuteAsync("DELETE FROM faixas WHERE TriagemModeloId = ?", id);
-        await GravarPerguntasEFaixasAsync(db, id, req);
+        // A atualização inteira é atômica: uma falha ao inserir perguntas/faixas novas
+        // restaura também o modelo e as coleções antigas.
+        await db.RunInTransactionAsync(conn =>
+        {
+            conn.Update(modelo);
+            conn.Execute("DELETE FROM perguntas WHERE TriagemModeloId = ?", id);
+            conn.Execute("DELETE FROM faixas WHERE TriagemModeloId = ?", id);
+            GravarPerguntasEFaixas(conn, id, req);
+        });
 
         return (true, null);
     }
@@ -313,7 +406,7 @@ public static partial class BancoLocal
         return (true, null);
     }
 
-    private static async Task GravarPerguntasEFaixasAsync(SQLiteAsyncConnection db, int modeloId, CriarTriagemInput req)
+    private static void GravarPerguntasEFaixas(SQLiteConnection db, int modeloId, CriarTriagemPayload req)
     {
         var perguntas = req.Perguntas
             .Select((p, i) => new PerguntaLocal
@@ -337,8 +430,8 @@ public static partial class BancoLocal
                 Ordem = i + 1
             }).ToList();
 
-        await db.InsertAllAsync(perguntas);
-        await db.InsertAllAsync(faixas);
+        db.InsertAll(perguntas);
+        db.InsertAll(faixas);
     }
 
     // ---------------- Home ----------------
@@ -350,36 +443,39 @@ public static partial class BancoLocal
         var existentes = (await db.Table<HomePrefLocal>().Where(h => h.UsuarioId == usuarioId).ToListAsync())
             .ToDictionary(h => h.TriagemModeloId);
 
-        foreach (var item in itens)
+        var alteracoes = itens.ToList();
+        await db.RunInTransactionAsync(conn =>
         {
-            if (existentes.TryGetValue(item.TriagemModeloId, out var pref))
+            foreach (var item in alteracoes)
             {
-                pref.Visivel = item.Visivel;
-                pref.Ordem = item.Ordem;
-                await db.UpdateAsync(pref);
-            }
-            else
-            {
-                await db.InsertAsync(new HomePrefLocal
+                if (existentes.TryGetValue(item.TriagemModeloId, out var pref))
                 {
-                    UsuarioId = usuarioId,
-                    TriagemModeloId = item.TriagemModeloId,
-                    Visivel = item.Visivel,
-                    Ordem = item.Ordem
-                });
+                    pref.Visivel = item.Visivel;
+                    pref.Ordem = item.Ordem;
+                    conn.Update(pref);
+                }
+                else
+                {
+                    conn.Insert(new HomePrefLocal
+                    {
+                        UsuarioId = usuarioId,
+                        TriagemModeloId = item.TriagemModeloId,
+                        Visivel = item.Visivel,
+                        Ordem = item.Ordem
+                    });
+                }
             }
-        }
+        });
     }
 
     // ---------------- Execução ----------------
 
-    public static async Task<(ResultadoTriagem? Resultado, string? Erro)> ResponderAsync(int usuarioId, int triagemId, object payload)
+    public static async Task<(ResultadoTriagem? Resultado, string? Erro)> ResponderAsync(int usuarioId, int triagemId, ResponderTriagemPayload req)
     {
-        var req = Converter<ResponderInput>(payload);
-        if (req is null) return (null, "Não foi possível ler as respostas.");
-
         if (string.IsNullOrWhiteSpace(req.NomePaciente)) return (null, "Informe o nome da pessoa avaliada.");
+        if (req.NomePaciente.Trim().Length > 150) return (null, "O nome deve ter no máximo 150 caracteres.");
         if (req.Idade is < 0 or > 130) return (null, "Idade inválida.");
+        if ((req.Sexo?.Trim().Length ?? 0) > 30) return (null, "O sexo deve ter no máximo 30 caracteres.");
 
         var db = await ConexaoAsync();
 
@@ -388,9 +484,15 @@ public static partial class BancoLocal
 
         var perguntas = await db.Table<PerguntaLocal>().Where(p => p.TriagemModeloId == triagemId).ToListAsync();
         var perguntasPorId = perguntas.ToDictionary(p => p.Id);
+        var respostasRecebidas = req.Respostas ?? [];
+
+        var validacaoRespostas = TriagemRules.ValidarRespostas(
+            perguntasPorId.Keys.ToList(), respostasRecebidas.Select(r => r.PerguntaId).ToList());
+        var erroRespostas = MensagemErroRespostas(validacaoRespostas);
+        if (erroRespostas is not null) return (null, erroRespostas);
 
         var pontuacao = 0;
-        foreach (var r in req.Respostas)
+        foreach (var r in respostasRecebidas)
         {
             if (!perguntasPorId.TryGetValue(r.PerguntaId, out var pergunta))
                 return (null, $"Pergunta {r.PerguntaId} não pertence a esta triagem.");
@@ -398,6 +500,8 @@ public static partial class BancoLocal
         }
 
         var pontuacaoMaxima = perguntas.Sum(p => p.Peso);
+        if (pontuacao is < 0 || pontuacao > pontuacaoMaxima)
+            return (null, "A pontuação calculada é inválida.");
 
         var faixas = (await db.Table<FaixaLocal>().Where(f => f.TriagemModeloId == triagemId).ToListAsync())
             .OrderBy(f => f.Ordem).ToList();
@@ -405,10 +509,8 @@ public static partial class BancoLocal
         var faixa = faixas.FirstOrDefault(f => pontuacao >= f.PontuacaoMin && pontuacao <= f.PontuacaoMax)
                     ?? faixas.LastOrDefault();
 
-        var resultado = new ResultadoLocal
+        var dadosSensiveis = new ResultadoSensivelLocal
         {
-            TriagemModeloId = modelo.Id,
-            UsuarioId = usuarioId,
             NomePaciente = req.NomePaciente.Trim(),
             Idade = req.Idade,
             Sexo = req.Sexo?.Trim() ?? "",
@@ -416,31 +518,45 @@ public static partial class BancoLocal
             PontuacaoMaxima = pontuacaoMaxima,
             Classificacao = faixa?.Titulo ?? "Sem classificação",
             Recomendacao = faixa?.Recomendacao ?? "",
-            Cor = faixa?.Cor ?? "#10B981",
+            Cor = faixa?.Cor ?? "#10B981"
+        };
+
+        var resultado = new ResultadoLocal
+        {
+            TriagemModeloId = modelo.Id,
+            UsuarioId = usuarioId,
+            DadosProtegidos = LocalDataProtection.Proteger(JsonSerializer.Serialize(dadosSensiveis, JsonOptions)),
             Data = DateTime.UtcNow
         };
 
-        await db.InsertAsync(resultado);
-        await db.InsertAllAsync(req.Respostas.Select(r => new RespostaLocal
+        var respostasLocais = respostasRecebidas.Select(r => new RespostaLocal
         {
-            ResultadoId = resultado.Id,
             PerguntaId = r.PerguntaId,
-            Valor = r.Valor
-        }).ToList());
+            Valor = false,
+            ValorProtegido = LocalDataProtection.Proteger(r.Valor ? "1" : "0")
+        }).ToList();
+
+        await db.RunInTransactionAsync(conn =>
+        {
+            conn.Insert(resultado);
+            foreach (var resposta in respostasLocais)
+                resposta.ResultadoId = resultado.Id;
+            conn.InsertAll(respostasLocais);
+        });
 
         return (new ResultadoTriagem
         {
             Id = resultado.Id,
             TriagemModeloId = modelo.Id,
             TituloTriagem = modelo.Titulo,
-            NomePaciente = resultado.NomePaciente,
-            Idade = resultado.Idade,
-            Sexo = resultado.Sexo,
-            Pontuacao = resultado.Pontuacao,
-            PontuacaoMaxima = resultado.PontuacaoMaxima,
-            Classificacao = resultado.Classificacao,
-            Recomendacao = resultado.Recomendacao,
-            Cor = resultado.Cor,
+            NomePaciente = dadosSensiveis.NomePaciente,
+            Idade = dadosSensiveis.Idade,
+            Sexo = dadosSensiveis.Sexo,
+            Pontuacao = dadosSensiveis.Pontuacao,
+            PontuacaoMaxima = dadosSensiveis.PontuacaoMaxima,
+            Classificacao = dadosSensiveis.Classificacao,
+            Recomendacao = dadosSensiveis.Recomendacao,
+            Cor = dadosSensiveis.Cor,
             Data = resultado.Data
         }, null);
     }
@@ -468,29 +584,56 @@ public static partial class BancoLocal
         var titulos = (await db.Table<TriagemModeloLocal>().ToListAsync())
             .ToDictionary(t => t.Id, t => t.Titulo);
 
-        return resultados.Select(r => new HistoricoItem
+        return resultados.Select(r =>
         {
-            Id = r.Id,
-            TriagemModeloId = r.TriagemModeloId,
-            TituloTriagem = titulos.TryGetValue(r.TriagemModeloId, out var titulo) ? titulo : "Triagem",
-            Nome = r.NomePaciente,
-            Idade = r.Idade,
-            Sexo = r.Sexo,
-            Pontuacao = r.Pontuacao,
-            PontuacaoMaxima = r.PontuacaoMaxima,
-            Resultado = r.Classificacao,
-            Cor = r.Cor,
-            Data = r.Data
+            var dados = ObterDadosSensiveis(r);
+            return new HistoricoItem
+            {
+                Id = r.Id,
+                TriagemModeloId = r.TriagemModeloId,
+                TituloTriagem = titulos.TryGetValue(r.TriagemModeloId, out var titulo) ? titulo : "Triagem",
+                Nome = dados.NomePaciente,
+                Idade = dados.Idade,
+                Sexo = dados.Sexo,
+                Pontuacao = dados.Pontuacao,
+                PontuacaoMaxima = dados.PontuacaoMaxima,
+                Resultado = dados.Classificacao,
+                Cor = dados.Cor,
+                Data = r.Data
+            };
         }).ToList();
+    }
+
+    private static ResultadoSensivelLocal ObterDadosSensiveis(ResultadoLocal resultado)
+    {
+        if (!string.IsNullOrWhiteSpace(resultado.DadosProtegidos))
+        {
+            var json = LocalDataProtection.Desproteger(resultado.DadosProtegidos);
+            var protegido = JsonSerializer.Deserialize<ResultadoSensivelLocal>(json, JsonOptions);
+            if (protegido is not null) return protegido;
+        }
+
+        return new ResultadoSensivelLocal
+        {
+            NomePaciente = resultado.NomePaciente,
+            Idade = resultado.Idade,
+            Sexo = resultado.Sexo,
+            Pontuacao = resultado.Pontuacao,
+            PontuacaoMaxima = resultado.PontuacaoMaxima,
+            Classificacao = resultado.Classificacao,
+            Recomendacao = resultado.Recomendacao,
+            Cor = resultado.Cor
+        };
     }
 
     // ---------------- Validação (espelha a da API) ----------------
 
-    private static string? ValidarModelo(CriarTriagemInput req)
+    private static string? ValidarModelo(CriarTriagemPayload req)
     {
         var erroImagem = ValidarImagem(req.Imagem);
         if (erroImagem is not null) return erroImagem;
         if (string.IsNullOrWhiteSpace(req.Titulo)) return "Informe o título da triagem.";
+        if (req.Titulo.Trim().Length > 150) return "O título deve ter no máximo 150 caracteres.";
 
         var perguntas = req.Perguntas;
         var faixas = req.Faixas;
@@ -498,9 +641,13 @@ public static partial class BancoLocal
         if (perguntas is null || perguntas.Count == 0) return "Adicione pelo menos uma pergunta.";
         if (perguntas.Count > 50) return "Máximo de 50 perguntas por triagem.";
         if (perguntas.Any(p => string.IsNullOrWhiteSpace(p.Texto))) return "Toda pergunta precisa de um texto.";
+        if (perguntas.Any(p => p.Texto.Trim().Length > 500)) return "Cada pergunta deve ter no máximo 500 caracteres.";
         if (perguntas.Any(p => p.Peso is < 1 or > 100)) return "O peso de cada pergunta deve estar entre 1 e 100.";
         if (faixas is null || faixas.Count < 2) return "Defina pelo menos duas faixas de resultado.";
+        if (faixas.Count > 100) return "Máximo de 100 faixas de resultado por triagem.";
         if (faixas.Any(f => string.IsNullOrWhiteSpace(f.Titulo))) return "Toda faixa de resultado precisa de um título.";
+        if (faixas.Any(f => f.Titulo.Trim().Length > 120)) return "O título de cada faixa deve ter no máximo 120 caracteres.";
+        if (faixas.Any(f => (f.Recomendacao?.Trim().Length ?? 0) > 600)) return "A recomendação deve ter no máximo 600 caracteres.";
         if (faixas.Any(f => f.PontuacaoMin > f.PontuacaoMax)) return "Em cada faixa, a pontuação mínima deve ser menor ou igual à máxima.";
 
         var ordenadas = faixas.OrderBy(f => f.PontuacaoMin).ToList();
@@ -519,6 +666,7 @@ public static partial class BancoLocal
     }
 
     private const int TamanhoMaximoImagem = 2 * 1024 * 1024;
+    private const int TamanhoMaximoBase64Imagem = ((TamanhoMaximoImagem + 2) / 3) * 4;
 
     private static string? NormalizarImagem(string? imagem) =>
         string.IsNullOrWhiteSpace(imagem) ? null : imagem.Trim();
@@ -532,10 +680,18 @@ public static partial class BancoLocal
         var prefixo = formatos.FirstOrDefault(p => valor.StartsWith(p, StringComparison.OrdinalIgnoreCase));
         if (prefixo is null) return "A imagem deve estar no formato PNG, JPG ou WebP.";
 
+        var base64 = valor[prefixo.Length..];
+        if (base64.Length > TamanhoMaximoBase64Imagem)
+            return "A imagem deve ter no máximo 2 MB.";
+
         try
         {
-            if (Convert.FromBase64String(valor[prefixo.Length..]).Length > TamanhoMaximoImagem)
+            var bytes = Convert.FromBase64String(base64);
+            if (bytes.Length > TamanhoMaximoImagem)
                 return "A imagem deve ter no máximo 2 MB.";
+
+            if (!TriagemRules.AssinaturaImagemValida(prefixo, bytes))
+                return "O conteúdo do arquivo não corresponde ao formato de imagem informado.";
         }
         catch (FormatException)
         {
@@ -545,6 +701,14 @@ public static partial class BancoLocal
         return null;
     }
 
+    private static string? MensagemErroRespostas(RespostasValidation validacao) => validacao.Status switch
+    {
+        RespostasStatus.PerguntaDesconhecida => $"Pergunta {validacao.PerguntaDesconhecida} não pertence a esta triagem.",
+        RespostasStatus.Incompletas => "Responda todas as perguntas da triagem uma única vez.",
+        RespostasStatus.Duplicadas => "Cada pergunta deve ser respondida uma única vez.",
+        _ => null
+    };
+
     private static string CorPadrao(int indice) => indice switch
     {
         0 => "#10B981",
@@ -552,56 +716,17 @@ public static partial class BancoLocal
         _ => "#EF4444",
     };
 
-    // ---------------- Payloads ----------------
-    // As telas montam os mesmos objetos anônimos que seriam enviados à API. Em vez de
-    // duplicar essa montagem, o objeto é serializado e relido no formato local — assim
-    // nenhuma tela precisa de um caminho de código diferente no modo local.
-
-    private static T? Converter<T>(object payload) where T : class
-    {
-        if (payload is T tipado) return tipado;
-        var json = JsonSerializer.Serialize(payload, JsonOptions);
-        return JsonSerializer.Deserialize<T>(json, JsonOptions);
-    }
-
-    private sealed class PerguntaInputLocal
-    {
-        public string Texto { get; set; } = "";
-        public int Peso { get; set; }
-    }
-
-    private sealed class FaixaInputLocal
-    {
-        public string Titulo { get; set; } = "";
-        public string? Recomendacao { get; set; }
-        public int PontuacaoMin { get; set; }
-        public int PontuacaoMax { get; set; }
-        public string? Cor { get; set; }
-    }
-
-    private sealed class CriarTriagemInput
-    {
-        public string Titulo { get; set; } = "";
-        public string? PublicoAlvo { get; set; }
-        public string? Descricao { get; set; }
-        public string? Icone { get; set; }
-        public string? Imagem { get; set; }
-        public List<PerguntaInputLocal> Perguntas { get; set; } = [];
-        public List<FaixaInputLocal> Faixas { get; set; } = [];
-    }
-
-    private sealed class RespostaInputLocal
-    {
-        public int PerguntaId { get; set; }
-        public bool Valor { get; set; }
-    }
-
-    private sealed class ResponderInput
+    // ---------------- Envelope clínico local ----------------
+    private sealed class ResultadoSensivelLocal
     {
         public string NomePaciente { get; set; } = "";
         public int Idade { get; set; }
-        public string? Sexo { get; set; }
-        public List<RespostaInputLocal> Respostas { get; set; } = [];
+        public string Sexo { get; set; } = "";
+        public int Pontuacao { get; set; }
+        public int PontuacaoMaxima { get; set; }
+        public string Classificacao { get; set; } = "";
+        public string Recomendacao { get; set; } = "";
+        public string Cor { get; set; } = "#10B981";
     }
 
     // ---------------- Senha (PBKDF2, igual à API) ----------------
@@ -691,8 +816,8 @@ public static partial class BancoLocal
     private sealed class HomePrefLocal
     {
         [PrimaryKey, AutoIncrement] public int Id { get; set; }
-        [Indexed] public int UsuarioId { get; set; }
-        public int TriagemModeloId { get; set; }
+        [Indexed("IX_home_prefs_usuario_triagem", 1, Unique = true)] public int UsuarioId { get; set; }
+        [Indexed("IX_home_prefs_usuario_triagem", 2, Unique = true)] public int TriagemModeloId { get; set; }
         public bool Visivel { get; set; } = true;
         public int Ordem { get; set; }
     }
@@ -711,6 +836,7 @@ public static partial class BancoLocal
         public string Classificacao { get; set; } = "";
         public string Recomendacao { get; set; } = "";
         public string Cor { get; set; } = "#10B981";
+        public string? DadosProtegidos { get; set; }
         public DateTime Data { get; set; } = DateTime.UtcNow;
     }
 
@@ -721,5 +847,6 @@ public static partial class BancoLocal
         [Indexed] public int ResultadoId { get; set; }
         public int PerguntaId { get; set; }
         public bool Valor { get; set; }
+        public string? ValorProtegido { get; set; }
     }
 }

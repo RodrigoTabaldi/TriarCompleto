@@ -194,8 +194,8 @@ antes. Isso acorda a API (~1 min) sem acordar o banco. O banco acorda sozinho no
 primeiro login, em cerca de mais 1 minuto.
 
 **Nunca** configure um monitor externo (UptimeRobot e similares) apontando para
-`/health` — ele consulta o banco a cada checagem e mantém o Azure SQL ligado 24/7.
-Se quiser manter a API sempre acordada, aponte para `/` ou `/health/live`.
+`/health` — além de exigir autenticação, ele consulta o banco a cada checagem e mantém
+o Azure SQL ligado 24/7. Para monitoramento público, use `/health/live`.
 
 **Acompanhe a cota** no portal do Azure, na métrica **"Free amount remaining"** do
 banco. Se ela cair rápido demais, o Activity Log mostra, nas operações
@@ -207,13 +207,10 @@ Uma sessão aberta impede o auto-pause pela noite inteira.
 
 ---
 
-## Dívida técnica assumida
+## Evolução do banco
 
-O banco é criado com `EnsureCreated` (ver `Data/DbSeeder.cs`), não com **EF Core
-Migrations**. Funciona para o primeiro deploy, mas significa que **não há caminho de
-evolução de schema**: se um dia você adicionar uma coluna a uma entidade, o banco
-existente não será atualizado, e a saída seria recriá-lo perdendo os dados.
-
-Deixei como está para não misturar mudança de schema com mudança de infraestrutura
-neste momento. Antes de o banco ter dados que importem, vale converter para Migrations
-— o custo é baixo agora e alto depois.
+O esquema é versionado por **EF Core Migrations** em `Data/Migrations`. Bancos antigos
+criados com `EnsureCreated` são detectados e recebem o baseline automaticamente, sem
+apagar dados. Mantenha `Database__SeedOnStartup=true` no primeiro deploy e em qualquer
+deploy que introduza migration; depois de a inicialização concluir, ele pode voltar a
+`false` para não acordar o Azure SQL quando o serviço reiniciar sem tráfego de usuário.

@@ -1315,6 +1315,9 @@
         "dependencies": {
           "Xamarin.Kotlin.StdLib": "2.2.0.1"
         }
+      },
+      "triagem.core": {
+        "type": "Project"
       }
     },
     "net10.0-android36.0/android-arm64": {
@@ -1612,6 +1615,9 @@
         "type": "Transitive",
         "resolved": "8.0.1",
         "contentHash": "KYkIOAvPexQOLDxPO2g0BVoWInnQhPpkFzRqvNrNrMhVT6kqhVr0zEb6KCHlptLFukxnZrjuMVAnxK7pOGUYrw=="
+      },
+      "triagem.core": {
+        "type": "Project"
       }
     },
     "net10.0-ios26.5/android-arm64": {},
@@ -1885,6 +1891,9 @@
         "type": "Transitive",
         "resolved": "8.0.1",
         "contentHash": "KYkIOAvPexQOLDxPO2g0BVoWInnQhPpkFzRqvNrNrMhVT6kqhVr0zEb6KCHlptLFukxnZrjuMVAnxK7pOGUYrw=="
+      },
+      "triagem.core": {
+        "type": "Project"
       }
     },
     "net10.0-maccatalyst26.5/android-arm64": {
@@ -2234,6 +2243,9 @@
         "type": "Transitive",
         "resolved": "8.0.1",
         "contentHash": "KYkIOAvPexQOLDxPO2g0BVoWInnQhPpkFzRqvNrNrMhVT6kqhVr0zEb6KCHlptLFukxnZrjuMVAnxK7pOGUYrw=="
+      },
+      "triagem.core": {
+        "type": "Project"
       }
     },
     "net10.0-windows10.0.19041/android-arm64": {

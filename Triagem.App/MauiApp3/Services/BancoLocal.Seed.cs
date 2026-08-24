@@ -1,3 +1,4 @@
+using System.Text.Json;
 using SQLite;
 
 namespace MauiApp3.Services;
@@ -208,10 +209,8 @@ public static partial class BancoLocal
             var faixa = faixas.FirstOrDefault(f => e.Pontuacao >= f.PontuacaoMin && e.Pontuacao <= f.PontuacaoMax)
                         ?? faixas.LastOrDefault();
 
-            await db.InsertAsync(new ResultadoLocal
+            var dadosSensiveis = new ResultadoSensivelLocal
             {
-                TriagemModeloId = modelo.Id,
-                UsuarioId = demo.Id,
                 NomePaciente = e.Nome,
                 Idade = e.Idade,
                 Sexo = e.Sexo,
@@ -219,7 +218,14 @@ public static partial class BancoLocal
                 PontuacaoMaxima = pesoTotal,
                 Classificacao = faixa?.Titulo ?? "Sem classificação",
                 Recomendacao = faixa?.Recomendacao ?? "",
-                Cor = faixa?.Cor ?? "#10B981",
+                Cor = faixa?.Cor ?? "#10B981"
+            };
+
+            await db.InsertAsync(new ResultadoLocal
+            {
+                TriagemModeloId = modelo.Id,
+                UsuarioId = demo.Id,
+                DadosProtegidos = LocalDataProtection.Proteger(JsonSerializer.Serialize(dadosSensiveis, JsonOptions)),
                 Data = DateTime.UtcNow.AddDays(-e.DiasAtras)
             });
         }

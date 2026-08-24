@@ -102,6 +102,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\..\Triagem.Core\Triagem.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="ClosedXML" Version="0.105.0" />
 		<!-- Banco local do app (modo demonstração, sem API). -->
 		<!-- A partir da 1.11, sqlite-net-pcl traz a cadeia SQLitePCLRaw 3.x e

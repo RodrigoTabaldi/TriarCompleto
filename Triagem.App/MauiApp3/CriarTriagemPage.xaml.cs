@@ -123,10 +123,8 @@ public partial class CriarTriagemPage : ContentPage
                 return;
             }
 
-            using var memoria = new MemoryStream();
-            await stream.CopyToAsync(memoria);
-            var bytes = memoria.ToArray();
-            if (bytes.Length > TamanhoMaximoImagem)
+            var bytes = await LerImagemComLimiteAsync(stream);
+            if (bytes is null)
             {
                 await DisplayAlertAsync("Imagem muito grande", "Escolha uma imagem de até 2 MB.", "OK");
                 return;
@@ -141,6 +139,22 @@ public partial class CriarTriagemPage : ContentPage
         {
             await DisplayAlertAsync("Erro", $"Não foi possível abrir a imagem: {ex.Message}", "OK");
         }
+    }
+
+    private static async Task<byte[]?> LerImagemComLimiteAsync(Stream stream)
+    {
+        using var memoria = new MemoryStream(capacity: TamanhoMaximoImagem);
+        var buffer = new byte[64 * 1024];
+
+        while (true)
+        {
+            var lidos = await stream.ReadAsync(buffer);
+            if (lidos == 0) break;
+            if (memoria.Length + lidos > TamanhoMaximoImagem) return null;
+            await memoria.WriteAsync(buffer.AsMemory(0, lidos));
+        }
+
+        return memoria.ToArray();
     }
 
     private void RemoverImagem(object? sender, EventArgs e)
@@ -264,23 +278,25 @@ public partial class CriarTriagemPage : ContentPage
 
             _salvando = true;
 
-            var payload = new
+            var payload = new CriarTriagemPayload
             {
-                usuarioId = usuario.Id,
-                titulo = Titulo.Text.Trim(),
-                publicoAlvo = PublicoAlvo.Text?.Trim() ?? "",
-                descricao = Descricao.Text?.Trim() ?? "",
-                icone = "📋",
-                imagem = _imagemDataUrl,
-                perguntas = _perguntas.Select(p => new { texto = p.Texto.Trim(), peso = int.Parse(p.Peso) }),
-                faixas = _faixas.Select(f => new
+                Titulo = Titulo.Text.Trim(),
+                PublicoAlvo = PublicoAlvo.Text?.Trim() ?? "",
+                Descricao = Descricao.Text?.Trim() ?? "",
+                Icone = "📋",
+                Imagem = _imagemDataUrl,
+                Perguntas = _perguntas.Select(p => new PerguntaTriagemPayload
                 {
-                    titulo = f.Titulo.Trim(),
-                    recomendacao = f.Recomendacao?.Trim() ?? "",
-                    pontuacaoMin = int.Parse(f.Min),
-                    pontuacaoMax = int.Parse(f.Max),
-                    cor = (string?)null
-                })
+                    Texto = p.Texto.Trim(), Peso = int.Parse(p.Peso)
+                }).ToList(),
+                Faixas = _faixas.Select(f => new FaixaTriagemPayload
+                {
+                    Titulo = f.Titulo.Trim(),
+                    Recomendacao = f.Recomendacao?.Trim() ?? "",
+                    PontuacaoMin = int.Parse(f.Min),
+                    PontuacaoMax = int.Parse(f.Max),
+                    Cor = null
+                }).ToList()
             };
 
             var (ok, erro) = string.IsNullOrEmpty(TriagemId)

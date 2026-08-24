@@ -96,6 +96,8 @@ public class TriagemResultado
     public string Classificacao { get; set; } = "";
     public string Recomendacao { get; set; } = "";
     public string Cor { get; set; } = "#10B981";
+    /// <summary>Envelope AES-GCM com os campos clínicos completos das novas gravações.</summary>
+    public string? DadosProtegidos { get; set; }
     public DateTime Data { get; set; } = DateTime.UtcNow;
 
     public List<RespostaDada> Respostas { get; set; } = [];
@@ -108,4 +110,5 @@ public class RespostaDada
     public TriagemResultado? TriagemResultado { get; set; }
     public int PerguntaId { get; set; }
     public bool Valor { get; set; }
+    public string? ValorProtegido { get; set; }
 }

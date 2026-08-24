@@ -80,7 +80,8 @@ public class TriagemDbContext(DbContextOptions<TriagemDbContext> options, FieldE
             e.Property(r => r.Classificacao).HasMaxLength(120);
             e.Property(r => r.Recomendacao).HasMaxLength(600);
             e.Property(r => r.Cor).HasMaxLength(9);
-            e.HasIndex(r => new { r.UsuarioId, r.TriagemModeloId });
+            e.Property(r => r.DadosProtegidos).HasColumnType("nvarchar(max)");
+            e.HasIndex(r => new { r.UsuarioId, r.TriagemModeloId, r.Data });
             e.HasOne(r => r.TriagemModelo).WithMany()
                 .HasForeignKey(r => r.TriagemModeloId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(r => r.Usuario).WithMany()
@@ -89,6 +90,10 @@ public class TriagemDbContext(DbContextOptions<TriagemDbContext> options, FieldE
                 .HasForeignKey(x => x.TriagemResultadoId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        mb.Entity<RespostaDada>(e => e.ToTable("RespostasDadas"));
+        mb.Entity<RespostaDada>(e =>
+        {
+            e.ToTable("RespostasDadas");
+            e.Property(r => r.ValorProtegido).HasMaxLength(200);
+        });
     }
 }

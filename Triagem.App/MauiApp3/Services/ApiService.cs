@@ -107,7 +107,7 @@ public static class ApiService
         DefinirToken(null);
         LimparCache();
         _usuarioAtualId = 0;
-        SecureStorage.Default.RemoveAll();
+        LimparSessaoPersistida();
     }
 
     public static bool EhSessaoExpirada(Exception ex) =>
@@ -152,7 +152,7 @@ public static class ApiService
                     System.Globalization.DateTimeStyles.RoundtripKind, out var expiraEm) ||
                 expiraEm <= DateTime.UtcNow)
             {
-                SecureStorage.Default.RemoveAll();
+                LimparSessaoPersistida();
                 return null;
             }
 
@@ -164,7 +164,7 @@ public static class ApiService
             // aparelho: limpar os dados do app apaga o banco, mas não o SecureStorage.
             if (ModoLocal && !await BancoLocal.UsuarioExisteAsync(id))
             {
-                SecureStorage.Default.RemoveAll();
+                LimparSessaoPersistida();
                 return null;
             }
 
@@ -184,6 +184,15 @@ public static class ApiService
             // ausente em vez de derrubar a inicialização do app.
             return null;
         }
+    }
+
+    private static void LimparSessaoPersistida()
+    {
+        SecureStorage.Default.Remove(ChaveToken);
+        SecureStorage.Default.Remove(ChaveExpiraEm);
+        SecureStorage.Default.Remove(ChaveUsuarioId);
+        SecureStorage.Default.Remove(ChaveUsuarioNome);
+        SecureStorage.Default.Remove(ChaveUsuarioEmail);
     }
 
     /// <summary>Remove do cache local as entradas cujas chaves começam por qualquer um dos prefixos.</summary>
@@ -221,7 +230,7 @@ public static class ApiService
         if (ModoLocal)
             return await IniciarSessaoLocalAsync(await BancoLocal.LoginAsync(email, senha));
 
-        var resp = await Http.PostAsJsonAsync($"{BaseUrl}/api/auth/login", new { email, senha }, JsonOptions);
+        using var resp = await Http.PostAsJsonAsync($"{BaseUrl}/api/auth/login", new { email, senha }, JsonOptions);
         if (!resp.IsSuccessStatusCode) return null;
         return await AutenticarAsync(resp);
     }
@@ -234,7 +243,7 @@ public static class ApiService
             return (await IniciarSessaoLocalAsync(novo), erroLocal);
         }
 
-        var resp = await Http.PostAsJsonAsync($"{BaseUrl}/api/auth/register", new { nome, email, senha }, JsonOptions);
+        using var resp = await Http.PostAsJsonAsync($"{BaseUrl}/api/auth/register", new { nome, email, senha }, JsonOptions);
         if (!resp.IsSuccessStatusCode)
             return (null, await resp.Content.ReadAsStringAsync());
         return (await AutenticarAsync(resp), null);
@@ -326,11 +335,11 @@ public static class ApiService
         return result;
     }
 
-    public static async Task<(bool Ok, string? Erro)> CriarTriagemAsync(object payload)
+    public static async Task<(bool Ok, string? Erro)> CriarTriagemAsync(CriarTriagemPayload payload)
     {
         if (ModoLocal) return await BancoLocal.CriarTriagemAsync(_usuarioAtualId, payload);
 
-        var resp = await Http.PostAsJsonAsync($"{BaseUrl}/api/triagens", payload, JsonOptions);
+        using var resp = await Http.PostAsJsonAsync($"{BaseUrl}/api/triagens", payload, JsonOptions);
         if (resp.IsSuccessStatusCode)
         {
             InvalidarCache("triagens_", "historico_");
@@ -339,11 +348,11 @@ public static class ApiService
         return (false, await resp.Content.ReadAsStringAsync());
     }
 
-    public static async Task<(bool Ok, string? Erro)> AtualizarTriagemAsync(int id, object payload)
+    public static async Task<(bool Ok, string? Erro)> AtualizarTriagemAsync(int id, CriarTriagemPayload payload)
     {
         if (ModoLocal) return await BancoLocal.AtualizarTriagemAsync(_usuarioAtualId, id, payload);
 
-        var resp = await Http.PutAsJsonAsync($"{BaseUrl}/api/triagens/{id}", payload, JsonOptions);
+        using var resp = await Http.PutAsJsonAsync($"{BaseUrl}/api/triagens/{id}", payload, JsonOptions);
         if (resp.IsSuccessStatusCode)
         {
             Cache.TryRemove($"triagem_{id}", out _);
@@ -357,7 +366,7 @@ public static class ApiService
     {
         if (ModoLocal) return await BancoLocal.ExcluirTriagemAsync(_usuarioAtualId, id);
 
-        var resp = await Http.DeleteAsync($"{BaseUrl}/api/triagens/{id}");
+        using var resp = await Http.DeleteAsync($"{BaseUrl}/api/triagens/{id}");
         if (resp.IsSuccessStatusCode)
         {
             Cache.TryRemove($"triagem_{id}", out _);
@@ -369,11 +378,11 @@ public static class ApiService
 
     // ---------------- Execução ----------------
 
-    public static async Task<(ResultadoTriagem? Resultado, string? Erro)> ResponderAsync(int triagemId, object payload)
+    public static async Task<(ResultadoTriagem? Resultado, string? Erro)> ResponderAsync(int triagemId, ResponderTriagemPayload payload)
     {
         if (ModoLocal) return await BancoLocal.ResponderAsync(_usuarioAtualId, triagemId, payload);
 
-        var resp = await Http.PostAsJsonAsync($"{BaseUrl}/api/triagens/{triagemId}/responder", payload, JsonOptions);
+        using var resp = await Http.PostAsJsonAsync($"{BaseUrl}/api/triagens/{triagemId}/responder", payload, JsonOptions);
         if (!resp.IsSuccessStatusCode)
             return (null, await resp.Content.ReadAsStringAsync());
 
@@ -396,10 +405,18 @@ public static class ApiService
         var cached = GetCache<List<HistoricoItem>>(cacheKey);
         if (cached is not null) return cached;
 
-        var url = $"{BaseUrl}/api/triagem/usuario/{usuarioId}";
-        if (triagemId is not null) url += $"?triagemModeloId={triagemId}";
+        const int tamanhoPagina = 200;
+        var result = new List<HistoricoItem>();
 
-        var result = await Http.GetFromJsonAsync<List<HistoricoItem>>(url, JsonOptions) ?? [];
+        for (var pagina = 1; ; pagina++)
+        {
+            var query = triagemId is not null ? $"triagemModeloId={triagemId}&" : "";
+            var url = $"{BaseUrl}/api/triagem/usuario/{usuarioId}?{query}pagina={pagina}&tamanhoPagina={tamanhoPagina}";
+            var lote = await Http.GetFromJsonAsync<List<HistoricoItem>>(url, JsonOptions) ?? [];
+            result.AddRange(lote);
+            if (lote.Count < tamanhoPagina) break;
+        }
+
         SetCache(cacheKey, result, TimeSpan.FromMinutes(10));
         return result;
     }
@@ -418,7 +435,7 @@ public static class ApiService
         {
             itens = itens.Select(i => new { triagemModeloId = i.TriagemModeloId, visivel = i.Visivel, ordem = i.Ordem })
         };
-        var resp = await Http.PutAsJsonAsync($"{BaseUrl}/api/usuarios/{usuarioId}/home", payload, JsonOptions);
+        using var resp = await Http.PutAsJsonAsync($"{BaseUrl}/api/usuarios/{usuarioId}/home", payload, JsonOptions);
         resp.EnsureSuccessStatusCode();
     }
 }

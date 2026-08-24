@@ -139,13 +139,16 @@ public partial class TriagemPage : ContentPage
 
             _enviando = true;
 
-            var payload = new
+            var payload = new ResponderTriagemPayload
             {
-                usuarioId = usuario.Id,
-                nomePaciente = Nome.Text.Trim(),
-                idade,
-                sexo = Sexo.SelectedItem?.ToString() ?? "",
-                respostas = _perguntas.Select(p => new { perguntaId = p.PerguntaId, valor = p.Resposta == true })
+                NomePaciente = Nome.Text.Trim(),
+                Idade = idade,
+                Sexo = Sexo.SelectedItem?.ToString() ?? "",
+                Respostas = _perguntas.Select(p => new RespostaTriagemPayload
+                {
+                    PerguntaId = p.PerguntaId,
+                    Valor = p.Resposta == true
+                }).ToList()
             };
 
             var (resultado, erro) = await ApiService.ResponderAsync(_triagem.Id, payload);

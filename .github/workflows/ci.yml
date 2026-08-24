@@ -24,7 +24,10 @@ jobs:
         run: dotnet build Triagem.API.Tests/Triagem.API.Tests.csproj --no-restore -c Release
 
       - name: Testes
-        run: dotnet test Triagem.API.Tests/Triagem.API.Tests.csproj --no-build -c Release --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test Triagem.API.Tests/Triagem.API.Tests.csproj --no-build -c Release --settings coverlet.runsettings --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx"
+
+      - name: Testes do núcleo compartilhado
+        run: dotnet test Triagem.Core.Tests/Triagem.Core.Tests.csproj -c Release --logger "trx;LogFileName=core-test-results.trx"
 
       - name: Checar dependências com vulnerabilidades conhecidas
         run: dotnet list Triagem.API/Triagem.API/Triagem.API.csproj package --vulnerable --include-transitive
@@ -34,10 +37,38 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: "**/TestResults/*.trx"
+          path: |
+            **/TestResults/*.trx
+            **/TestResults/**/coverage.cobertura.xml
 
-  # O app .NET MAUI (Triagem.App/MauiApp3) não entra neste pipeline: build multi-
-  # plataforma (Android/iOS/Windows/macOS) exige os workloads do MAUI instalados por
-  # runner (JDK, Android SDK, Xcode em macOS-only para iOS/MacCatalyst), o que é caro
-  # e frágil para rodar em toda alteração. Se o app crescer, considerar um job
-  # separado, sob demanda, só para o alvo Android (o mais barato de configurar em CI).
+  build-app-android:
+    name: Build do app Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Instalar workload MAUI Android
+        run: dotnet workload install maui-android
+
+      - name: Restaurar app com lockfile
+        run: dotnet restore Triagem.App/MauiApp3/MauiApp3.csproj --locked-mode -p:TargetFramework=net10.0-android
+
+      - name: Compilar app Android
+        run: dotnet build Triagem.App/MauiApp3/MauiApp3.csproj -f net10.0-android -c Debug --no-restore
+
+      - name: Checar dependências do app
+        run: dotnet list Triagem.App/MauiApp3/MauiApp3.csproj package --vulnerable --include-transitive
+
+  secret-scan:
+    name: Verificação de segredos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2

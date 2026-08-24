@@ -37,4 +37,13 @@ public class PasswordHasherTests
     {
         Assert.False(PasswordHasher.Verify("qualquer", "formato-invalido-sem-pontos"));
     }
+
+    [Theory]
+    [InlineData("abc.c2FsdA==.aGFzaA==")]
+    [InlineData("100000.@@@.aGFzaA==")]
+    [InlineData("999999999.c2FsdA==.aGFzaA==")]
+    public void Verify_ComPartesCorrompidas_RetornaFalseSemLancar(string hash)
+    {
+        Assert.False(PasswordHasher.Verify("qualquer", hash));
+    }
 }
