@@ -37,7 +37,7 @@ public partial class TriagemService(TriagemDbContext db, CacheService cache, ILo
                 .ToDictionaryAsync(h => h.TriagemModeloId);
 
             return modelos.Select(t => new TriagemModeloResumo(
-                t.Id, t.Titulo, t.PublicoAlvo, t.Descricao, t.Icone,
+                t.Id, t.Titulo, t.PublicoAlvo, t.Descricao, t.Icone, t.Imagem,
                 Padrao: t.CriadorUsuarioId == null,
                 MinhaAutoria: t.CriadorUsuarioId == usuarioId,
                 VisivelNaHome: !prefs.TryGetValue(t.Id, out var p) || p.Visivel,
@@ -68,7 +68,7 @@ public partial class TriagemService(TriagemDbContext db, CacheService cache, ILo
             if (t is null) return null;
 
             return new TriagemModeloDetalhe(
-                t.Id, t.Titulo, t.PublicoAlvo, t.Descricao, t.Icone,
+                t.Id, t.Titulo, t.PublicoAlvo, t.Descricao, t.Icone, t.Imagem,
                 t.CriadorUsuarioId == null, t.CriadorUsuarioId,
                 t.Perguntas.OrderBy(p => p.Ordem)
                     .Select(p => new PerguntaDto(p.Id, p.Texto, p.Peso, p.Ordem)).ToList(),
@@ -81,6 +81,8 @@ public partial class TriagemService(TriagemDbContext db, CacheService cache, ILo
     {
         var erro = ValidarModelo(req.Titulo, req.Perguntas, req.Faixas);
         if (erro is not null) return (null, erro);
+        erro = ValidarImagem(req.Imagem);
+        if (erro is not null) return (null, erro);
 
         if (!await db.Usuarios.AnyAsync(u => u.Id == usuarioId))
             return (null, "Usuário não encontrado.");
@@ -91,6 +93,7 @@ public partial class TriagemService(TriagemDbContext db, CacheService cache, ILo
             PublicoAlvo = string.IsNullOrWhiteSpace(req.PublicoAlvo) ? "Todas as idades" : req.PublicoAlvo.Trim(),
             Descricao = req.Descricao?.Trim() ?? "",
             Icone = string.IsNullOrWhiteSpace(req.Icone) ? "📋" : req.Icone.Trim(),
+            Imagem = NormalizarImagem(req.Imagem),
             CriadorUsuarioId = usuarioId,
             Ativa = true,
             Perguntas = MapearPerguntas(req.Perguntas),
@@ -130,6 +133,8 @@ public partial class TriagemService(TriagemDbContext db, CacheService cache, ILo
     {
         var erro = ValidarModelo(req.Titulo, req.Perguntas, req.Faixas);
         if (erro is not null) return (false, erro);
+        erro = ValidarImagem(req.Imagem);
+        if (erro is not null) return (false, erro);
 
         var modelo = await db.TriagemModelos
             .Include(t => t.Perguntas)
@@ -144,6 +149,7 @@ public partial class TriagemService(TriagemDbContext db, CacheService cache, ILo
         modelo.PublicoAlvo = string.IsNullOrWhiteSpace(req.PublicoAlvo) ? "Todas as idades" : req.PublicoAlvo.Trim();
         modelo.Descricao = req.Descricao?.Trim() ?? "";
         modelo.Icone = string.IsNullOrWhiteSpace(req.Icone) ? modelo.Icone : req.Icone.Trim();
+        modelo.Imagem = NormalizarImagem(req.Imagem);
 
         db.Perguntas.RemoveRange(modelo.Perguntas);
         db.FaixasResultado.RemoveRange(modelo.Faixas);
@@ -356,4 +362,31 @@ public partial class TriagemService(TriagemDbContext db, CacheService cache, ILo
         1 => "#F59E0B",
         _ => "#EF4444",
     };
+
+    private const int TamanhoMaximoImagem = 2 * 1024 * 1024;
+
+    private static string? NormalizarImagem(string? imagem) =>
+        string.IsNullOrWhiteSpace(imagem) ? null : imagem.Trim();
+
+    private static string? ValidarImagem(string? imagem)
+    {
+        if (string.IsNullOrWhiteSpace(imagem)) return null;
+
+        var valor = imagem.Trim();
+        var formatos = new[] { "data:image/png;base64,", "data:image/jpeg;base64,", "data:image/webp;base64," };
+        var prefixo = formatos.FirstOrDefault(p => valor.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+        if (prefixo is null) return "A imagem deve estar no formato PNG, JPG ou WebP.";
+
+        try
+        {
+            if (Convert.FromBase64String(valor[prefixo.Length..]).Length > TamanhoMaximoImagem)
+                return "A imagem deve ter no máximo 2 MB.";
+        }
+        catch (FormatException)
+        {
+            return "Os dados da imagem são inválidos.";
+        }
+
+        return null;
+    }
 }

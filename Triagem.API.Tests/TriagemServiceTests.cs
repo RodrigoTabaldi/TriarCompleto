@@ -25,6 +25,7 @@ public class TriagemServiceTests
         PublicoAlvo: "Todas as idades",
         Descricao: "descricao",
         Icone: "🩺",
+        Imagem: null,
         Perguntas: [new PerguntaInput("Pergunta 1?", 2), new PerguntaInput("Pergunta 2?", 3)],
         Faixas:
         [

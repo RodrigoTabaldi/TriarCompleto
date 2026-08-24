@@ -13,11 +13,11 @@ public record PerguntaDto(int Id, string Texto, int Peso, int Ordem);
 public record FaixaDto(int Id, string Titulo, string Recomendacao, int PontuacaoMin, int PontuacaoMax, string Cor, int Ordem);
 
 public record TriagemModeloResumo(
-    int Id, string Titulo, string PublicoAlvo, string Descricao, string Icone,
+    int Id, string Titulo, string PublicoAlvo, string Descricao, string Icone, string? Imagem,
     bool Padrao, bool MinhaAutoria, bool VisivelNaHome, int TotalPerguntas);
 
 public record TriagemModeloDetalhe(
-    int Id, string Titulo, string PublicoAlvo, string Descricao, string Icone,
+    int Id, string Titulo, string PublicoAlvo, string Descricao, string Icone, string? Imagem,
     bool Padrao, int? CriadorUsuarioId,
     List<PerguntaDto> Perguntas, List<FaixaDto> Faixas);
 
@@ -25,7 +25,7 @@ public record PerguntaInput(string Texto, int Peso);
 public record FaixaInput(string Titulo, string Recomendacao, int PontuacaoMin, int PontuacaoMax, string? Cor);
 
 public record CriarTriagemRequest(
-    string Titulo, string PublicoAlvo, string? Descricao, string? Icone,
+    string Titulo, string PublicoAlvo, string? Descricao, string? Icone, string? Imagem,
     List<PerguntaInput> Perguntas, List<FaixaInput> Faixas);
 
 // ---------- Home ----------

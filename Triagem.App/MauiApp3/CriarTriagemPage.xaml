@@ -50,6 +50,30 @@
                         <Entry x:Name="Descricao" Placeholder="Explique o objetivo desta triagem"
                                TextColor="Black" PlaceholderColor="#9CA3AF" BackgroundColor="Transparent"/>
                     </Border>
+
+                    <Label Text="Imagem ilustrativa" TextColor="#374151" Margin="0,6,0,0"/>
+                    <Label Text="Essa imagem será exibida no cartão da triagem na Home. Use PNG, JPG ou WebP de até 2 MB."
+                           FontSize="12" TextColor="#6B7280"/>
+
+                    <Border BackgroundColor="#F8FAFC" Stroke="#DDE5EE" StrokeThickness="1"
+                            StrokeShape="RoundRectangle 12" Padding="10">
+                        <Image x:Name="PreviewImagem" Source="triagem_clinica_profissional.png"
+                               HeightRequest="180" Aspect="AspectFit"/>
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Button x:Name="BotaoEscolherImagem"
+                                Text="Escolher imagem"
+                                Clicked="EscolherImagem"
+                                BackgroundColor="#E6F6F1" TextColor="#009B72"
+                                FontAttributes="Bold" CornerRadius="10" HeightRequest="44"/>
+                        <Button x:Name="BotaoRemoverImagem"
+                                Grid.Column="1" Text="Remover imagem"
+                                Clicked="RemoverImagem"
+                                IsVisible="False"
+                                BackgroundColor="#FEE2E2" TextColor="#DC2626"
+                                FontAttributes="Bold" CornerRadius="10" HeightRequest="44"/>
+                    </Grid>
                 </VerticalStackLayout>
             </Border>
 

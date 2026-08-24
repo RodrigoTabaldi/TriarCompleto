@@ -23,6 +23,7 @@ public class TriagemModelo
     public string PublicoAlvo { get; set; } = "";
     public string Descricao { get; set; } = "";
     public string Icone { get; set; } = "🩺";
+    public string? Imagem { get; set; }
 
     /// <summary>Null = triagem padrão do sistema; senão, id do usuário criador.</summary>
     public int? CriadorUsuarioId { get; set; }

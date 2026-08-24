@@ -12,6 +12,8 @@ public partial class CriarTriagemPage : ContentPage
     private readonly ObservableCollection<FaixaEditavel> _faixas = [];
     private bool _carregouEdicao;
     private bool _salvando;
+    private string? _imagemDataUrl;
+    private const int TamanhoMaximoImagem = 2 * 1024 * 1024;
 
     /// <summary>Quando presente, a página edita uma triagem existente.</summary>
     public string? TriagemId { get; set; }
@@ -60,6 +62,8 @@ public partial class CriarTriagemPage : ContentPage
             Titulo.Text = detalhe.Titulo;
             PublicoAlvo.Text = detalhe.PublicoAlvo;
             Descricao.Text = detalhe.Descricao;
+            _imagemDataUrl = detalhe.Imagem;
+            AtualizarPreviewImagem();
 
             _perguntas.Clear();
             foreach (var p in detalhe.Perguntas.OrderBy(p => p.Ordem))
@@ -81,6 +85,75 @@ public partial class CriarTriagemPage : ContentPage
         {
             await DisplayAlertAsync("Erro", ex.Message, "OK");
         }
+    }
+
+    // ---------------- Imagem ilustrativa ----------------
+
+    private async void EscolherImagem(object? sender, EventArgs e)
+    {
+        try
+        {
+            var arquivo = await FilePicker.Default.PickAsync(new PickOptions
+            {
+                PickerTitle = "Escolha a imagem da triagem",
+                FileTypes = FilePickerFileType.Images
+            });
+
+            if (arquivo is null) return;
+
+            var extensao = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
+            var mime = extensao switch
+            {
+                ".png" => "image/png",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".webp" => "image/webp",
+                _ => null
+            };
+
+            if (mime is null)
+            {
+                await DisplayAlertAsync("Formato não suportado", "Escolha uma imagem PNG, JPG ou WebP.", "OK");
+                return;
+            }
+
+            await using var stream = await arquivo.OpenReadAsync();
+            if (stream.CanSeek && stream.Length > TamanhoMaximoImagem)
+            {
+                await DisplayAlertAsync("Imagem muito grande", "Escolha uma imagem de até 2 MB.", "OK");
+                return;
+            }
+
+            using var memoria = new MemoryStream();
+            await stream.CopyToAsync(memoria);
+            var bytes = memoria.ToArray();
+            if (bytes.Length > TamanhoMaximoImagem)
+            {
+                await DisplayAlertAsync("Imagem muito grande", "Escolha uma imagem de até 2 MB.", "OK");
+                return;
+            }
+
+            _imagemDataUrl = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+            PreviewImagem.Source = ImageSource.FromStream(() => new MemoryStream(bytes, writable: false));
+            BotaoEscolherImagem.Text = "Trocar imagem";
+            BotaoRemoverImagem.IsVisible = true;
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("Erro", $"Não foi possível abrir a imagem: {ex.Message}", "OK");
+        }
+    }
+
+    private void RemoverImagem(object? sender, EventArgs e)
+    {
+        _imagemDataUrl = null;
+        AtualizarPreviewImagem();
+    }
+
+    private void AtualizarPreviewImagem()
+    {
+        PreviewImagem.Source = TriagemImagem.CriarImageSource(_imagemDataUrl, "triagem_clinica_profissional.png");
+        BotaoEscolherImagem.Text = string.IsNullOrWhiteSpace(_imagemDataUrl) ? "Escolher imagem" : "Trocar imagem";
+        BotaoRemoverImagem.IsVisible = !string.IsNullOrWhiteSpace(_imagemDataUrl);
     }
 
     // ---------------- Perguntas ----------------
@@ -198,6 +271,7 @@ public partial class CriarTriagemPage : ContentPage
                 publicoAlvo = PublicoAlvo.Text?.Trim() ?? "",
                 descricao = Descricao.Text?.Trim() ?? "",
                 icone = "📋",
+                imagem = _imagemDataUrl,
                 perguntas = _perguntas.Select(p => new { texto = p.Texto.Trim(), peso = int.Parse(p.Peso) }),
                 faixas = _faixas.Select(f => new
                 {

@@ -12,7 +12,6 @@ public partial class EscolhaModoPage : ContentPage
 
     private Modo _modoEscolhido = Modo.Nenhum;
     private bool _entrando;
-    private bool _tentouRestaurarSessao;
 
     private static readonly Color CorBordaPadrao = Color.FromArgb("#E5E7EB");
     private static readonly Color CorBordaSelecionada = Color.FromArgb("#10B981");
@@ -21,21 +20,6 @@ public partial class EscolhaModoPage : ContentPage
     public EscolhaModoPage()
     {
         InitializeComponent();
-    }
-
-    protected override async void OnAppearing()
-    {
-        base.OnAppearing();
-
-        if (_tentouRestaurarSessao) return;
-        _tentouRestaurarSessao = true;
-
-        var usuario = await ApiService.RestaurarSessaoAsync();
-        if (usuario is null) return;
-
-        App.UsuarioLogado = usuario;
-        App.ModoIndividual = false;
-        await Shell.Current.GoToAsync(nameof(HomePage));
     }
 
     private void SelecionarIndividual(object? sender, EventArgs e) => Selecionar(Modo.Individual);

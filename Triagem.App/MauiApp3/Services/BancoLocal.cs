@@ -49,6 +49,7 @@ public static partial class BancoLocal
 
             await conexao.CreateTableAsync<UsuarioLocal>();
             await conexao.CreateTableAsync<TriagemModeloLocal>();
+            await GarantirColunaImagemAsync(conexao);
             await conexao.CreateTableAsync<PerguntaLocal>();
             await conexao.CreateTableAsync<FaixaLocal>();
             await conexao.CreateTableAsync<HomePrefLocal>();
@@ -64,6 +65,14 @@ public static partial class BancoLocal
         {
             Inicializacao.Release();
         }
+    }
+
+    private static async Task GarantirColunaImagemAsync(SQLiteAsyncConnection conexao)
+    {
+        var existe = await conexao.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM pragma_table_info('triagem_modelos') WHERE name = 'Imagem'");
+        if (existe == 0)
+            await conexao.ExecuteAsync("ALTER TABLE triagem_modelos ADD COLUMN Imagem TEXT NULL");
     }
 
     // ---------------- Autenticação ----------------
@@ -169,6 +178,7 @@ public static partial class BancoLocal
             PublicoAlvo = t.PublicoAlvo,
             Descricao = t.Descricao,
             Icone = t.Icone,
+            Imagem = t.Imagem,
             Padrao = t.CriadorUsuarioId is null,
             MinhaAutoria = t.CriadorUsuarioId == usuarioId,
             VisivelNaHome = !preferencias.TryGetValue(t.Id, out var pref) || pref.Visivel,
@@ -203,6 +213,7 @@ public static partial class BancoLocal
             PublicoAlvo = modelo.PublicoAlvo,
             Descricao = modelo.Descricao,
             Icone = modelo.Icone,
+            Imagem = modelo.Imagem,
             Padrao = modelo.CriadorUsuarioId is null,
             CriadorUsuarioId = modelo.CriadorUsuarioId,
             Perguntas = perguntas
@@ -238,6 +249,7 @@ public static partial class BancoLocal
             PublicoAlvo = string.IsNullOrWhiteSpace(req.PublicoAlvo) ? "Todas as idades" : req.PublicoAlvo!.Trim(),
             Descricao = req.Descricao?.Trim() ?? "",
             Icone = string.IsNullOrWhiteSpace(req.Icone) ? "📋" : req.Icone!.Trim(),
+            Imagem = NormalizarImagem(req.Imagem),
             CriadorUsuarioId = usuarioId,
             Ativa = true
         };
@@ -274,6 +286,7 @@ public static partial class BancoLocal
         modelo.PublicoAlvo = string.IsNullOrWhiteSpace(req.PublicoAlvo) ? "Todas as idades" : req.PublicoAlvo!.Trim();
         modelo.Descricao = req.Descricao?.Trim() ?? "";
         modelo.Icone = string.IsNullOrWhiteSpace(req.Icone) ? modelo.Icone : req.Icone!.Trim();
+        modelo.Imagem = NormalizarImagem(req.Imagem);
         await db.UpdateAsync(modelo);
 
         // As perguntas antigas são apagadas e regravadas (mesma estratégia da API).
@@ -475,6 +488,8 @@ public static partial class BancoLocal
 
     private static string? ValidarModelo(CriarTriagemInput req)
     {
+        var erroImagem = ValidarImagem(req.Imagem);
+        if (erroImagem is not null) return erroImagem;
         if (string.IsNullOrWhiteSpace(req.Titulo)) return "Informe o título da triagem.";
 
         var perguntas = req.Perguntas;
@@ -499,6 +514,33 @@ public static partial class BancoLocal
         if (ordenadas[0].PontuacaoMin > 0) return "A primeira faixa deve começar em 0.";
         if (ordenadas[^1].PontuacaoMax < pesoTotal)
             return $"A última faixa deve cobrir até a pontuação máxima ({pesoTotal}).";
+
+        return null;
+    }
+
+    private const int TamanhoMaximoImagem = 2 * 1024 * 1024;
+
+    private static string? NormalizarImagem(string? imagem) =>
+        string.IsNullOrWhiteSpace(imagem) ? null : imagem.Trim();
+
+    private static string? ValidarImagem(string? imagem)
+    {
+        if (string.IsNullOrWhiteSpace(imagem)) return null;
+
+        var valor = imagem.Trim();
+        var formatos = new[] { "data:image/png;base64,", "data:image/jpeg;base64,", "data:image/webp;base64," };
+        var prefixo = formatos.FirstOrDefault(p => valor.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+        if (prefixo is null) return "A imagem deve estar no formato PNG, JPG ou WebP.";
+
+        try
+        {
+            if (Convert.FromBase64String(valor[prefixo.Length..]).Length > TamanhoMaximoImagem)
+                return "A imagem deve ter no máximo 2 MB.";
+        }
+        catch (FormatException)
+        {
+            return "Os dados da imagem são inválidos.";
+        }
 
         return null;
     }
@@ -543,6 +585,7 @@ public static partial class BancoLocal
         public string? PublicoAlvo { get; set; }
         public string? Descricao { get; set; }
         public string? Icone { get; set; }
+        public string? Imagem { get; set; }
         public List<PerguntaInputLocal> Perguntas { get; set; } = [];
         public List<FaixaInputLocal> Faixas { get; set; } = [];
     }
@@ -613,6 +656,7 @@ public static partial class BancoLocal
         public string PublicoAlvo { get; set; } = "";
         public string Descricao { get; set; } = "";
         public string Icone { get; set; } = "🩺";
+        public string? Imagem { get; set; }
 
         /// <summary>Null = triagem padrão do sistema; senão, id do usuário criador.</summary>
         public int? CriadorUsuarioId { get; set; }

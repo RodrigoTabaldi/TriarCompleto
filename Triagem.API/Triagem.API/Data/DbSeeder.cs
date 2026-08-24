@@ -11,6 +11,10 @@ public static class DbSeeder
     public static async Task SeedAsync(TriagemDbContext db)
     {
         await db.Database.EnsureCreatedAsync();
+        await db.Database.ExecuteSqlRawAsync("""
+            IF COL_LENGTH('dbo.TriagemModelos', 'Imagem') IS NULL
+                ALTER TABLE dbo.TriagemModelos ADD Imagem NVARCHAR(MAX) NULL;
+            """);
 
         // Várias instâncias da API podem subir ao mesmo tempo (load balancer);
         // o applock do SQL Server garante que só uma execute o seed.

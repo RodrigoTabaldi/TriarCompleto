@@ -32,6 +32,7 @@ public class TriagemDbContext(DbContextOptions<TriagemDbContext> options, FieldE
             e.Property(t => t.PublicoAlvo).HasMaxLength(150);
             e.Property(t => t.Descricao).HasMaxLength(600);
             e.Property(t => t.Icone).HasMaxLength(16);
+            e.Property(t => t.Imagem).HasColumnType("nvarchar(max)");
             e.HasOne(t => t.CriadorUsuario)
                 .WithMany(u => u.TriagensCriadas)
                 .HasForeignKey(t => t.CriadorUsuarioId)

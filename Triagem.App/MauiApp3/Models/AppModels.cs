@@ -23,6 +23,7 @@ public class TriagemResumo : ObservableBase
     public string PublicoAlvo { get; set; } = "";
     public string Descricao { get; set; } = "";
     public string Icone { get; set; } = "🩺";
+    public string? Imagem { get; set; }
     public bool Padrao { get; set; }
     public bool MinhaAutoria { get; set; }
     public int TotalPerguntas { get; set; }
@@ -37,19 +38,48 @@ public class TriagemResumo : ObservableBase
     }
     public bool ModoNormal => !ModoEdicao;
 
-    public string ImagemHome
+    public ImageSource ImagemHome
     {
         get
         {
+            if (!string.IsNullOrWhiteSpace(Imagem))
+                return TriagemImagem.CriarImageSource(Imagem, "triagem_clinica_profissional.png");
+
             var titulo = Titulo.ToLowerInvariant();
-            if (titulo.Contains("mental")) return "triagem_mental.png";
-            if (titulo.Contains("infantil") || titulo.Contains("criança") || titulo.Contains("crianca")) return "triagem_infantil.png";
-            if (titulo.Contains("mulher")) return "triagem_mulher.png";
-            if (titulo.Contains("idoso")) return "triagem_idoso.png";
-            if (titulo.Contains("respirat")) return "triagem_respiratoria.png";
-            if (titulo.Contains("clínica") || titulo.Contains("clinica") || titulo.Contains("geral")) return "triagem_clinica.png";
-            return "triagem_clinica.png";
+            var arquivo = titulo.Contains("mental") ? "triagem_mental_profissional.png"
+                : titulo.Contains("infantil") || titulo.Contains("criança") || titulo.Contains("crianca") ? "triagem_infantil_profissional.png"
+                : titulo.Contains("mulher") ? "triagem_mulher_profissional.png"
+                : titulo.Contains("idoso") ? "triagem_idoso_profissional.png"
+                : titulo.Contains("respirat") ? "triagem_respiratoria_profissional.png"
+                : "triagem_clinica_profissional.png";
+
+            return ImageSource.FromFile(arquivo);
         }
+    }
+}
+
+public static class TriagemImagem
+{
+    public static ImageSource CriarImageSource(string? dataUrl, string fallback)
+    {
+        if (!string.IsNullOrWhiteSpace(dataUrl))
+        {
+            try
+            {
+                var separador = dataUrl.IndexOf(',');
+                if (dataUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) && separador > 0)
+                {
+                    var bytes = Convert.FromBase64String(dataUrl[(separador + 1)..]);
+                    return ImageSource.FromStream(() => new MemoryStream(bytes, writable: false));
+                }
+            }
+            catch (FormatException)
+            {
+                // Dados antigos ou corrompidos usam a ilustração padrão sem derrubar a Home.
+            }
+        }
+
+        return ImageSource.FromFile(fallback);
     }
 }
 
@@ -79,6 +109,7 @@ public class TriagemDetalhe
     public string PublicoAlvo { get; set; } = "";
     public string Descricao { get; set; } = "";
     public string Icone { get; set; } = "🩺";
+    public string? Imagem { get; set; }
     public bool Padrao { get; set; }
     public int? CriadorUsuarioId { get; set; }
     public List<PerguntaDto> Perguntas { get; set; } = [];

@@ -104,8 +104,10 @@
 	<ItemGroup>
 		<PackageReference Include="ClosedXML" Version="0.105.0" />
 		<!-- Banco local do app (modo demonstração, sem API). -->
-		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
-		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />
+		<!-- A partir da 1.11, sqlite-net-pcl traz a cadeia SQLitePCLRaw 3.x e
+		     SourceGear.sqlite3 atualizada. Não fixe bundle_green 2.x aqui: além de
+		     redundante, ele reintroduz binários nativos antigos e vulneráveis. -->
+		<PackageReference Include="sqlite-net-pcl" Version="1.11.285" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
 	</ItemGroup>

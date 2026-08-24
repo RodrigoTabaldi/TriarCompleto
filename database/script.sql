@@ -29,10 +29,15 @@ CREATE TABLE dbo.TriagemModelos (
     PublicoAlvo      NVARCHAR(150) NOT NULL,
     Descricao        NVARCHAR(600) NOT NULL,
     Icone            NVARCHAR(16)  NOT NULL,
+    Imagem           NVARCHAR(MAX) NULL,
     CriadorUsuarioId INT NULL REFERENCES dbo.Usuarios(Id),
     Ativa            BIT NOT NULL DEFAULT 1,
     CriadoEm         DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
+GO
+
+IF COL_LENGTH('dbo.TriagemModelos', 'Imagem') IS NULL
+    ALTER TABLE dbo.TriagemModelos ADD Imagem NVARCHAR(MAX) NULL;
 GO
 
 IF OBJECT_ID('dbo.Perguntas') IS NULL
