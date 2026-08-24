@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage x:Class="MauiApp3.CreditosPage" xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" BackgroundColor="#F5F7F6" Shell.NavBarIsVisible="False">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="18" MaximumWidthRequest="700" HorizontalOptions="Fill">
+            <HorizontalStackLayout Spacing="8">
+                <HorizontalStackLayout.GestureRecognizers><TapGestureRecognizer Tapped="Voltar"/></HorizontalStackLayout.GestureRecognizers>
+                <Label Text="←" FontSize="22" TextColor="#009B72" FontAttributes="Bold"/><Label Text="Voltar" TextColor="#009B72" FontAttributes="Bold" VerticalOptions="Center"/>
+            </HorizontalStackLayout>
+            <Image Source="logo.png" HeightRequest="86" HorizontalOptions="Center"/>
+            <Label Text="Créditos" FontSize="26" FontAttributes="Bold" TextColor="#0F172A" HorizontalOptions="Center"/>
+            <Label Text="Equipe responsável pelo projeto" FontSize="15" TextColor="#64748B" HorizontalOptions="Center"/>
+            <VerticalStackLayout Spacing="12">
+                <Border BackgroundColor="White" Stroke="#E2E8F0" StrokeShape="RoundRectangle 14" Padding="18"><VerticalStackLayout Spacing="4"><Label Text="Gabriela de Luccia Dutra" FontSize="17" FontAttributes="Bold" TextColor="#0F172A"/><Label Text="Orientadora principal e responsável pela área de Fonoaudiologia" FontSize="14" TextColor="#475569"/></VerticalStackLayout></Border>
+                <Border BackgroundColor="White" Stroke="#E2E8F0" StrokeShape="RoundRectangle 14" Padding="18"><VerticalStackLayout Spacing="4"><Label Text="Rodrigo Tabaldi" FontSize="17" FontAttributes="Bold" TextColor="#0F172A"/><Label Text="Desenvolvedor principal do software" FontSize="14" TextColor="#475569"/></VerticalStackLayout></Border>
+                <Border BackgroundColor="White" Stroke="#E2E8F0" StrokeShape="RoundRectangle 14" Padding="18"><VerticalStackLayout Spacing="4"><Label Text="Waine Teixeira Junior" FontSize="17" FontAttributes="Bold" TextColor="#0F172A"/><Label Text="Supervisor de Engenharia de Software" FontSize="14" TextColor="#475569"/></VerticalStackLayout></Border>
+                <Border BackgroundColor="White" Stroke="#E2E8F0" StrokeShape="RoundRectangle 14" Padding="18"><VerticalStackLayout Spacing="4"><Label Text="Yasmin Paes Ferreira" FontSize="17" FontAttributes="Bold" TextColor="#0F172A"/><Label Text="Colaboradora discente em Fonoaudiologia" FontSize="14" TextColor="#475569"/></VerticalStackLayout></Border>
+            </VerticalStackLayout>
+            <Label Text="Projeto acadêmico da Universidade Federal de Rondonópolis (UFR)." FontSize="13" TextColor="#64748B" HorizontalOptions="Center"/>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

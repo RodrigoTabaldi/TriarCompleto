@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage x:Class="MauiApp3.ContatoPage" xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" BackgroundColor="#F5F7F6" Shell.NavBarIsVisible="False">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="18" MaximumWidthRequest="700" HorizontalOptions="Fill">
+            <HorizontalStackLayout Spacing="8"><HorizontalStackLayout.GestureRecognizers><TapGestureRecognizer Tapped="Voltar"/></HorizontalStackLayout.GestureRecognizers><Label Text="←" FontSize="22" TextColor="#009B72" FontAttributes="Bold"/><Label Text="Voltar" TextColor="#009B72" FontAttributes="Bold" VerticalOptions="Center"/></HorizontalStackLayout>
+            <Image Source="logo.png" HeightRequest="86" HorizontalOptions="Center"/>
+            <Label Text="Contato" FontSize="26" FontAttributes="Bold" TextColor="#0F172A" HorizontalOptions="Center"/>
+            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="22" Shadow="0,3,14,#0000001A">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="Dúvidas sobre o projeto" FontSize="18" FontAttributes="Bold" TextColor="#0F172A"/>
+                    <Label Text="Para assuntos acadêmicos e institucionais relacionados a projetos de pesquisa, utilize os canais oficiais da PROPGP/UFR." FontSize="14" TextColor="#475569" LineHeight="1.25"/>
+                    <Label Text="Gerência de Projetos de Pesquisa" FontSize="14" FontAttributes="Bold" TextColor="#0F172A"/>
+                    <Label Text="pesquisa.propgp@ufr.edu.br" FontSize="15" TextColor="#007A5A"/><Label Text="(66) 3410-4170" FontSize="15" TextColor="#475569"/>
+                    <Button Text="Enviar e-mail" Clicked="EnviarEmail" BackgroundColor="#009B72" TextColor="White" FontAttributes="Bold" CornerRadius="10"/>
+                    <Button Text="Ver página de contatos da PROPGP" Clicked="AbrirContatos" BackgroundColor="#E6F6F1" TextColor="#007A5A" FontAttributes="Bold" CornerRadius="10"/>
+                </VerticalStackLayout>
+            </Border>
+            <Label Text="O aplicativo não realiza atendimento clínico. Em caso de sintomas vocais persistentes, procure um fonoaudiólogo ou outro serviço de saúde." FontSize="13" TextColor="#64748B" LineHeight="1.2"/>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

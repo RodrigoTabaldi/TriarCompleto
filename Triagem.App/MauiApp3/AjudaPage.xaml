@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage x:Class="MauiApp3.AjudaPage" xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" BackgroundColor="#F5F7F6" Shell.NavBarIsVisible="False">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="18" MaximumWidthRequest="700" HorizontalOptions="Fill">
+            <HorizontalStackLayout Spacing="8"><HorizontalStackLayout.GestureRecognizers><TapGestureRecognizer Tapped="Voltar"/></HorizontalStackLayout.GestureRecognizers><Label Text="←" FontSize="22" TextColor="#009B72" FontAttributes="Bold"/><Label Text="Voltar" TextColor="#009B72" FontAttributes="Bold" VerticalOptions="Center"/></HorizontalStackLayout>
+            <Image Source="logo.png" HeightRequest="86" HorizontalOptions="Center"/><Label Text="Ajuda" FontSize="26" FontAttributes="Bold" TextColor="#0F172A" HorizontalOptions="Center"/>
+            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="22" Shadow="0,3,14,#0000001A">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Como iniciar uma triagem?" FontSize="17" FontAttributes="Bold" TextColor="#0F172A"/><Label Text="Na tela inicial, escolha uma triagem disponível e toque em Entrar. Responda todas as perguntas e confirme para visualizar o resultado." FontSize="14" TextColor="#475569" LineHeight="1.2"/>
+                    <Label Text="Como consultar resultados anteriores?" FontSize="17" FontAttributes="Bold" TextColor="#0F172A"/><Label Text="Use Ver histórico em uma triagem para filtrar os resultados ou Histórico geral para consultar todas as avaliações realizadas." FontSize="14" TextColor="#475569" LineHeight="1.2"/>
+                    <Label Text="Como personalizar a tela inicial?" FontSize="17" FontAttributes="Bold" TextColor="#0F172A"/><Label Text="Abra Configurações, escolha quais triagens devem aparecer e toque em Salvar configuração da home." FontSize="14" TextColor="#475569" LineHeight="1.2"/>
+                    <Label Text="O resultado é um diagnóstico?" FontSize="17" FontAttributes="Bold" TextColor="#0F172A"/><Label Text="Não. A classificação é uma orientação inicial e não substitui avaliação profissional." FontSize="14" TextColor="#475569" LineHeight="1.2"/>
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

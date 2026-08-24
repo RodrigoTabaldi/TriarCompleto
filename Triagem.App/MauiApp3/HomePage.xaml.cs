@@ -146,6 +146,15 @@ public partial class HomePage : ContentPage
     private async void IrSobre(object? sender, EventArgs e) =>
         await Shell.Current.GoToAsync(nameof(SobrePage));
 
+    private async void IrHistoricoGeral(object? sender, EventArgs e) =>
+        await Shell.Current.GoToAsync(nameof(HistoricoPage));
+
+    private async void IrCreditos(object? sender, EventArgs e) =>
+        await Shell.Current.GoToAsync(nameof(CreditosPage));
+
+    private async void IrContato(object? sender, EventArgs e) =>
+        await Shell.Current.GoToAsync(nameof(ContatoPage));
+
     private async void Sair(object? sender, EventArgs e)
     {
         if (App.ModoIndividual)
@@ -169,14 +178,24 @@ public partial class HomePage : ContentPage
         await Shell.Current.GoToAsync($"//{nameof(EscolhaModoPage)}");
     }
 
-    private void AlternarEdicaoHome(object? sender, EventArgs e)
+    private async void AlternarEdicaoHome(object? sender, EventArgs e)
     {
-        _modoEdicao = !_modoEdicao;
+        if (_modoEdicao)
+        {
+            await DisplayAlertAsync("Configurações",
+                "Escolha as triagens que deseja exibir e use o botão Salvar configuração da home.", "OK");
+            return;
+        }
+
+        _modoEdicao = true;
         BotaoSalvarHomeMobile.IsVisible = _modoEdicao;
         BotaoSalvarHomeDesktop.IsVisible = _modoEdicao;
 
         foreach (var t in _todas) t.ModoEdicao = _modoEdicao;
         AplicarFiltro();
+
+        await DisplayAlertAsync("Configurações",
+            "A personalização da Home foi ativada. Escolha as triagens que deseja exibir e salve ao final da lista.", "OK");
     }
 
     private async void SalvarConfiguracaoHome(object? sender, EventArgs e)

@@ -55,10 +55,9 @@
                         </Border>
 
                         <HorizontalStackLayout Spacing="14" Padding="12,10">
-                            <Label Text="♙" FontSize="20" TextColor="#40506A"/>
-                            <Label Text="Pacientes" FontSize="16" TextColor="#40506A"/>
-                        </HorizontalStackLayout>
-                        <HorizontalStackLayout Spacing="14" Padding="12,10">
+                            <HorizontalStackLayout.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="IrHistoricoGeral"/>
+                            </HorizontalStackLayout.GestureRecognizers>
                             <Label Text="▣" FontSize="20" TextColor="#40506A"/>
                             <Label Text="Histórico geral" FontSize="16" TextColor="#40506A"/>
                         </HorizontalStackLayout>
@@ -66,10 +65,16 @@
                         <BoxView HeightRequest="1" Color="#E4EAF0" Margin="0,16"/>
 
                         <HorizontalStackLayout Spacing="14" Padding="12,10">
+                            <HorizontalStackLayout.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="IrCreditos"/>
+                            </HorizontalStackLayout.GestureRecognizers>
                             <Label Text="⌬" FontSize="20" TextColor="#40506A"/>
                             <Label Text="Créditos" FontSize="16" TextColor="#40506A"/>
                         </HorizontalStackLayout>
                         <HorizontalStackLayout Spacing="14" Padding="12,10">
+                            <HorizontalStackLayout.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="IrContato"/>
+                            </HorizontalStackLayout.GestureRecognizers>
                             <Label Text="✉" FontSize="20" TextColor="#40506A"/>
                             <Label Text="Contato" FontSize="16" TextColor="#40506A"/>
                         </HorizontalStackLayout>
@@ -88,16 +93,6 @@
                             <Label Text="Criar sua triagem" FontSize="16" FontAttributes="Bold" TextColor="#009B72"/>
                         </HorizontalStackLayout>
 
-                        <BoxView HeightRequest="1" Color="#E4EAF0" Margin="0,16"/>
-
-                        <HorizontalStackLayout Spacing="14" Padding="12,10">
-                            <Label Text="⚙" FontSize="20" TextColor="#40506A"/>
-                            <Label Text="Configurações" FontSize="16" TextColor="#40506A"/>
-                        </HorizontalStackLayout>
-                        <HorizontalStackLayout Spacing="14" Padding="12,10">
-                            <Label Text="?" FontSize="20" TextColor="#40506A"/>
-                            <Label Text="Ajuda" FontSize="16" TextColor="#40506A"/>
-                        </HorizontalStackLayout>
                     </VerticalStackLayout>
 
                     <HorizontalStackLayout Grid.Row="2" Spacing="14" Padding="2,10">
@@ -141,17 +136,29 @@
                                 <Label x:Name="NomeUsuario" Text="João Silva" FontSize="18" FontAttributes="Bold" TextColor="#07142E"/>
                                 <Label x:Name="EmailUsuario" Text="joaosilva@email.com" FontSize="14" TextColor="#465674"/>
                             </VerticalStackLayout>
-                            <Button Grid.Column="2"
-                                    Text="↻  Atualizar"
-                                    Clicked="Atualizar"
-                                    BackgroundColor="White"
-                                    BorderColor="#DDE5EE"
-                                    BorderWidth="1"
-                                    TextColor="#07142E"
-                                    CornerRadius="8"
-                                    FontSize="15"
-                                    HeightRequest="48"
-                                    Padding="18,0"/>
+                            <HorizontalStackLayout Grid.Column="2" Spacing="10">
+                                <Button Text="✎  Editar triagens"
+                                        Clicked="AlternarEdicaoHome"
+                                        BackgroundColor="White"
+                                        BorderColor="#009B72"
+                                        BorderWidth="1"
+                                        TextColor="#009B72"
+                                        CornerRadius="8"
+                                        FontSize="15"
+                                        FontAttributes="Bold"
+                                        HeightRequest="48"
+                                        Padding="18,0"/>
+                                <Button Text="↻  Atualizar"
+                                        Clicked="Atualizar"
+                                        BackgroundColor="White"
+                                        BorderColor="#DDE5EE"
+                                        BorderWidth="1"
+                                        TextColor="#07142E"
+                                        CornerRadius="8"
+                                        FontSize="15"
+                                        HeightRequest="48"
+                                        Padding="18,0"/>
+                            </HorizontalStackLayout>
                         </Grid>
 
                         <VerticalStackLayout Grid.Row="1" Spacing="6" Margin="0,34,0,0">
@@ -370,10 +377,16 @@
                         <Label Text="Início" FontSize="13" TextColor="#009B72" HorizontalTextAlignment="Center"/>
                     </VerticalStackLayout>
                     <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Center">
+                        <VerticalStackLayout.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="IrCreditos"/>
+                        </VerticalStackLayout.GestureRecognizers>
                         <Label Text="⌬" FontSize="26" TextColor="#40506A" HorizontalTextAlignment="Center"/>
                         <Label Text="Créditos" FontSize="13" TextColor="#40506A" HorizontalTextAlignment="Center"/>
                     </VerticalStackLayout>
                     <VerticalStackLayout Grid.Column="2" Spacing="2" HorizontalOptions="Center">
+                        <VerticalStackLayout.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="IrContato"/>
+                        </VerticalStackLayout.GestureRecognizers>
                         <Label Text="✉" FontSize="26" TextColor="#40506A" HorizontalTextAlignment="Center"/>
                         <Label Text="Contato" FontSize="13" TextColor="#40506A" HorizontalTextAlignment="Center"/>
                     </VerticalStackLayout>
