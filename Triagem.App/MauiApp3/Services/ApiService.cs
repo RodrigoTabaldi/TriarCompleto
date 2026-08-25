@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -128,7 +129,7 @@ public static class ApiService
     {
         await SecureStorage.Default.SetAsync(ChaveToken, token);
         await SecureStorage.Default.SetAsync(ChaveExpiraEm, expiraEm.ToString("O"));
-        await SecureStorage.Default.SetAsync(ChaveUsuarioId, usuario.Id.ToString());
+        await SecureStorage.Default.SetAsync(ChaveUsuarioId, usuario.Id.ToString(CultureInfo.InvariantCulture));
         await SecureStorage.Default.SetAsync(ChaveUsuarioNome, usuario.Nome ?? "");
         await SecureStorage.Default.SetAsync(ChaveUsuarioEmail, usuario.Email ?? "");
     }
@@ -223,7 +224,7 @@ public static class ApiService
     // ---------------- Auth ----------------
 
     /// <summary>Resposta de autenticação da API: usuário + token JWT.</summary>
-    private record AuthResponse(int Id, string Nome, string Email, string Token, DateTime ExpiraEm);
+    private sealed record AuthResponse(int Id, string Nome, string Email, string Token, DateTime ExpiraEm);
 
     public static async Task<Usuario?> LoginAsync(string email, string senha)
     {
@@ -300,7 +301,7 @@ public static class ApiService
 
         var usuario = await BancoLocal.CriarUsuarioIndividualAsync();
         _usuarioAtualId = usuario.Id;
-        await SecureStorage.Default.SetAsync(ChaveUsuarioIndividualId, usuario.Id.ToString());
+        await SecureStorage.Default.SetAsync(ChaveUsuarioIndividualId, usuario.Id.ToString(CultureInfo.InvariantCulture));
         return usuario;
     }
 
@@ -316,8 +317,10 @@ public static class ApiService
         var cached = GetCache<List<TriagemResumo>>(cacheKey);
         if (cached is not null) return cached;
 
+        // A API deriva o usuário sempre do token (nunca de um id na URL); usuarioId
+        // aqui só serve para a chave de cache local e o caminho ModoLocal acima.
         var result = await Http.GetFromJsonAsync<List<TriagemResumo>>(
-            $"{BaseUrl}/api/triagens?usuarioId={usuarioId}", JsonOptions) ?? [];
+            $"{BaseUrl}/api/triagens", JsonOptions) ?? [];
         SetCache(cacheKey, result, TimeSpan.FromMinutes(5));
         return result;
     }
@@ -435,7 +438,7 @@ public static class ApiService
         {
             itens = itens.Select(i => new { triagemModeloId = i.TriagemModeloId, visivel = i.Visivel, ordem = i.Ordem })
         };
-        using var resp = await Http.PutAsJsonAsync($"{BaseUrl}/api/usuarios/{usuarioId}/home", payload, JsonOptions);
+        using var resp = await Http.PutAsJsonAsync($"{BaseUrl}/api/usuarios/home", payload, JsonOptions);
         resp.EnsureSuccessStatusCode();
     }
 }

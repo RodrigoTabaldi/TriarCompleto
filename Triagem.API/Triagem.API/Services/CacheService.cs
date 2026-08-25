@@ -9,10 +9,22 @@ namespace Triagem.API.Services;
 /// então um bump feito pela api1 invalida também as leituras da api2.
 /// Qualquer falha do Redis degrada para acesso direto ao banco: cache nunca derruba requisição.
 /// </summary>
-public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
+public partial class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private const string VersionKey = "triar:triagens:version";
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Cache indisponível ao ler versão: {Erro}")]
+    private static partial void LogFalhaAoLerVersao(ILogger logger, string erro);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Cache indisponível ao invalidar: {Erro}")]
+    private static partial void LogFalhaAoInvalidar(ILogger logger, string erro);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Cache indisponível (get {Chave}): {Erro}")]
+    private static partial void LogFalhaAoLer(ILogger logger, string chave, string erro);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Cache indisponível (set {Chave}): {Erro}")]
+    private static partial void LogFalhaAoGravar(ILogger logger, string chave, string erro);
 
     /// <summary>Token atual da geração do cache de triagens.</summary>
     public async Task<string> GetVersionAsync()
@@ -24,7 +36,7 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
         }
         catch (Exception ex)
         {
-            logger.LogWarning("Cache indisponível ao ler versão: {Erro}", ex.Message);
+            LogFalhaAoLerVersao(logger, ex.Message);
             // Token único impede reutilizar uma entrada potencialmente velha quando o
             // cache voltar durante a requisição.
             return $"nocache-{Guid.NewGuid():N}";
@@ -43,7 +55,7 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
         }
         catch (Exception ex)
         {
-            logger.LogWarning("Cache indisponível ao invalidar: {Erro}", ex.Message);
+            LogFalhaAoInvalidar(logger, ex.Message);
         }
     }
 
@@ -57,7 +69,7 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
         }
         catch (Exception ex)
         {
-            logger.LogWarning("Cache indisponível (get {Chave}): {Erro}", key, ex.Message);
+            LogFalhaAoLer(logger, key, ex.Message);
             return await factory();
         }
 
@@ -71,7 +83,7 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
         }
         catch (Exception ex)
         {
-            logger.LogWarning("Cache indisponível (set {Chave}): {Erro}", key, ex.Message);
+            LogFalhaAoGravar(logger, key, ex.Message);
         }
 
         return valor;

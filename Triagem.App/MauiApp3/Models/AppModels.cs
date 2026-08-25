@@ -201,7 +201,7 @@ public class HistoricoItem
     public string Cor { get; set; } = "#10B981";
     public DateTime Data { get; set; }
 
-    public string DataFormatada => Data.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+    public string DataFormatada => Data.ToLocalTime().ToString("dd/MM/yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture);
     public string PontuacaoFormatada => $"{Pontuacao}/{PontuacaoMaxima}";
 }
 

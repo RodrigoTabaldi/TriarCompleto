@@ -199,6 +199,10 @@ builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>
 
 var app = builder.Build();
 
+// Criado uma única vez (fora do pipeline por requisição) para a instrumentação de
+// duração abaixo — evita recriar um logger a cada requisição.
+var perfLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Triar.Performance");
+
 // ---------- Pipeline ----------
 app.UseForwardedHeaders();
 
@@ -217,6 +221,28 @@ app.Use(async (context, next) =>
     var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Triar.Request");
     using (logger.BeginScope(new Dictionary<string, object> { ["CorrelationId"] = correlationId }))
         await next();
+});
+
+// ---------- Duração de cada requisição ----------
+// Instrumentação mínima de performance: sem isso, um endpoint lento só aparece quando
+// alguém reclama, sem nenhum dado histórico para investigar a causa. Loga em Warning
+// acima de 1s (o limiar que separa "normal" de "merece atenção") e em Debug sempre,
+// para quem precisar do tempo de toda requisição ao investigar localmente.
+app.Use(async (context, next) =>
+{
+    var cronometro = System.Diagnostics.Stopwatch.StartNew();
+    await next();
+    cronometro.Stop();
+
+    var metodo = context.Request.Method;
+    var caminho = context.Request.Path.Value ?? "";
+    var duracaoMs = cronometro.ElapsedMilliseconds;
+    var statusCode = context.Response.StatusCode;
+
+    if (duracaoMs >= 1000)
+        Program.LogRequisicaoLenta(perfLogger, metodo, caminho, duracaoMs, statusCode);
+    else
+        Program.LogRequisicaoConcluida(perfLogger, metodo, caminho, duracaoMs, statusCode);
 });
 
 // HSTS instrui o navegador a nunca mais acessar este host em HTTP puro. Fora de
@@ -295,16 +321,33 @@ if (app.Configuration.GetValue("Database:SeedOnStartup", true))
         try
         {
             await DbSeeder.SeedAsync(db, encryptor);
-            logger.LogInformation("Banco de dados pronto.");
+            Program.LogBancoPronto(logger);
             break;
         }
         catch (Exception ex) when (tentativa < 10)
         {
-            logger.LogWarning("Banco indisponível (tentativa {Tentativa}/10): {Erro}. Aguardando 5s...",
-                tentativa, ex.Message);
+            Program.LogBancoIndisponivel(logger, tentativa, ex.Message);
             await Task.Delay(TimeSpan.FromSeconds(5));
         }
     }
 }
 
 app.Run();
+
+// Marcador para Triagem.API.Tests usar WebApplicationFactory<Program> nos testes de
+// integração (o Program gerado a partir de top-level statements é `internal` por
+// padrão; InternalsVisibleTo em AssemblyInfo.cs libera o acesso ao projeto de teste).
+partial class Program
+{
+    [LoggerMessage(Level = LogLevel.Information, Message = "Banco de dados pronto.")]
+    private static partial void LogBancoPronto(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Banco indisponível (tentativa {Tentativa}/10): {Erro}. Aguardando 5s...")]
+    private static partial void LogBancoIndisponivel(ILogger logger, int tentativa, string erro);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Requisição lenta: {Metodo} {Caminho} levou {DuracaoMs}ms (status {StatusCode})")]
+    internal static partial void LogRequisicaoLenta(ILogger logger, string metodo, string caminho, long duracaoMs, int statusCode);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "{Metodo} {Caminho} levou {DuracaoMs}ms (status {StatusCode})")]
+    internal static partial void LogRequisicaoConcluida(ILogger logger, string metodo, string caminho, long duracaoMs, int statusCode);
+}

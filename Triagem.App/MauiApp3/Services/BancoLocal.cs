@@ -626,95 +626,27 @@ public static partial class BancoLocal
         };
     }
 
-    // ---------------- Validação (espelha a da API) ----------------
+    // ---------------- Validação ----------------
+    // A validação de fato (título/perguntas/faixas/imagem) vive em Triagem.Core.TriagemRules,
+    // compartilhada com a API (TriagemService) — aqui só convertemos o payload do app
+    // para os tipos de entrada do Core, garantindo que os dois modos nunca divirjam.
 
     private static string? ValidarModelo(CriarTriagemPayload req)
     {
-        var erroImagem = ValidarImagem(req.Imagem);
+        var erroImagem = TriagemRules.ValidarImagemBase64(req.Imagem);
         if (erroImagem is not null) return erroImagem;
-        if (string.IsNullOrWhiteSpace(req.Titulo)) return "Informe o título da triagem.";
-        if (req.Titulo.Trim().Length > 150) return "O título deve ter no máximo 150 caracteres.";
 
-        var perguntas = req.Perguntas;
-        var faixas = req.Faixas;
-
-        if (perguntas is null || perguntas.Count == 0) return "Adicione pelo menos uma pergunta.";
-        if (perguntas.Count > 50) return "Máximo de 50 perguntas por triagem.";
-        if (perguntas.Any(p => string.IsNullOrWhiteSpace(p.Texto))) return "Toda pergunta precisa de um texto.";
-        if (perguntas.Any(p => p.Texto.Trim().Length > 500)) return "Cada pergunta deve ter no máximo 500 caracteres.";
-        if (perguntas.Any(p => p.Peso is < 1 or > 100)) return "O peso de cada pergunta deve estar entre 1 e 100.";
-        if (faixas is null || faixas.Count < 2) return "Defina pelo menos duas faixas de resultado.";
-        if (faixas.Count > 100) return "Máximo de 100 faixas de resultado por triagem.";
-        if (faixas.Any(f => string.IsNullOrWhiteSpace(f.Titulo))) return "Toda faixa de resultado precisa de um título.";
-        if (faixas.Any(f => f.Titulo.Trim().Length > 120)) return "O título de cada faixa deve ter no máximo 120 caracteres.";
-        if (faixas.Any(f => (f.Recomendacao?.Trim().Length ?? 0) > 600)) return "A recomendação deve ter no máximo 600 caracteres.";
-        if (faixas.Any(f => f.PontuacaoMin > f.PontuacaoMax)) return "Em cada faixa, a pontuação mínima deve ser menor ou igual à máxima.";
-
-        var ordenadas = faixas.OrderBy(f => f.PontuacaoMin).ToList();
-        for (var i = 1; i < ordenadas.Count; i++)
-        {
-            if (ordenadas[i].PontuacaoMin <= ordenadas[i - 1].PontuacaoMax)
-                return "As faixas de resultado não podem se sobrepor.";
-        }
-
-        var pesoTotal = perguntas.Sum(p => p.Peso);
-        if (ordenadas[0].PontuacaoMin > 0) return "A primeira faixa deve começar em 0.";
-        if (ordenadas[^1].PontuacaoMax < pesoTotal)
-            return $"A última faixa deve cobrir até a pontuação máxima ({pesoTotal}).";
-
-        return null;
+        return TriagemRules.ValidarModelo(
+            req.Titulo,
+            req.Perguntas?.Select(p => new PerguntaEntrada(p.Texto, p.Peso)).ToList(),
+            req.Faixas?.Select(f => new FaixaEntrada(f.Titulo, f.Recomendacao, f.PontuacaoMin, f.PontuacaoMax, f.Cor)).ToList());
     }
 
-    private const int TamanhoMaximoImagem = 2 * 1024 * 1024;
-    private const int TamanhoMaximoBase64Imagem = ((TamanhoMaximoImagem + 2) / 3) * 4;
+    private static string? NormalizarImagem(string? imagem) => TriagemRules.NormalizarImagem(imagem);
 
-    private static string? NormalizarImagem(string? imagem) =>
-        string.IsNullOrWhiteSpace(imagem) ? null : imagem.Trim();
+    private static string? MensagemErroRespostas(RespostasValidation validacao) => TriagemRules.MensagemErroRespostas(validacao);
 
-    private static string? ValidarImagem(string? imagem)
-    {
-        if (string.IsNullOrWhiteSpace(imagem)) return null;
-
-        var valor = imagem.Trim();
-        var formatos = new[] { "data:image/png;base64,", "data:image/jpeg;base64,", "data:image/webp;base64," };
-        var prefixo = formatos.FirstOrDefault(p => valor.StartsWith(p, StringComparison.OrdinalIgnoreCase));
-        if (prefixo is null) return "A imagem deve estar no formato PNG, JPG ou WebP.";
-
-        var base64 = valor[prefixo.Length..];
-        if (base64.Length > TamanhoMaximoBase64Imagem)
-            return "A imagem deve ter no máximo 2 MB.";
-
-        try
-        {
-            var bytes = Convert.FromBase64String(base64);
-            if (bytes.Length > TamanhoMaximoImagem)
-                return "A imagem deve ter no máximo 2 MB.";
-
-            if (!TriagemRules.AssinaturaImagemValida(prefixo, bytes))
-                return "O conteúdo do arquivo não corresponde ao formato de imagem informado.";
-        }
-        catch (FormatException)
-        {
-            return "Os dados da imagem são inválidos.";
-        }
-
-        return null;
-    }
-
-    private static string? MensagemErroRespostas(RespostasValidation validacao) => validacao.Status switch
-    {
-        RespostasStatus.PerguntaDesconhecida => $"Pergunta {validacao.PerguntaDesconhecida} não pertence a esta triagem.",
-        RespostasStatus.Incompletas => "Responda todas as perguntas da triagem uma única vez.",
-        RespostasStatus.Duplicadas => "Cada pergunta deve ser respondida uma única vez.",
-        _ => null
-    };
-
-    private static string CorPadrao(int indice) => indice switch
-    {
-        0 => "#10B981",
-        1 => "#F59E0B",
-        _ => "#EF4444",
-    };
+    private static string CorPadrao(int indice) => TriagemRules.CorPadrao(indice);
 
     // ---------------- Envelope clínico local ----------------
     private sealed class ResultadoSensivelLocal

@@ -15,7 +15,7 @@ internal static class TestHelpers
         new(new DataProtectionOptions { Key = "chave-de-teste-com-mais-de-32-caracteres-para-aes" });
 
     /// <summary>Novo TriagemDbContext isolado (InMemory), um banco distinto por teste.</summary>
-    public static TriagemDbContext NovoDbContext(FieldEncryptionService? encryptor = null)
+    public static TriagemDbContext NovoDbContext()
     {
         var options = new DbContextOptionsBuilder<TriagemDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -25,7 +25,7 @@ internal static class TestHelpers
             // sob teste é o mesmo, sem a garantia transacional real do SQL Server.
             .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
-        return new TriagemDbContext(options, encryptor ?? NovoEncryptor());
+        return new TriagemDbContext(options);
     }
 
     public static CacheService NovoCacheService() =>

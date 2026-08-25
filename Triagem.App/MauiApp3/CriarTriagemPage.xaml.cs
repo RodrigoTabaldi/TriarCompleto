@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using MauiApp3.Models;
 using MauiApp3.Services;
 
@@ -49,7 +50,7 @@ public partial class CriarTriagemPage : ContentPage
     {
         try
         {
-            var detalhe = await ApiService.ObterTriagemAsync(int.Parse(TriagemId!));
+            var detalhe = await ApiService.ObterTriagemAsync(int.Parse(TriagemId!, CultureInfo.InvariantCulture));
             if (detalhe is null)
             {
                 await DisplayAlertAsync("Erro", "Triagem não encontrada.", "OK");
@@ -67,7 +68,7 @@ public partial class CriarTriagemPage : ContentPage
 
             _perguntas.Clear();
             foreach (var p in detalhe.Perguntas.OrderBy(p => p.Ordem))
-                AdicionarPerguntaInterna(new PerguntaEditavel { Texto = p.Texto, Peso = p.Peso.ToString() });
+                AdicionarPerguntaInterna(new PerguntaEditavel { Texto = p.Texto, Peso = p.Peso.ToString(CultureInfo.InvariantCulture) });
 
             _faixas.Clear();
             foreach (var f in detalhe.Faixas.OrderBy(f => f.Ordem))
@@ -75,8 +76,8 @@ public partial class CriarTriagemPage : ContentPage
                 {
                     Titulo = f.Titulo,
                     Recomendacao = f.Recomendacao,
-                    Min = f.PontuacaoMin.ToString(),
-                    Max = f.PontuacaoMax.ToString()
+                    Min = f.PontuacaoMin.ToString(CultureInfo.InvariantCulture),
+                    Max = f.PontuacaoMax.ToString(CultureInfo.InvariantCulture)
                 });
 
             AtualizarPesoTotal();
@@ -218,7 +219,7 @@ public partial class CriarTriagemPage : ContentPage
             ? 0
             : (int.TryParse(_faixas[^1].Max, out var maxAnterior) ? maxAnterior + 1 : 0);
 
-        _faixas.Add(new FaixaEditavel { Min = min.ToString(), Max = PesoTotal().ToString() });
+        _faixas.Add(new FaixaEditavel { Min = min.ToString(CultureInfo.InvariantCulture), Max = PesoTotal().ToString(CultureInfo.InvariantCulture) });
     }
 
     private void RemoverFaixa(object? sender, EventArgs e)
@@ -287,21 +288,21 @@ public partial class CriarTriagemPage : ContentPage
                 Imagem = _imagemDataUrl,
                 Perguntas = _perguntas.Select(p => new PerguntaTriagemPayload
                 {
-                    Texto = p.Texto.Trim(), Peso = int.Parse(p.Peso)
+                    Texto = p.Texto.Trim(), Peso = int.Parse(p.Peso, CultureInfo.InvariantCulture)
                 }).ToList(),
                 Faixas = _faixas.Select(f => new FaixaTriagemPayload
                 {
                     Titulo = f.Titulo.Trim(),
                     Recomendacao = f.Recomendacao?.Trim() ?? "",
-                    PontuacaoMin = int.Parse(f.Min),
-                    PontuacaoMax = int.Parse(f.Max),
+                    PontuacaoMin = int.Parse(f.Min, CultureInfo.InvariantCulture),
+                    PontuacaoMax = int.Parse(f.Max, CultureInfo.InvariantCulture),
                     Cor = null
                 }).ToList()
             };
 
             var (ok, erro) = string.IsNullOrEmpty(TriagemId)
                 ? await ApiService.CriarTriagemAsync(payload)
-                : await ApiService.AtualizarTriagemAsync(int.Parse(TriagemId), payload);
+                : await ApiService.AtualizarTriagemAsync(int.Parse(TriagemId, CultureInfo.InvariantCulture), payload);
 
             if (!ok)
             {

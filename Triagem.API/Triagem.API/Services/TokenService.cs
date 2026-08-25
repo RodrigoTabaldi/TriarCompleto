@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -32,8 +33,8 @@ public class TokenService(JwtOptions options)
 
         var claims = new[]
         {
-            new Claim(UserIdClaim, usuario.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Sub, usuario.Id.ToString()),
+            new Claim(UserIdClaim, usuario.Id.ToString(CultureInfo.InvariantCulture)),
+            new Claim(JwtRegisteredClaimNames.Sub, usuario.Id.ToString(CultureInfo.InvariantCulture)),
             new Claim(JwtRegisteredClaimNames.Email, usuario.Email),
             new Claim(JwtRegisteredClaimNames.Name, usuario.Nome),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())

@@ -1,10 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Triagem.API.Models;
-using Triagem.API.Services;
 
 namespace Triagem.API.Data;
 
-public class TriagemDbContext(DbContextOptions<TriagemDbContext> options, FieldEncryptionService encryptor) : DbContext(options)
+public class TriagemDbContext(DbContextOptions<TriagemDbContext> options) : DbContext(options)
 {
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<TriagemModelo> TriagemModelos => Set<TriagemModelo>();
@@ -14,9 +13,9 @@ public class TriagemDbContext(DbContextOptions<TriagemDbContext> options, FieldE
     public DbSet<TriagemResultado> TriagemResultados => Set<TriagemResultado>();
     public DbSet<RespostaDada> RespostasDadas => Set<RespostaDada>();
 
-    protected override void OnModelCreating(ModelBuilder mb)
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        mb.Entity<Usuario>(e =>
+        modelBuilder.Entity<Usuario>(e =>
         {
             e.ToTable("Usuarios");
             e.HasIndex(u => u.Email).IsUnique();
@@ -25,7 +24,7 @@ public class TriagemDbContext(DbContextOptions<TriagemDbContext> options, FieldE
             e.Property(u => u.SenhaHash).HasMaxLength(500);
         });
 
-        mb.Entity<TriagemModelo>(e =>
+        modelBuilder.Entity<TriagemModelo>(e =>
         {
             e.ToTable("TriagemModelos");
             e.Property(t => t.Titulo).HasMaxLength(150);
@@ -43,13 +42,13 @@ public class TriagemDbContext(DbContextOptions<TriagemDbContext> options, FieldE
                 .HasForeignKey(f => f.TriagemModeloId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        mb.Entity<Pergunta>(e =>
+        modelBuilder.Entity<Pergunta>(e =>
         {
             e.ToTable("Perguntas");
             e.Property(p => p.Texto).HasMaxLength(500);
         });
 
-        mb.Entity<FaixaResultado>(e =>
+        modelBuilder.Entity<FaixaResultado>(e =>
         {
             e.ToTable("FaixasResultado");
             e.Property(f => f.Titulo).HasMaxLength(120);
@@ -57,7 +56,7 @@ public class TriagemDbContext(DbContextOptions<TriagemDbContext> options, FieldE
             e.Property(f => f.Cor).HasMaxLength(9);
         });
 
-        mb.Entity<UsuarioTriagemHome>(e =>
+        modelBuilder.Entity<UsuarioTriagemHome>(e =>
         {
             e.ToTable("UsuarioTriagensHome");
             e.HasKey(h => new { h.UsuarioId, h.TriagemModeloId });
@@ -67,15 +66,19 @@ public class TriagemDbContext(DbContextOptions<TriagemDbContext> options, FieldE
                 .HasForeignKey(h => h.TriagemModeloId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        mb.Entity<TriagemResultado>(e =>
+        modelBuilder.Entity<TriagemResultado>(e =>
         {
             e.ToTable("TriagemResultados");
-            // Nome do paciente é criptografado em repouso (AES-256-GCM) — o dado é
-            // sensível de saúde e o SQL Server Express deste projeto não suporta TDE.
-            // MaxLength maior que o original (150) para acomodar nonce+tag+base64.
-            e.Property(r => r.NomePaciente)
-                .HasConversion(v => encryptor.Encrypt(v), v => encryptor.Decrypt(v))
-                .HasMaxLength(500);
+            // NomePaciente não guarda mais o nome: os campos clínicos completos (nome
+            // incluído) vivem só no envelope DadosProtegidos (AES-256-GCM), gravado em
+            // TriagemService/BancoLocal. A coluna permanece vazia daqui em diante — é
+            // mantida (em vez de removida) só para servir de fallback de leitura a
+            // registros anteriores à migração ProtectClinicalData, que ainda podem ter
+            // o nome em texto puro aqui até o próximo start da API rodar o backfill em
+            // DbSeeder.MigrarDadosClinicosLegadosAsync. Por isso nenhuma criptografia é
+            // aplicada aqui: encriptar uma string sempre vazia a cada escrita nova seria
+            // custo puro sem ganho de segurança.
+            e.Property(r => r.NomePaciente).HasMaxLength(500);
             e.Property(r => r.Sexo).HasMaxLength(30);
             e.Property(r => r.Classificacao).HasMaxLength(120);
             e.Property(r => r.Recomendacao).HasMaxLength(600);
@@ -90,7 +93,7 @@ public class TriagemDbContext(DbContextOptions<TriagemDbContext> options, FieldE
                 .HasForeignKey(x => x.TriagemResultadoId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        mb.Entity<RespostaDada>(e =>
+        modelBuilder.Entity<RespostaDada>(e =>
         {
             e.ToTable("RespostasDadas");
             e.Property(r => r.ValorProtegido).HasMaxLength(200);

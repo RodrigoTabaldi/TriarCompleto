@@ -175,26 +175,33 @@ O projeto já vem preparado para isso:
 | POST | `/api/triagens/{id}/responder` | Calcula e grava o resultado |
 | GET | `/api/triagens/{id}/historico` | Histórico de uma triagem (paginado: `?pagina=&tamanhoPagina=`, máx. 200/página) |
 | GET | `/api/triagem/usuario/{id}` | Histórico do usuário autenticado (filtro `?triagemModeloId=`, paginado: `?pagina=&tamanhoPagina=`) |
-| PUT | `/api/usuarios/{id}/home` | Configura a home |
+| PUT | `/api/usuarios/home` | Configura a home |
 | GET | `/health/live` | Liveness público, sem consultar o banco |
 | GET | `/health` | Readiness do banco (exige autenticação) |
 
 > Exceto `/api/auth/*` e `/health`, **todos os endpoints exigem** o cabeçalho
-> `Authorization: Bearer <token>`. O usuário é sempre o dono do token — parâmetros
-> de `usuarioId` na rota são ignorados por segurança, e `GET /api/triagens/{id}`
-> só retorna triagens padrão do sistema ou pertencentes ao próprio usuário do token.
+> `Authorization: Bearer <token>`. O usuário é sempre o dono do token, nunca de um id
+> na rota ou na query — por isso rotas como `/api/usuarios/home` e `/api/triagens` nem
+> aceitam mais um `usuarioId`, e `GET /api/triagens/{id}` só retorna triagens padrão do
+> sistema ou pertencentes ao próprio usuário do token.
 
 > Projeto acadêmico: os resultados das triagens são orientativos e não substituem avaliação profissional.
 
 ## Testes
 
-A API tem uma suíte de testes automatizados (`Triagem.API.Tests`, xUnit) cobrindo a
-lógica de negócio de `TriagemService` — validação de modelo, cálculo de pontuação e
-classificação, autorização de escrita (editar/excluir só pelo criador), paginação do
-histórico e, especificamente, um teste de regressão para a restrição de acesso de
-`ObterDetalheAsync` (garante que uma triagem privada de um usuário não é visível para
-outro) — além de `PasswordHasher`, `TokenService`, `ClaimsPrincipalExtensions` e
-`FieldEncryptionService`. Rodar localmente:
+A API tem uma suíte de testes automatizados (`Triagem.API.Tests`, xUnit) em duas
+camadas: testes de unidade contra `TriagemService` — validação de modelo, cálculo de
+pontuação e classificação, autorização de escrita (editar/excluir só pelo criador),
+paginação do histórico e, especificamente, um teste de regressão para a restrição de
+acesso de `ObterDetalheAsync` (garante que uma triagem privada de um usuário não é
+visível para outro) — além de `PasswordHasher`, `TokenService`,
+`ClaimsPrincipalExtensions` e `FieldEncryptionService`; e testes de integração HTTP
+(`Integration/`, via `WebApplicationFactory<Program>`) que sobem a API real (JWT,
+rate limiting, `[Authorize]`) contra um banco EF InMemory, cobrindo registro/login e
+o bloqueio de rotas autenticadas sem token. A validação de modelo de triagem em si
+(título/perguntas/faixas/imagem) vive em `Triagem.Core.TriagemRules`, compartilhada
+com o modo offline do app (`BancoLocal`) e testada em `Triagem.Core.Tests`. Rodar
+localmente:
 
 ```bash
 dotnet test Triagem.Core.Tests/Triagem.Core.Tests.csproj

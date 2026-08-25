@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using System.Globalization;
 using System.Text.Json;
 using Triagem.API.Models;
 using Triagem.API.Services;
@@ -113,7 +114,7 @@ public static class DbSeeder
             await using var comando = conexao.CreateCommand();
             comando.Transaction = bootstrapTx.GetDbTransaction();
             comando.CommandText = "SELECT CASE WHEN OBJECT_ID(N'dbo.Usuarios', N'U') IS NULL THEN 0 ELSE 1 END";
-            var esquemaLegado = Convert.ToInt32(await comando.ExecuteScalarAsync()) == 1;
+            var esquemaLegado = Convert.ToInt32(await comando.ExecuteScalarAsync(), CultureInfo.InvariantCulture) == 1;
 
             if (esquemaLegado)
             {

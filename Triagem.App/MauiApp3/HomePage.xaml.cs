@@ -231,7 +231,7 @@ public partial class HomePage : ContentPage
     {
         if (string.IsNullOrWhiteSpace(nome)) return "U";
         var partes = nome.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (partes.Length == 1) return partes[0][..1].ToUpper();
-        return $"{partes[0][0]}{partes[^1][0]}".ToUpper();
+        if (partes.Length == 1) return partes[0][..1].ToUpperInvariant();
+        return $"{partes[0][0]}{partes[^1][0]}".ToUpperInvariant();
     }
 }

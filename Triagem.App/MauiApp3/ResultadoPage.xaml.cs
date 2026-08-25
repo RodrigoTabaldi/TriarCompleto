@@ -1,3 +1,4 @@
+using System.Globalization;
 using MauiApp3.Models;
 
 namespace MauiApp3;
@@ -22,13 +23,13 @@ public partial class ResultadoPage : ContentPage
         if (UltimoResultado is not { } r) return;
 
         TituloTriagem.Text = r.TituloTriagem;
-        Pontuacao.Text = r.Pontuacao.ToString();
+        Pontuacao.Text = r.Pontuacao.ToString(CultureInfo.InvariantCulture);
         PontuacaoMaxima.Text = $"de {r.PontuacaoMaxima} pontos";
         Classificacao.Text = r.Classificacao;
         Recomendacao.Text = r.Recomendacao;
         NomePaciente.Text = r.NomePaciente;
         IdadePaciente.Text = $"{r.Idade} anos";
-        DataTriagem.Text = r.Data.ToLocalTime().ToString("dd/MM/yyyy");
+        DataTriagem.Text = r.Data.ToLocalTime().ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
 
         if (Color.TryParse(r.Cor, out var cor))
         {
@@ -40,7 +41,7 @@ public partial class ResultadoPage : ContentPage
     /// <summary>Volta para a mesma triagem, limpa, para aplicar em outra pessoa.</summary>
     private async void RepetirTriagem(object? sender, EventArgs e)
     {
-        var id = UltimoResultado?.TriagemModeloId.ToString() ?? TriagemId;
+        var id = UltimoResultado?.TriagemModeloId.ToString(CultureInfo.InvariantCulture) ?? TriagemId;
         // remove a TriagemPage anterior da pilha e abre uma nova em branco
         await Shell.Current.GoToAsync($"../..");
         await Shell.Current.GoToAsync($"{nameof(TriagemPage)}?triagemId={id}");

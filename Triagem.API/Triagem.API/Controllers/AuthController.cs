@@ -15,9 +15,19 @@ namespace Triagem.API.Controllers;
 [AllowAnonymous]
 [EnableRateLimiting("auth")]
 [RequestSizeLimit(32 * 1024)]
-public class AuthController(TriagemDbContext db, TokenService tokens, ILogger<AuthController> logger) : ControllerBase
+public partial class AuthController(TriagemDbContext db, TokenService tokens, ILogger<AuthController> logger) : ControllerBase
 {
     private const int SenhaMinima = 8;
+
+    // Hash "dummy" (custo idêntico a um hash real, mas sem corresponder a nenhuma
+    // senha) usado como alvo de comparação em Login quando o email não existe.
+    // Sem isso, PasswordHasher.Verify nunca rodaria para emails inexistentes e o
+    // tempo de resposta vazaria, por temporização, quais emails têm conta cadastrada
+    // — a mesma classe de vazamento que Register já neutraliza abaixo.
+    private static readonly string HashParaEmailInexistente = PasswordHasher.Hash(Guid.NewGuid().ToString("N"));
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Novo usuário cadastrado: {Email}")]
+    private static partial void LogNovoUsuarioCadastrado(ILogger logger, string email);
 
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req, CancellationToken ct)
@@ -66,7 +76,7 @@ public class AuthController(TriagemDbContext db, TokenService tokens, ILogger<Au
             throw;
         }
 
-        logger.LogInformation("Novo usuário cadastrado: {Email}", email);
+        LogNovoUsuarioCadastrado(logger, email);
         return Ok(Autenticar(usuario));
     }
 
@@ -79,11 +89,17 @@ public class AuthController(TriagemDbContext db, TokenService tokens, ILogger<Au
         var email = req.Email.Trim().ToLowerInvariant();
         var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Email == email, ct);
 
-        if (usuario is null || !PasswordHasher.Verify(req.Senha, usuario.SenhaHash))
+        // PasswordHasher.Verify roda sempre — mesmo com email inexistente, contra o
+        // hash dummy — para que o tempo de resposta não denuncie quais emails existem.
+        var senhaValida = PasswordHasher.Verify(req.Senha, ResolverHashParaComparacao(usuario));
+        if (usuario is null || !senhaValida)
             return Unauthorized("Email ou senha inválidos.");
 
         return Ok(Autenticar(usuario));
     }
+
+    internal static string ResolverHashParaComparacao(Usuario? usuario) =>
+        usuario?.SenhaHash ?? HashParaEmailInexistente;
 
     private AuthResponse Autenticar(Usuario usuario)
     {

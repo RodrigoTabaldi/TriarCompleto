@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Triagem.API.Data;
@@ -16,9 +15,12 @@ public partial class TriagemService(
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
 
-    [GeneratedRegex("^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$")]
-    private static partial Regex CorHexRegex();
-    private static readonly Regex CorHexValida = CorHexRegex();
+    [LoggerMessage(Level = LogLevel.Information, Message = "Usuário {UsuarioId} criou a triagem {TriagemId} ({Titulo})")]
+    private static partial void LogTriagemCriada(ILogger logger, int usuarioId, int triagemId, string titulo);
+
+    [LoggerMessage(Level = LogLevel.Information,
+        Message = "Usuário {UsuarioId} acessou o histórico (triagemModeloId={TriagemModeloId}, página={Pagina}, {Quantidade} registro(s))")]
+    private static partial void LogHistoricoAcessado(ILogger logger, int usuarioId, int? triagemModeloId, int pagina, int quantidade);
 
     private Task InvalidateCacheAsync() => cache.BumpVersionAsync();
 
@@ -134,8 +136,7 @@ public partial class TriagemService(
         });
 
         await InvalidateCacheAsync();
-        logger.LogInformation("Usuário {UsuarioId} criou a triagem {TriagemId} ({Titulo})",
-            usuarioId, modelo.Id, modelo.Titulo);
+        LogTriagemCriada(logger, usuarioId, modelo.Id, modelo.Titulo);
 
         return (await ObterDetalheAsync(usuarioId, modelo.Id, ct), null);
     }
@@ -359,9 +360,7 @@ public partial class TriagemService(
 
         // Trilha de auditoria mínima: quem acessou dados de pacientes (nome + respostas
         // de saúde), quando e quantos registros — sem logar o conteúdo sensível em si.
-        logger.LogInformation(
-            "Usuário {UsuarioId} acessou o histórico (triagemModeloId={TriagemModeloId}, página={Pagina}, {Quantidade} registro(s))",
-            usuarioId, triagemModeloId, pagina, resultado.Count);
+        LogHistoricoAcessado(logger, usuarioId, triagemModeloId, pagina, resultado.Count);
 
         return resultado;
     }
@@ -417,94 +416,24 @@ public partial class TriagemService(
                 Recomendacao = f.Recomendacao?.Trim() ?? "",
                 PontuacaoMin = f.PontuacaoMin,
                 PontuacaoMax = f.PontuacaoMax,
-                Cor = string.IsNullOrWhiteSpace(f.Cor) ? CorPadrao(i) : f.Cor!,
+                Cor = string.IsNullOrWhiteSpace(f.Cor) ? TriagemRules.CorPadrao(i) : f.Cor!,
                 Ordem = i + 1
             }).ToList();
 
     // ---------------- Validação ----------------
+    // A validação de fato (título/perguntas/faixas/imagem) vive em Triagem.Core.TriagemRules,
+    // compartilhada com o modo offline do app (BancoLocal) — aqui só convertemos os
+    // DTOs da API para os tipos de entrada do Core.
 
-    private static string? ValidarModelo(string titulo, List<PerguntaInput> perguntas, List<FaixaInput> faixas)
-    {
-        if (string.IsNullOrWhiteSpace(titulo)) return "Informe o título da triagem.";
-        if (titulo.Trim().Length > 150) return "O título deve ter no máximo 150 caracteres.";
-        if (perguntas is null || perguntas.Count == 0) return "Adicione pelo menos uma pergunta.";
-        if (perguntas.Count > 50) return "Máximo de 50 perguntas por triagem.";
-        if (perguntas.Any(p => string.IsNullOrWhiteSpace(p.Texto))) return "Toda pergunta precisa de um texto.";
-        if (perguntas.Any(p => p.Texto.Trim().Length > 500)) return "Cada pergunta deve ter no máximo 500 caracteres.";
-        if (perguntas.Any(p => p.Peso is < 1 or > 100)) return "O peso de cada pergunta deve estar entre 1 e 100.";
-        if (faixas is null || faixas.Count < 2) return "Defina pelo menos duas faixas de resultado.";
-        if (faixas.Count > 100) return "Máximo de 100 faixas de resultado por triagem.";
-        if (faixas.Any(f => string.IsNullOrWhiteSpace(f.Titulo))) return "Toda faixa de resultado precisa de um título.";
-        if (faixas.Any(f => f.Titulo.Trim().Length > 120)) return "O título de cada faixa deve ter no máximo 120 caracteres.";
-        if (faixas.Any(f => (f.Recomendacao?.Trim().Length ?? 0) > 600)) return "A recomendação deve ter no máximo 600 caracteres.";
-        if (faixas.Any(f => f.PontuacaoMin > f.PontuacaoMax)) return "Em cada faixa, a pontuação mínima deve ser menor ou igual à máxima.";
-        if (faixas.Any(f => !string.IsNullOrWhiteSpace(f.Cor) && !CorHexValida.IsMatch(f.Cor)))
-            return "A cor de cada faixa deve ser um hexadecimal válido (ex.: #10B981).";
+    private static string? ValidarModelo(string titulo, List<PerguntaInput> perguntas, List<FaixaInput> faixas) =>
+        TriagemRules.ValidarModelo(
+            titulo,
+            perguntas?.Select(p => new PerguntaEntrada(p.Texto, p.Peso)).ToList(),
+            faixas?.Select(f => new FaixaEntrada(f.Titulo, f.Recomendacao, f.PontuacaoMin, f.PontuacaoMax, f.Cor)).ToList());
 
-        var ordenadas = faixas.OrderBy(f => f.PontuacaoMin).ToList();
-        for (var i = 1; i < ordenadas.Count; i++)
-        {
-            if (ordenadas[i].PontuacaoMin <= ordenadas[i - 1].PontuacaoMax)
-                return "As faixas de resultado não podem se sobrepor.";
-        }
+    private static string? NormalizarImagem(string? imagem) => TriagemRules.NormalizarImagem(imagem);
 
-        var pesoTotal = perguntas.Sum(p => p.Peso);
-        if (ordenadas[0].PontuacaoMin > 0)
-            return "A primeira faixa deve começar em 0.";
-        if (ordenadas[^1].PontuacaoMax < pesoTotal)
-            return $"A última faixa deve cobrir até a pontuação máxima ({pesoTotal}).";
+    private static string? ValidarImagem(string? imagem) => TriagemRules.ValidarImagemBase64(imagem);
 
-        return null;
-    }
-
-    private static string CorPadrao(int indice) => indice switch
-    {
-        0 => "#10B981",
-        1 => "#F59E0B",
-        _ => "#EF4444",
-    };
-
-    private const int TamanhoMaximoImagem = 2 * 1024 * 1024;
-    private const int TamanhoMaximoBase64Imagem = ((TamanhoMaximoImagem + 2) / 3) * 4;
-
-    private static string? NormalizarImagem(string? imagem) =>
-        string.IsNullOrWhiteSpace(imagem) ? null : imagem.Trim();
-
-    private static string? ValidarImagem(string? imagem)
-    {
-        if (string.IsNullOrWhiteSpace(imagem)) return null;
-
-        var valor = imagem.Trim();
-        var formatos = new[] { "data:image/png;base64,", "data:image/jpeg;base64,", "data:image/webp;base64," };
-        var prefixo = formatos.FirstOrDefault(p => valor.StartsWith(p, StringComparison.OrdinalIgnoreCase));
-        if (prefixo is null) return "A imagem deve estar no formato PNG, JPG ou WebP.";
-
-        var base64 = valor[prefixo.Length..];
-        if (base64.Length > TamanhoMaximoBase64Imagem)
-            return "A imagem deve ter no máximo 2 MB.";
-
-        try
-        {
-            var bytes = Convert.FromBase64String(base64);
-            if (bytes.Length > TamanhoMaximoImagem)
-                return "A imagem deve ter no máximo 2 MB.";
-
-            if (!TriagemRules.AssinaturaImagemValida(prefixo, bytes))
-                return "O conteúdo do arquivo não corresponde ao formato de imagem informado.";
-        }
-        catch (FormatException)
-        {
-            return "Os dados da imagem são inválidos.";
-        }
-
-        return null;
-    }
-
-    private static string? MensagemErroRespostas(RespostasValidation validacao) => validacao.Status switch
-    {
-        RespostasStatus.PerguntaDesconhecida => $"Pergunta {validacao.PerguntaDesconhecida} não pertence a esta triagem.",
-        RespostasStatus.Incompletas => "Responda todas as perguntas da triagem uma única vez.",
-        RespostasStatus.Duplicadas => "Cada pergunta deve ser respondida uma única vez.",
-        _ => null
-    };
+    private static string? MensagemErroRespostas(RespostasValidation validacao) => TriagemRules.MensagemErroRespostas(validacao);
 }

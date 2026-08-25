@@ -87,10 +87,10 @@ public class TriagemLegacyController(TriagemService service) : ControllerBase
 [EnableRateLimiting("api")]
 public class UsuariosController(TriagemService service) : ControllerBase
 {
-    /// <summary>Define quais triagens aparecem na home do usuário autenticado.</summary>
-    [HttpPut("{usuarioId:int}/home")]
+    /// <summary>Define quais triagens aparecem na home do usuário autenticado (sempre o do token — nunca um id da rota).</summary>
+    [HttpPut("home")]
     [RequestSizeLimit(64 * 1024)]
-    public async Task<IActionResult> ConfigurarHome(int usuarioId, [FromBody] ConfigurarHomeRequest req, CancellationToken ct)
+    public async Task<IActionResult> ConfigurarHome([FromBody] ConfigurarHomeRequest req, CancellationToken ct)
     {
         var erro = await service.ConfigurarHomeAsync(User.GetUserId(), req, ct);
         return erro is null ? Ok() : BadRequest(erro);
