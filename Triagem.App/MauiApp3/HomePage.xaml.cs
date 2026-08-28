@@ -6,7 +6,7 @@ namespace MauiApp3;
 
 public partial class HomePage : ContentPage
 {
-    private readonly ObservableCollection<TriagemResumo> _triagensDesktop = [];
+    private readonly ObservableCollection<LinhaTriagens> _linhasDesktop = [];
     private readonly ObservableCollection<TriagemResumo> _triagensMobile = [];
     private List<TriagemResumo> _todas = [];
     private bool _modoEdicao;
@@ -15,7 +15,7 @@ public partial class HomePage : ContentPage
     {
         InitializeComponent();
 
-        ListaTriagensDesktop.ItemsSource = _triagensDesktop;
+        ListaTriagensDesktop.ItemsSource = _linhasDesktop;
         ListaTriagensMobile.ItemsSource = _triagensMobile;
         SizeChanged += AjustarLayout;
 
@@ -39,14 +39,18 @@ public partial class HomePage : ContentPage
 
     private void AjustarLayout(object? sender, EventArgs e)
     {
-        var desktop = Width >= 900;
+        // PC: barra lateral e exatamente três triagens por linha.
+        // Abaixo do breakpoint, troca por uma coluna e navegação inferior.
+        // Em um desktop em tela cheia, a grade deve permanecer 3x2 independentemente
+        // da escala de exibição configurada no Windows. Fora da tela cheia, usa a largura.
+        var desktopEmTelaCheia = DeviceInfo.Current.Idiom == DeviceIdiom.Desktop && App.TelaCheia;
+        var desktop = desktopEmTelaCheia || Width >= 1000;
         DesktopRoot.IsVisible = desktop;
         MobileRoot.IsVisible = !desktop;
 
-        var span = Width >= 1100 ? 3 : Width >= 900 ? 2 : 1;
-        if (LayoutGrade.Span != span)
-            LayoutGrade.Span = span;
     }
+
+    internal void AtualizarLayoutResponsivo() => AjustarLayout(this, EventArgs.Empty);
 
     private async Task CarregarAsync()
     {
@@ -89,25 +93,26 @@ public partial class HomePage : ContentPage
     {
         var visiveis = _todas.Where(t => _modoEdicao || t.VisivelNaHome).ToList();
 
-        _triagensDesktop.Clear();
-        foreach (var t in visiveis)
-            _triagensDesktop.Add(t);
+        _linhasDesktop.Clear();
+        // A Home de PC apresenta seis cartões: duas linhas por três colunas.
+        // No modo de edição, mantém todos disponíveis para configuração.
+        var itensDesktop = (_modoEdicao ? visiveis : visiveis.Take(6)).ToList();
+        for (var i = 0; i < itensDesktop.Count; i += 3)
+        {
+            _linhasDesktop.Add(new LinhaTriagens
+            {
+                Primeira = itensDesktop[i],
+                Segunda = i + 1 < itensDesktop.Count ? itensDesktop[i + 1] : null,
+                Terceira = i + 2 < itensDesktop.Count ? itensDesktop[i + 2] : null
+            });
+        }
 
         _triagensMobile.Clear();
-        foreach (var t in (_modoEdicao ? visiveis : visiveis.Take(4)))
+        foreach (var t in visiveis)
             _triagensMobile.Add(t);
     }
 
     private async void Atualizar(object? sender, EventArgs e) => await CarregarAsync();
-
-    private void AlternarTelaCheia(object? sender, EventArgs e)
-    {
-        var telaCheia = App.AlternarTelaCheia();
-        var texto = telaCheia ? "⛶" : "□";
-
-        BotaoTelaCheiaDesktop.Text = texto;
-        BotaoTelaCheiaMobile.Text = texto;
-    }
 
     private async void AbrirTriagem(object? sender, EventArgs e)
     {

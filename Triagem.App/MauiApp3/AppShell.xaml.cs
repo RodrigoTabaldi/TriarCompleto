@@ -6,6 +6,9 @@ public partial class AppShell : Shell
     {
         InitializeComponent();
 
+        Navigated += (_, _) => MainThread.BeginInvokeOnMainThread(() =>
+            FullscreenButtonDecorator.Aplicar(CurrentPage as ContentPage));
+
         Routing.RegisterRoute(nameof(LoginPage), typeof(LoginPage));
         Routing.RegisterRoute(nameof(HomePage), typeof(HomePage));
         Routing.RegisterRoute(nameof(CadastroPage), typeof(CadastroPage));
@@ -17,5 +20,8 @@ public partial class AppShell : Shell
         Routing.RegisterRoute(nameof(CreditosPage), typeof(CreditosPage));
         Routing.RegisterRoute(nameof(ContatoPage), typeof(ContatoPage));
         Routing.RegisterRoute(nameof(AjudaPage), typeof(AjudaPage));
+
+        MainThread.BeginInvokeOnMainThread(() =>
+            FullscreenButtonDecorator.Aplicar(CurrentPage as ContentPage));
     }
 }

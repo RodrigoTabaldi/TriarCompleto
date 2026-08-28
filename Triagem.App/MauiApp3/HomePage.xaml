@@ -27,6 +27,62 @@
             <Setter Property="HeightRequest" Value="40"/>
             <Setter Property="Padding" Value="12,0"/>
         </Style>
+
+        <Style x:Key="SidebarItem" TargetType="Border">
+            <Setter Property="BackgroundColor" Value="Transparent"/>
+            <Setter Property="StrokeThickness" Value="0"/>
+            <Setter Property="StrokeShape" Value="RoundRectangle 9"/>
+            <Setter Property="Padding" Value="12,11"/>
+        </Style>
+
+        <Style x:Key="SidebarLabel" TargetType="Label">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="TextColor" Value="#40506A"/>
+            <Setter Property="VerticalOptions" Value="Center"/>
+            <Setter Property="LineBreakMode" Value="WordWrap"/>
+        </Style>
+
+        <Style x:Key="SidebarIcon" TargetType="Image">
+            <Setter Property="WidthRequest" Value="22"/>
+            <Setter Property="HeightRequest" Value="22"/>
+            <Setter Property="HorizontalOptions" Value="Center"/>
+            <Setter Property="VerticalOptions" Value="Center"/>
+        </Style>
+
+        <ControlTemplate x:Key="DesktopTriagemCard" x:DataType="models:TriagemResumo">
+            <Border BackgroundColor="White"
+                    Stroke="#EDF0F3"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 10"
+                    Padding="18,14,18,16"
+                    Shadow="0,2,12,#00000012">
+                <VerticalStackLayout Spacing="9">
+                    <Border HeightRequest="132"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 10"
+                            BackgroundColor="#F4F8FC">
+                        <Image Source="{Binding ImagemHome}"
+                               Aspect="AspectFit"
+                               HorizontalOptions="Fill"
+                               VerticalOptions="Fill"/>
+                    </Border>
+                    <Label Text="{Binding Titulo}" FontSize="18" FontAttributes="Bold" TextColor="#07142E" LineBreakMode="WordWrap" MinimumHeightRequest="48"/>
+                    <VerticalStackLayout Spacing="0">
+                        <Label Text="Público alvo:" FontSize="14" TextColor="#40506A"/>
+                        <Label Text="{Binding PublicoAlvo}" FontSize="14" TextColor="#40506A" MinimumHeightRequest="38"/>
+                    </VerticalStackLayout>
+                    <Button Text="Entrar" Clicked="AbrirTriagem" Style="{StaticResource PrimaryButton}"/>
+                    <Button Text="Ver histórico de pacientes" Clicked="AbrirHistorico" Style="{StaticResource OutlineButton}"/>
+
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" IsVisible="{Binding ModoEdicao}">
+                        <Label Text="Exibir na home" VerticalOptions="Center" TextColor="#374151"/>
+                        <Switch Grid.Column="1" IsToggled="{Binding VisivelNaHome, Mode=TwoWay}" OnColor="#009B72"/>
+                        <Button Grid.Column="2" Text="✎" Clicked="EditarTriagem" BackgroundColor="#E6F6F1" CornerRadius="8" WidthRequest="40" HeightRequest="40" IsVisible="{Binding MinhaAutoria}" SemanticProperties.Description="Editar triagem e sua imagem"/>
+                        <Button Grid.Column="3" Text="🗑" Clicked="ExcluirTriagem" BackgroundColor="#FEE2E2" TextColor="#EF4444" CornerRadius="8" WidthRequest="40" HeightRequest="40" IsVisible="{Binding MinhaAutoria}" SemanticProperties.Description="Excluir triagem"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+        </ControlTemplate>
     </ContentPage.Resources>
 
     <Grid>
@@ -35,73 +91,84 @@
         <Grid x:Name="DesktopRoot"
               IsVisible="False"
               BackgroundColor="#FBFCFD"
-              ColumnDefinitions="246,*">
+              ColumnDefinitions="286,*">
 
             <Border BackgroundColor="White"
                     Stroke="#E5EAF0"
                     StrokeThickness="0,0,1,0"
-                    Padding="28,44,18,28">
+                    Padding="22,34,22,24">
                 <Grid RowDefinitions="Auto,*,Auto">
                     <Image Source="logo.png"
-                           HeightRequest="92"
-                           HorizontalOptions="Start"/>
+                           HeightRequest="86"
+                           HorizontalOptions="Center"/>
 
-                    <VerticalStackLayout Grid.Row="1" Spacing="13" Margin="0,48,0,0">
-                        <Border BackgroundColor="#ECF8F4" StrokeThickness="0" StrokeShape="RoundRectangle 8" Padding="2,12">
-                            <HorizontalStackLayout Spacing="14">
-                                <Image Source="nav_home.png" WidthRequest="22" HeightRequest="22" VerticalOptions="Center"/>
-                                <Label Text="Início" FontSize="16" FontAttributes="Bold" TextColor="#009B72" VerticalOptions="Center"/>
-                            </HorizontalStackLayout>
+                    <VerticalStackLayout Grid.Row="1" Spacing="5" Margin="0,38,0,0">
+                        <Border Style="{StaticResource SidebarItem}" BackgroundColor="#ECF8F4">
+                            <Grid ColumnDefinitions="28,*" ColumnSpacing="12">
+                                <Image Source="nav_home.png" Style="{StaticResource SidebarIcon}"/>
+                                <Label Grid.Column="1" Text="Início" Style="{StaticResource SidebarLabel}" FontAttributes="Bold" TextColor="#009B72"/>
+                            </Grid>
                         </Border>
 
-                        <HorizontalStackLayout Spacing="14" Padding="2,10">
-                            <HorizontalStackLayout.GestureRecognizers>
+                        <Border Style="{StaticResource SidebarItem}">
+                            <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="IrHistoricoGeral"/>
-                            </HorizontalStackLayout.GestureRecognizers>
-                            <Image Source="nav_history.png" WidthRequest="22" HeightRequest="22" VerticalOptions="Center"/>
-                            <Label Text="Histórico geral" FontSize="16" TextColor="#40506A"/>
-                        </HorizontalStackLayout>
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="28,*" ColumnSpacing="12">
+                                <Image Source="nav_history.png" Style="{StaticResource SidebarIcon}"/>
+                                <Label Grid.Column="1" Text="Histórico geral" Style="{StaticResource SidebarLabel}"/>
+                            </Grid>
+                        </Border>
 
-                        <BoxView HeightRequest="1" Color="#E4EAF0" Margin="0,16"/>
+                        <BoxView HeightRequest="1" Color="#E4EAF0" Margin="12,13"/>
 
-                        <HorizontalStackLayout Spacing="14" Padding="2,10">
-                            <HorizontalStackLayout.GestureRecognizers>
+                        <Border Style="{StaticResource SidebarItem}">
+                            <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="IrCreditos"/>
-                            </HorizontalStackLayout.GestureRecognizers>
-                            <Image Source="nav_credits.png" WidthRequest="22" HeightRequest="22" VerticalOptions="Center"/>
-                            <Label Text="Créditos" FontSize="16" TextColor="#40506A"/>
-                        </HorizontalStackLayout>
-                        <HorizontalStackLayout Spacing="14" Padding="2,10">
-                            <HorizontalStackLayout.GestureRecognizers>
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="28,*" ColumnSpacing="12">
+                                <Image Source="nav_credits.png" Style="{StaticResource SidebarIcon}"/>
+                                <Label Grid.Column="1" Text="Créditos" Style="{StaticResource SidebarLabel}"/>
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource SidebarItem}">
+                            <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="IrContato"/>
-                            </HorizontalStackLayout.GestureRecognizers>
-                            <Image Source="nav_contact.png" WidthRequest="22" HeightRequest="22" VerticalOptions="Center"/>
-                            <Label Text="Contato" FontSize="16" TextColor="#40506A"/>
-                        </HorizontalStackLayout>
-                        <HorizontalStackLayout Spacing="14" Padding="2,10">
-                            <HorizontalStackLayout.GestureRecognizers>
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="28,*" ColumnSpacing="12">
+                                <Image Source="nav_contact.png" Style="{StaticResource SidebarIcon}"/>
+                                <Label Grid.Column="1" Text="Contato" Style="{StaticResource SidebarLabel}"/>
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource SidebarItem}">
+                            <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="IrSobre"/>
-                            </HorizontalStackLayout.GestureRecognizers>
-                            <Image Source="nav_about.png" WidthRequest="22" HeightRequest="22" VerticalOptions="Center"/>
-                            <Label Text="Sobre o projeto" FontSize="16" TextColor="#40506A"/>
-                        </HorizontalStackLayout>
-                        <HorizontalStackLayout Spacing="14" Padding="2,10">
-                            <HorizontalStackLayout.GestureRecognizers>
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="28,*" ColumnSpacing="12">
+                                <Image Source="nav_about.png" Style="{StaticResource SidebarIcon}"/>
+                                <Label Grid.Column="1" Text="Sobre o projeto" Style="{StaticResource SidebarLabel}"/>
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource SidebarItem}">
+                            <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="IrCriarTriagem"/>
-                            </HorizontalStackLayout.GestureRecognizers>
-                            <Image Source="nav_create.png" WidthRequest="22" HeightRequest="22" VerticalOptions="Center"/>
-                            <Label Text="Criar sua triagem" FontSize="16" FontAttributes="Bold" TextColor="#009B72"/>
-                        </HorizontalStackLayout>
-
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="28,*" ColumnSpacing="12">
+                                <Image Source="nav_create.png" Style="{StaticResource SidebarIcon}"/>
+                                <Label Grid.Column="1" Text="Criar sua triagem" Style="{StaticResource SidebarLabel}" FontAttributes="Bold" TextColor="#009B72"/>
+                            </Grid>
+                        </Border>
                     </VerticalStackLayout>
 
-                    <HorizontalStackLayout Grid.Row="2" Spacing="14" Padding="2,10">
-                        <HorizontalStackLayout.GestureRecognizers>
+                    <Border Grid.Row="2" Style="{StaticResource SidebarItem}" BackgroundColor="#F8FAFC">
+                        <Border.GestureRecognizers>
                             <TapGestureRecognizer Tapped="Sair"/>
-                        </HorizontalStackLayout.GestureRecognizers>
-                        <Image Source="nav_logout.png" WidthRequest="22" HeightRequest="22" VerticalOptions="Center"/>
-                        <Label x:Name="BotaoSairDesktop" Text="Sair" FontSize="16" TextColor="#40506A"/>
-                    </HorizontalStackLayout>
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="28,*" ColumnSpacing="12">
+                            <Image Source="nav_logout.png" Style="{StaticResource SidebarIcon}"/>
+                            <Label x:Name="BotaoSairDesktop" Grid.Column="1" Text="Sair" Style="{StaticResource SidebarLabel}"/>
+                        </Grid>
+                    </Border>
                 </Grid>
             </Border>
 
@@ -110,11 +177,7 @@
                             Margin="38,26,38,18"
                             SelectionMode="None">
                 <CollectionView.ItemsLayout>
-                    <GridItemsLayout x:Name="LayoutGrade"
-                                     Orientation="Vertical"
-                                     Span="3"
-                                     HorizontalItemSpacing="26"
-                                     VerticalItemSpacing="14"/>
+                    <LinearItemsLayout Orientation="Vertical" ItemSpacing="14"/>
                 </CollectionView.ItemsLayout>
 
                 <CollectionView.Header>
@@ -158,19 +221,6 @@
                                         FontSize="15"
                                         HeightRequest="48"
                                         Padding="18,0"/>
-                                <Button x:Name="BotaoTelaCheiaDesktop"
-                                        Text="⛶"
-                                        Clicked="AlternarTelaCheia"
-                                        BackgroundColor="White"
-                                        BorderColor="#DDE5EE"
-                                        BorderWidth="1"
-                                        TextColor="#40506A"
-                                        CornerRadius="8"
-                                        FontSize="16"
-                                        HeightRequest="48"
-                                        WidthRequest="48"
-                                        Padding="0"
-                                        SemanticProperties.Description="Alternar tela cheia"/>
                             </HorizontalStackLayout>
                         </Grid>
 
@@ -182,31 +232,19 @@
                 </CollectionView.Header>
 
                 <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="models:TriagemResumo">
-                        <Border BackgroundColor="White"
-                                Stroke="#EDF0F3"
-                                StrokeThickness="1"
-                                StrokeShape="RoundRectangle 10"
-                                Padding="18,14,18,16"
-                                Shadow="0,2,12,#00000012">
-                            <VerticalStackLayout Spacing="9">
-                                <Image Source="{Binding ImagemHome}" HeightRequest="132" Aspect="AspectFit" HorizontalOptions="Fill"/>
-                                <Label Text="{Binding Titulo}" FontSize="18" FontAttributes="Bold" TextColor="#07142E" LineBreakMode="WordWrap" MinimumHeightRequest="48"/>
-                                <VerticalStackLayout Spacing="0">
-                                    <Label Text="Público alvo:" FontSize="14" TextColor="#40506A"/>
-                                    <Label Text="{Binding PublicoAlvo}" FontSize="14" TextColor="#40506A" MinimumHeightRequest="38"/>
-                                </VerticalStackLayout>
-                                <Button Text="Entrar" Clicked="AbrirTriagem" Style="{StaticResource PrimaryButton}"/>
-                                <Button Text="Ver histórico de pacientes" Clicked="AbrirHistorico" Style="{StaticResource OutlineButton}"/>
-
-                                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" IsVisible="{Binding ModoEdicao}">
-                                    <Label Text="Exibir na home" VerticalOptions="Center" TextColor="#374151"/>
-                                    <Switch Grid.Column="1" IsToggled="{Binding VisivelNaHome, Mode=TwoWay}" OnColor="#009B72"/>
-                                    <Button Grid.Column="2" Text="✎" Clicked="EditarTriagem" BackgroundColor="#E6F6F1" CornerRadius="8" WidthRequest="40" HeightRequest="40" IsVisible="{Binding MinhaAutoria}" SemanticProperties.Description="Editar triagem e sua imagem"/>
-                                    <Button Grid.Column="3" Text="🗑" Clicked="ExcluirTriagem" BackgroundColor="#FEE2E2" TextColor="#EF4444" CornerRadius="8" WidthRequest="40" HeightRequest="40" IsVisible="{Binding MinhaAutoria}" SemanticProperties.Description="Excluir triagem"/>
-                                </Grid>
-                            </VerticalStackLayout>
-                        </Border>
+                    <DataTemplate x:DataType="models:LinhaTriagens">
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="26">
+                            <ContentView BindingContext="{Binding Primeira}"
+                                         ControlTemplate="{StaticResource DesktopTriagemCard}"/>
+                            <Grid Grid.Column="1" IsVisible="{Binding TemSegunda}">
+                                <ContentView BindingContext="{Binding Segunda}"
+                                             ControlTemplate="{StaticResource DesktopTriagemCard}"/>
+                            </Grid>
+                            <Grid Grid.Column="2" IsVisible="{Binding TemTerceira}">
+                                <ContentView BindingContext="{Binding Terceira}"
+                                             ControlTemplate="{StaticResource DesktopTriagemCard}"/>
+                            </Grid>
+                        </Grid>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
 
@@ -279,21 +317,6 @@
                             <Image Source="logo.png"
                                    HeightRequest="86"
                                    HorizontalOptions="Start"/>
-                            <Button Grid.Column="2"
-                                    x:Name="BotaoTelaCheiaMobile"
-                                    Text="⛶"
-                                    Clicked="AlternarTelaCheia"
-                                    BackgroundColor="White"
-                                    BorderColor="#DDE5EE"
-                                    BorderWidth="1"
-                                    TextColor="#40506A"
-                                    CornerRadius="8"
-                                    FontSize="16"
-                                    HeightRequest="46"
-                                    WidthRequest="46"
-                                    Padding="0"
-                                    VerticalOptions="Center"
-                                    SemanticProperties.Description="Alternar tela cheia"/>
                             <Border Grid.Column="1"
                                     BackgroundColor="#009B72"
                                     StrokeThickness="0"
@@ -328,7 +351,16 @@
                                 Padding="18,16"
                                 Shadow="0,3,14,#00000016">
                             <Grid ColumnDefinitions="140,*" ColumnSpacing="14">
-                                <Image Source="{Binding ImagemHome}" HeightRequest="112" Aspect="AspectFit" VerticalOptions="Center" HorizontalOptions="Fill"/>
+                                <Border HeightRequest="112"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 10"
+                                        BackgroundColor="#F4F8FC"
+                                        VerticalOptions="Center">
+                                    <Image Source="{Binding ImagemHome}"
+                                           Aspect="AspectFit"
+                                           HorizontalOptions="Fill"
+                                           VerticalOptions="Fill"/>
+                                </Border>
 
                                 <VerticalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
                                     <Label Text="{Binding Titulo}" FontSize="20" FontAttributes="Bold" TextColor="#05070D" LineBreakMode="WordWrap"/>

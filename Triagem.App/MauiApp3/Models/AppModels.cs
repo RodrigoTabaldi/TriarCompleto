@@ -56,11 +56,21 @@ public class TriagemResumo : ObservableBase
             if (_imagemHome is not null) return _imagemHome;
 
             if (!string.IsNullOrWhiteSpace(Imagem))
-                return _imagemHome = TriagemImagem.CriarImageSource(Imagem, "triagem_clinica_profissional.png");
+                return _imagemHome = TriagemImagem.CriarImageSource(
+                    Imagem, TriagemImagem.ObterArquivoPadrao(Titulo));
 
             return _imagemHome = ImageSource.FromFile(TriagemImagem.ObterArquivoPadrao(Titulo));
         }
     }
+}
+
+public sealed class LinhaTriagens
+{
+    public required TriagemResumo Primeira { get; init; }
+    public TriagemResumo? Segunda { get; init; }
+    public TriagemResumo? Terceira { get; init; }
+    public bool TemSegunda => Segunda is not null;
+    public bool TemTerceira => Terceira is not null;
 }
 
 public static class TriagemImagem
@@ -69,14 +79,14 @@ public static class TriagemImagem
     {
         var texto = titulo?.ToLowerInvariant() ?? "";
 
-        if (texto.Contains("linguagem") || texto.Contains("cogni") || texto.Contains("mental")) return "triagem_mental_iconetriagem.png";
-        if (texto.Contains("infantil") || texto.Contains("criança") || texto.Contains("crianca")) return "triagem_infantil_iconetriagem.png";
-        if (texto.Contains("orofacial") || texto.Contains("motricidade") || texto.Contains("mulher")) return "triagem_mulher_iconetriagem.png";
-        if (texto.Contains("idoso")) return "triagem_idoso_iconetriagem.png";
-        if (texto.Contains("voz") || texto.Contains("vocal") || texto.Contains("respirat")) return "triagem_respiratoria_iconetriagem.png";
-        if (texto.Contains("audi") || texto.Contains("ouvi")) return "triagem_clinica_iconetriagem.png";
+        if (texto.Contains("linguagem") || texto.Contains("cogni") || texto.Contains("saúde mental") || texto.Contains("saude mental")) return "triagem_linguagem_cognicao.png";
+        if (texto.Contains("infantil") || texto.Contains("criança") || texto.Contains("crianca")) return "triagem_fono_infantil.png";
+        if (texto.Contains("orofacial") || texto.Contains("motricidade") || texto.Contains("mastiga") || texto.Contains("degluti") || texto.Contains("saúde da mulher") || texto.Contains("saude da mulher")) return "triagem_motricidade_orofacial.png";
+        if (texto.Contains("idoso") && (texto.Contains("audi") || texto.Contains("ouvi"))) return "triagem_auditiva_idoso.png";
+        if (texto.Contains("voz") || texto.Contains("vocal") || texto.Contains("laringe") || texto.Contains("respiratória") || texto.Contains("respiratoria")) return "triagem_voz.png";
+        if (texto.Contains("audi") || texto.Contains("ouvi") || texto.Contains("clínica geral") || texto.Contains("clinica geral")) return "triagem_auditiva.png";
 
-        return "triagem_clinica_iconetriagem.png";
+        return "triagem_fonoaudiologia.png";
     }
 
     public static ImageSource CriarImageSourceDaTriagem(string? dataUrl, string? titulo) =>
