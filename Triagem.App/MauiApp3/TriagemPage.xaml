@@ -24,12 +24,13 @@
             <Image Source="logo.png" HeightRequest="70" HorizontalOptions="Center"/>
 
             <!-- CABEÇALHO DA TRIAGEM -->
-            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="18" Shadow="0,3,14,#0000001A">
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="15">
-                    <Border BackgroundColor="#E6F6F1" StrokeThickness="0" StrokeShape="RoundRectangle 100"
-                            HeightRequest="64" WidthRequest="64">
-                        <Label x:Name="IconeTriagem" Text="🩺" FontSize="30"
-                               HorizontalOptions="Center" VerticalOptions="Center"/>
+            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="18" Shadow="0,3,14,#0000001A">
+                <Grid ColumnDefinitions="136,*" ColumnSpacing="18">
+                    <Border BackgroundColor="#EEF8F5" StrokeThickness="0" StrokeShape="RoundRectangle 10"
+                            HeightRequest="92" WidthRequest="136" VerticalOptions="Center">
+                        <Image x:Name="ImagemTriagem"
+                               Aspect="AspectFit"
+                               Margin="6"/>
                     </Border>
 
                     <VerticalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">

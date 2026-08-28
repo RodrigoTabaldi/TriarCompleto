@@ -57,7 +57,7 @@
 
                     <Border BackgroundColor="#F8FAFC" Stroke="#DDE5EE" StrokeThickness="1"
                             StrokeShape="RoundRectangle 12" Padding="10">
-                        <Image x:Name="PreviewImagem" Source="triagem_clinica_profissional.png"
+                        <Image x:Name="PreviewImagem" Source="triagem_clinica_iconetriagem.png"
                                HeightRequest="180" Aspect="AspectFit"/>
                     </Border>
 

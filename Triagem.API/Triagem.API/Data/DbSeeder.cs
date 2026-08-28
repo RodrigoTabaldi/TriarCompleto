@@ -33,9 +33,45 @@ public static class DbSeeder
                 db.TriagemModelos.AddRange(CriarModelosPadrao());
                 await db.SaveChangesAsync();
             }
+            else
+            {
+                await AtualizarModelosPadraoFonoAsync(db);
+            }
 
             await tx.CommitAsync();
         });
+    }
+
+    private static async Task AtualizarModelosPadraoFonoAsync(TriagemDbContext db)
+    {
+        var ajustes = new (string Antigo, string Novo, string Publico, string Descricao)[]
+        {
+            ("Triagem em Saúde Mental", "Triagem de Linguagem e Cognição", "Adultos e idosos",
+                "Rastreio inicial de linguagem, comunicação funcional e aspectos cognitivos relacionados."),
+            ("Triagem em Saúde Infantil", "Triagem Fonoaudiológica Infantil", "Crianças de 0 a 12 anos",
+                "Acompanhamento de sinais de fala, linguagem, audição e comunicação na infância."),
+            ("Triagem em Saúde da Mulher", "Triagem de Motricidade Orofacial", "Todas as idades",
+                "Rastreio de sinais relacionados a mastigação, deglutição, respiração oral e musculatura orofacial."),
+            ("Triagem em Saúde do Idoso", "Triagem Auditiva do Idoso", "Pessoas com 60 anos ou mais",
+                "Avaliação inicial de sinais de perda auditiva e impacto funcional na comunicação do idoso."),
+            ("Triagem Respiratória", "Triagem de Voz", "Profissionais da voz e adultos",
+                "Identificação de sinais vocais como rouquidão, esforço, fadiga e alterações persistentes da voz."),
+            ("Triagem Clínica Geral", "Triagem Auditiva", "Todas as idades",
+                "Rastreio inicial de dificuldades auditivas e necessidade de avaliação fonoaudiológica."),
+        };
+
+        foreach (var ajuste in ajustes)
+        {
+            var modelo = await db.TriagemModelos
+                .FirstOrDefaultAsync(t => t.Titulo == ajuste.Antigo || t.Titulo == ajuste.Novo);
+            if (modelo is null) continue;
+
+            modelo.Titulo = ajuste.Novo;
+            modelo.PublicoAlvo = ajuste.Publico;
+            modelo.Descricao = ajuste.Descricao;
+        }
+
+        await db.SaveChangesAsync();
     }
 
     private static async Task MigrarDadosClinicosLegadosAsync(
@@ -155,8 +191,8 @@ public static class DbSeeder
 
         var modelos = new List<TriagemModelo>
         {
-            Modelo("Triagem em Saúde Mental", "Adolescentes e adultos", "🧠",
-                "Avaliação inicial de sinais de ansiedade, depressão e estresse.",
+            Modelo("Triagem de Linguagem e Cognição", "Adultos e idosos", "🧠",
+                "Rastreio inicial de linguagem, comunicação funcional e aspectos cognitivos relacionados.",
                 [
                     ("Nas últimas duas semanas, sentiu-se triste, desanimado(a) ou sem esperança?", 2),
                     ("Perdeu o interesse ou prazer em atividades que antes gostava?", 2),
@@ -169,8 +205,8 @@ public static class DbSeeder
                     ("Já teve pensamentos de se machucar ou de que seria melhor não existir?", 3),
                     ("Sente que o estresse tem afetado seu trabalho ou estudos?", 1),
                 ]),
-            Modelo("Triagem em Saúde Infantil", "Crianças de 0 a 12 anos", "🧒",
-                "Acompanhamento de sinais de alerta no desenvolvimento e saúde da criança.",
+            Modelo("Triagem Fonoaudiológica Infantil", "Crianças de 0 a 12 anos", "🧒",
+                "Acompanhamento de sinais de fala, linguagem, audição e comunicação na infância.",
                 [
                     ("A criança teve febre alta (acima de 38,5°C) nos últimos dias?", 2),
                     ("Apresenta tosse persistente ou dificuldade para respirar?", 2),
@@ -183,8 +219,8 @@ public static class DbSeeder
                     ("Tem dificuldades de fala ou de interação esperadas para a idade?", 1),
                     ("Dorme mal ou apresenta agitação constante à noite?", 1),
                 ]),
-            Modelo("Triagem em Saúde da Mulher", "Mulheres de todas as idades", "👩",
-                "Rastreio de sinais importantes para a saúde da mulher.",
+            Modelo("Triagem de Motricidade Orofacial", "Todas as idades", "👩",
+                "Rastreio de sinais relacionados a mastigação, deglutição, respiração oral e musculatura orofacial.",
                 [
                     ("Sente dores pélvicas frequentes ou intensas?", 2),
                     ("Notou alterações no ciclo menstrual nos últimos meses?", 1),
@@ -197,8 +233,8 @@ public static class DbSeeder
                     ("Está gestante ou suspeita de gravidez sem acompanhamento?", 2),
                     ("Sente ondas de calor, insônia ou alterações de humor intensas?", 1),
                 ]),
-            Modelo("Triagem em Saúde do Idoso", "Pessoas com 60 anos ou mais", "🧓",
-                "Avaliação de riscos comuns na terceira idade: quedas, memória e autonomia.",
+            Modelo("Triagem Auditiva do Idoso", "Pessoas com 60 anos ou mais", "🧓",
+                "Avaliação inicial de sinais de perda auditiva e impacto funcional na comunicação do idoso.",
                 [
                     ("Sofreu alguma queda nos últimos seis meses?", 2),
                     ("Tem dificuldade para caminhar ou manter o equilíbrio?", 2),
@@ -211,8 +247,8 @@ public static class DbSeeder
                     ("Tem incontinência urinária que atrapalha o dia a dia?", 1),
                     ("Deixou de sair de casa ou de fazer atividades que gostava?", 1),
                 ]),
-            Modelo("Triagem Respiratória", "Adolescentes e adultos", "🫁",
-                "Identificação de sintomas respiratórios que merecem avaliação.",
+            Modelo("Triagem de Voz", "Profissionais da voz e adultos", "🫁",
+                "Identificação de sinais vocais como rouquidão, esforço, fadiga e alterações persistentes da voz.",
                 [
                     ("Tem tosse há mais de três semanas?", 2),
                     ("Sente falta de ar ao realizar esforços leves?", 2),
@@ -225,8 +261,8 @@ public static class DbSeeder
                     ("Sente dor no peito ao respirar fundo?", 1),
                     ("Percebeu piora dos sintomas nas últimas semanas?", 1),
                 ]),
-            Modelo("Triagem Clínica Geral", "Todas as idades", "🩺",
-                "Avaliação geral de sinais e sintomas para orientar a busca por atendimento.",
+            Modelo("Triagem Auditiva", "Todas as idades", "🩺",
+                "Rastreio inicial de dificuldades auditivas e necessidade de avaliação fonoaudiológica.",
                 [
                     ("Sente dores frequentes que não melhoram com repouso?", 2),
                     ("Teve febre recorrente na última semana?", 2),

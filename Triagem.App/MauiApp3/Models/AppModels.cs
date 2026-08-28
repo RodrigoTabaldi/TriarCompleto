@@ -58,21 +58,30 @@ public class TriagemResumo : ObservableBase
             if (!string.IsNullOrWhiteSpace(Imagem))
                 return _imagemHome = TriagemImagem.CriarImageSource(Imagem, "triagem_clinica_profissional.png");
 
-            var titulo = Titulo.ToLowerInvariant();
-            var arquivo = titulo.Contains("mental") ? "triagem_mental_profissional.png"
-                : titulo.Contains("infantil") || titulo.Contains("criança") || titulo.Contains("crianca") ? "triagem_infantil_profissional.png"
-                : titulo.Contains("mulher") ? "triagem_mulher_profissional.png"
-                : titulo.Contains("idoso") ? "triagem_idoso_profissional.png"
-                : titulo.Contains("respirat") ? "triagem_respiratoria_profissional.png"
-                : "triagem_clinica_profissional.png";
-
-            return _imagemHome = ImageSource.FromFile(arquivo);
+            return _imagemHome = ImageSource.FromFile(TriagemImagem.ObterArquivoPadrao(Titulo));
         }
     }
 }
 
 public static class TriagemImagem
 {
+    public static string ObterArquivoPadrao(string? titulo)
+    {
+        var texto = titulo?.ToLowerInvariant() ?? "";
+
+        if (texto.Contains("linguagem") || texto.Contains("cogni") || texto.Contains("mental")) return "triagem_mental_iconetriagem.png";
+        if (texto.Contains("infantil") || texto.Contains("criança") || texto.Contains("crianca")) return "triagem_infantil_iconetriagem.png";
+        if (texto.Contains("orofacial") || texto.Contains("motricidade") || texto.Contains("mulher")) return "triagem_mulher_iconetriagem.png";
+        if (texto.Contains("idoso")) return "triagem_idoso_iconetriagem.png";
+        if (texto.Contains("voz") || texto.Contains("vocal") || texto.Contains("respirat")) return "triagem_respiratoria_iconetriagem.png";
+        if (texto.Contains("audi") || texto.Contains("ouvi")) return "triagem_clinica_iconetriagem.png";
+
+        return "triagem_clinica_iconetriagem.png";
+    }
+
+    public static ImageSource CriarImageSourceDaTriagem(string? dataUrl, string? titulo) =>
+        CriarImageSource(dataUrl, ObterArquivoPadrao(titulo));
+
     public static ImageSource CriarImageSource(string? dataUrl, string fallback)
     {
         if (!string.IsNullOrWhiteSpace(dataUrl))

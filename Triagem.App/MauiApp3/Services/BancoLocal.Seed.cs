@@ -15,6 +15,8 @@ public static partial class BancoLocal
         if (await db.Table<TriagemModeloLocal>().CountAsync() == 0)
             await SemearTriagensPadraoAsync(db);
 
+        await AtualizarModelosPadraoFonoAsync(db);
+
         if (await db.Table<UsuarioLocal>().CountAsync() == 0)
             await SemearContaDemoAsync(db);
     }
@@ -83,8 +85,8 @@ public static partial class BancoLocal
 
     private static List<(string Titulo, string Publico, string Icone, string Descricao, (string Texto, int Peso)[] Perguntas)> TriagensPadrao() =>
     [
-        ("Triagem em Saúde Mental", "Adolescentes e adultos", "🧠",
-            "Avaliação inicial de sinais de ansiedade, depressão e estresse.",
+        ("Triagem de Linguagem e Cognição", "Adultos e idosos", "🧠",
+            "Rastreio inicial de linguagem, comunicação funcional e aspectos cognitivos relacionados.",
             [
                 ("Nas últimas duas semanas, sentiu-se triste, desanimado(a) ou sem esperança?", 2),
                 ("Perdeu o interesse ou prazer em atividades que antes gostava?", 2),
@@ -97,8 +99,8 @@ public static partial class BancoLocal
                 ("Já teve pensamentos de se machucar ou de que seria melhor não existir?", 3),
                 ("Sente que o estresse tem afetado seu trabalho ou estudos?", 1),
             ]),
-        ("Triagem em Saúde Infantil", "Crianças de 0 a 12 anos", "🧒",
-            "Acompanhamento de sinais de alerta no desenvolvimento e saúde da criança.",
+        ("Triagem Fonoaudiológica Infantil", "Crianças de 0 a 12 anos", "🧒",
+            "Acompanhamento de sinais de fala, linguagem, audição e comunicação na infância.",
             [
                 ("A criança teve febre alta (acima de 38,5°C) nos últimos dias?", 2),
                 ("Apresenta tosse persistente ou dificuldade para respirar?", 2),
@@ -111,8 +113,8 @@ public static partial class BancoLocal
                 ("Tem dificuldades de fala ou de interação esperadas para a idade?", 1),
                 ("Dorme mal ou apresenta agitação constante à noite?", 1),
             ]),
-        ("Triagem em Saúde da Mulher", "Mulheres de todas as idades", "👩",
-            "Rastreio de sinais importantes para a saúde da mulher.",
+        ("Triagem de Motricidade Orofacial", "Todas as idades", "👩",
+            "Rastreio de sinais relacionados a mastigação, deglutição, respiração oral e musculatura orofacial.",
             [
                 ("Sente dores pélvicas frequentes ou intensas?", 2),
                 ("Notou alterações no ciclo menstrual nos últimos meses?", 1),
@@ -125,8 +127,8 @@ public static partial class BancoLocal
                 ("Está gestante ou suspeita de gravidez sem acompanhamento?", 2),
                 ("Sente ondas de calor, insônia ou alterações de humor intensas?", 1),
             ]),
-        ("Triagem em Saúde do Idoso", "Pessoas com 60 anos ou mais", "🧓",
-            "Avaliação de riscos comuns na terceira idade: quedas, memória e autonomia.",
+        ("Triagem Auditiva do Idoso", "Pessoas com 60 anos ou mais", "🧓",
+            "Avaliação inicial de sinais de perda auditiva e impacto funcional na comunicação do idoso.",
             [
                 ("Sofreu alguma queda nos últimos seis meses?", 2),
                 ("Tem dificuldade para caminhar ou manter o equilíbrio?", 2),
@@ -139,8 +141,8 @@ public static partial class BancoLocal
                 ("Tem incontinência urinária que atrapalha o dia a dia?", 1),
                 ("Deixou de sair de casa ou de fazer atividades que gostava?", 1),
             ]),
-        ("Triagem Respiratória", "Adolescentes e adultos", "🫁",
-            "Identificação de sintomas respiratórios que merecem avaliação.",
+        ("Triagem de Voz", "Profissionais da voz e adultos", "🫁",
+            "Identificação de sinais vocais como rouquidão, esforço, fadiga e alterações persistentes da voz.",
             [
                 ("Tem tosse há mais de três semanas?", 2),
                 ("Sente falta de ar ao realizar esforços leves?", 2),
@@ -153,8 +155,8 @@ public static partial class BancoLocal
                 ("Sente dor no peito ao respirar fundo?", 1),
                 ("Percebeu piora dos sintomas nas últimas semanas?", 1),
             ]),
-        ("Triagem Clínica Geral", "Todas as idades", "🩺",
-            "Avaliação geral de sinais e sintomas para orientar a busca por atendimento.",
+        ("Triagem Auditiva", "Todas as idades", "🩺",
+            "Rastreio inicial de dificuldades auditivas e necessidade de avaliação fonoaudiológica.",
             [
                 ("Sente dores frequentes que não melhoram com repouso?", 2),
                 ("Teve febre recorrente na última semana?", 2),
@@ -171,6 +173,37 @@ public static partial class BancoLocal
 
     // ---------------- Conta e histórico de demonstração ----------------
 
+    private static async Task AtualizarModelosPadraoFonoAsync(SQLiteAsyncConnection db)
+    {
+        var ajustes = new (string Antigo, string Novo, string Publico, string Descricao)[]
+        {
+            ("Triagem em Saúde Mental", "Triagem de Linguagem e Cognição", "Adultos e idosos",
+                "Rastreio inicial de linguagem, comunicação funcional e aspectos cognitivos relacionados."),
+            ("Triagem em Saúde Infantil", "Triagem Fonoaudiológica Infantil", "Crianças de 0 a 12 anos",
+                "Acompanhamento de sinais de fala, linguagem, audição e comunicação na infância."),
+            ("Triagem em Saúde da Mulher", "Triagem de Motricidade Orofacial", "Todas as idades",
+                "Rastreio de sinais relacionados a mastigação, deglutição, respiração oral e musculatura orofacial."),
+            ("Triagem em Saúde do Idoso", "Triagem Auditiva do Idoso", "Pessoas com 60 anos ou mais",
+                "Avaliação inicial de sinais de perda auditiva e impacto funcional na comunicação do idoso."),
+            ("Triagem Respiratória", "Triagem de Voz", "Profissionais da voz e adultos",
+                "Identificação de sinais vocais como rouquidão, esforço, fadiga e alterações persistentes da voz."),
+            ("Triagem Clínica Geral", "Triagem Auditiva", "Todas as idades",
+                "Rastreio inicial de dificuldades auditivas e necessidade de avaliação fonoaudiológica."),
+        };
+
+        var modelos = await db.Table<TriagemModeloLocal>().ToListAsync();
+        foreach (var ajuste in ajustes)
+        {
+            var modelo = modelos.FirstOrDefault(t => t.Titulo == ajuste.Antigo || t.Titulo == ajuste.Novo);
+            if (modelo is null) continue;
+
+            modelo.Titulo = ajuste.Novo;
+            modelo.PublicoAlvo = ajuste.Publico;
+            modelo.Descricao = ajuste.Descricao;
+            await db.UpdateAsync(modelo);
+        }
+    }
+
     private static async Task SemearContaDemoAsync(SQLiteAsyncConnection db)
     {
         var demo = new UsuarioLocal
@@ -185,12 +218,12 @@ public static partial class BancoLocal
         // já terem o que mostrar numa demonstração.
         var exemplos = new (string Triagem, string Nome, int Idade, string Sexo, int Pontuacao, int DiasAtras)[]
         {
-            ("Triagem em Saúde Mental", "Ana Paula Ribeiro", 34, "Feminino", 4, 1),
-            ("Triagem em Saúde do Idoso", "Carlos Eduardo Menezes", 71, "Masculino", 11, 2),
-            ("Triagem em Saúde Infantil", "Beatriz Nogueira", 7, "Feminino", 2, 4),
-            ("Triagem Respiratória", "Marcos Vinícius Alves", 52, "Masculino", 8, 6),
-            ("Triagem em Saúde da Mulher", "Helena Duarte", 29, "Feminino", 6, 9),
-            ("Triagem Clínica Geral", "Roberto Lima", 45, "Masculino", 3, 13),
+            ("Triagem de Linguagem e Cognição", "Ana Paula Ribeiro", 34, "Feminino", 4, 1),
+            ("Triagem Auditiva do Idoso", "Carlos Eduardo Menezes", 71, "Masculino", 11, 2),
+            ("Triagem Fonoaudiológica Infantil", "Beatriz Nogueira", 7, "Feminino", 2, 4),
+            ("Triagem de Voz", "Marcos Vinícius Alves", 52, "Masculino", 8, 6),
+            ("Triagem de Motricidade Orofacial", "Helena Duarte", 29, "Feminino", 6, 9),
+            ("Triagem Auditiva", "Roberto Lima", 45, "Masculino", 3, 13),
         };
 
         var modelos = await db.Table<TriagemModeloLocal>().ToListAsync();

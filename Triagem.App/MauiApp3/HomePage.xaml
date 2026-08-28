@@ -158,6 +158,19 @@
                                         FontSize="15"
                                         HeightRequest="48"
                                         Padding="18,0"/>
+                                <Button x:Name="BotaoTelaCheiaDesktop"
+                                        Text="⛶"
+                                        Clicked="AlternarTelaCheia"
+                                        BackgroundColor="White"
+                                        BorderColor="#DDE5EE"
+                                        BorderWidth="1"
+                                        TextColor="#40506A"
+                                        CornerRadius="8"
+                                        FontSize="16"
+                                        HeightRequest="48"
+                                        WidthRequest="48"
+                                        Padding="0"
+                                        SemanticProperties.Description="Alternar tela cheia"/>
                             </HorizontalStackLayout>
                         </Grid>
 
@@ -177,11 +190,11 @@
                                 Padding="18,14,18,16"
                                 Shadow="0,2,12,#00000012">
                             <VerticalStackLayout Spacing="9">
-                                <Image Source="{Binding ImagemHome}" HeightRequest="148" Aspect="AspectFit"/>
-                                <Label Text="{Binding Titulo}" FontSize="18" FontAttributes="Bold" TextColor="#07142E" LineBreakMode="WordWrap"/>
+                                <Image Source="{Binding ImagemHome}" HeightRequest="132" Aspect="AspectFit" HorizontalOptions="Fill"/>
+                                <Label Text="{Binding Titulo}" FontSize="18" FontAttributes="Bold" TextColor="#07142E" LineBreakMode="WordWrap" MinimumHeightRequest="48"/>
                                 <VerticalStackLayout Spacing="0">
                                     <Label Text="Público alvo:" FontSize="14" TextColor="#40506A"/>
-                                    <Label Text="{Binding PublicoAlvo}" FontSize="14" TextColor="#40506A"/>
+                                    <Label Text="{Binding PublicoAlvo}" FontSize="14" TextColor="#40506A" MinimumHeightRequest="38"/>
                                 </VerticalStackLayout>
                                 <Button Text="Entrar" Clicked="AbrirTriagem" Style="{StaticResource PrimaryButton}"/>
                                 <Button Text="Ver histórico de pacientes" Clicked="AbrirHistorico" Style="{StaticResource OutlineButton}"/>
@@ -262,10 +275,25 @@
 
                 <CollectionView.Header>
                     <VerticalStackLayout Spacing="0" Padding="0,34,0,18">
-                        <Grid ColumnDefinitions="*,Auto">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
                             <Image Source="logo.png"
                                    HeightRequest="86"
                                    HorizontalOptions="Start"/>
+                            <Button Grid.Column="2"
+                                    x:Name="BotaoTelaCheiaMobile"
+                                    Text="⛶"
+                                    Clicked="AlternarTelaCheia"
+                                    BackgroundColor="White"
+                                    BorderColor="#DDE5EE"
+                                    BorderWidth="1"
+                                    TextColor="#40506A"
+                                    CornerRadius="8"
+                                    FontSize="16"
+                                    HeightRequest="46"
+                                    WidthRequest="46"
+                                    Padding="0"
+                                    VerticalOptions="Center"
+                                    SemanticProperties.Description="Alternar tela cheia"/>
                             <Border Grid.Column="1"
                                     BackgroundColor="#009B72"
                                     StrokeThickness="0"
@@ -299,18 +327,18 @@
                                 StrokeShape="RoundRectangle 14"
                                 Padding="18,16"
                                 Shadow="0,3,14,#00000016">
-                            <Grid ColumnDefinitions="230,*" ColumnSpacing="16">
-                                <Image Source="{Binding ImagemHome}" HeightRequest="170" Aspect="AspectFit" VerticalOptions="Center"/>
+                            <Grid ColumnDefinitions="140,*" ColumnSpacing="14">
+                                <Image Source="{Binding ImagemHome}" HeightRequest="112" Aspect="AspectFit" VerticalOptions="Center" HorizontalOptions="Fill"/>
 
                                 <VerticalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
-                                    <Label Text="{Binding Titulo}" FontSize="23" FontAttributes="Bold" TextColor="#05070D" LineBreakMode="WordWrap"/>
+                                    <Label Text="{Binding Titulo}" FontSize="20" FontAttributes="Bold" TextColor="#05070D" LineBreakMode="WordWrap"/>
                                     <VerticalStackLayout Spacing="0">
-                                        <Label Text="Público alvo:" FontSize="17" TextColor="#40506A"/>
-                                        <Label Text="{Binding PublicoAlvo}" FontSize="17" TextColor="#40506A"/>
+                                        <Label Text="Público alvo:" FontSize="14" TextColor="#40506A"/>
+                                        <Label Text="{Binding PublicoAlvo}" FontSize="14" TextColor="#40506A"/>
                                     </VerticalStackLayout>
-                                    <Grid ColumnDefinitions="*,24,*" Margin="0,6,0,0">
-                                        <Button Text="Entrar" Clicked="AbrirTriagem" Style="{StaticResource PrimaryButton}" HeightRequest="52"/>
-                                        <Button Grid.Column="2" Text="Ver histórico" Clicked="AbrirHistorico" Style="{StaticResource OutlineButton}" HeightRequest="52"/>
+                                    <Grid ColumnDefinitions="*,12,*" Margin="0,6,0,0">
+                                        <Button Text="Entrar" Clicked="AbrirTriagem" Style="{StaticResource PrimaryButton}" HeightRequest="48"/>
+                                        <Button Grid.Column="2" Text="Histórico" Clicked="AbrirHistorico" Style="{StaticResource OutlineButton}" HeightRequest="48"/>
                                     </Grid>
 
                                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" IsVisible="{Binding ModoEdicao}">

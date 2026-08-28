@@ -47,7 +47,7 @@ public partial class TriagemPage : ContentPage
             }
 
             TituloTriagem.Text = _triagem.Titulo;
-            IconeTriagem.Text = _triagem.Icone;
+            ImagemTriagem.Source = TriagemImagem.CriarImageSourceDaTriagem(_triagem.Imagem, _triagem.Titulo);
 
             _perguntas.Clear();
             foreach (var (p, i) in _triagem.Perguntas.OrderBy(p => p.Ordem).Select((p, i) => (p, i)))

@@ -166,7 +166,7 @@ public partial class CriarTriagemPage : ContentPage
 
     private void AtualizarPreviewImagem()
     {
-        PreviewImagem.Source = TriagemImagem.CriarImageSource(_imagemDataUrl, "triagem_clinica_profissional.png");
+        PreviewImagem.Source = TriagemImagem.CriarImageSource(_imagemDataUrl, TriagemImagem.ObterArquivoPadrao(Titulo.Text));
         BotaoEscolherImagem.Text = string.IsNullOrWhiteSpace(_imagemDataUrl) ? "Escolher imagem" : "Trocar imagem";
         BotaoRemoverImagem.IsVisible = !string.IsNullOrWhiteSpace(_imagemDataUrl);
     }

@@ -100,6 +100,15 @@ public partial class HomePage : ContentPage
 
     private async void Atualizar(object? sender, EventArgs e) => await CarregarAsync();
 
+    private void AlternarTelaCheia(object? sender, EventArgs e)
+    {
+        var telaCheia = App.AlternarTelaCheia();
+        var texto = telaCheia ? "⛶" : "□";
+
+        BotaoTelaCheiaDesktop.Text = texto;
+        BotaoTelaCheiaMobile.Text = texto;
+    }
+
     private async void AbrirTriagem(object? sender, EventArgs e)
     {
         if ((sender as BindableObject)?.BindingContext is TriagemResumo t)
