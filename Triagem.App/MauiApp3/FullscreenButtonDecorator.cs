@@ -1,7 +1,7 @@
 namespace MauiApp3;
 
 /// <summary>
-/// Exibe uma única barra de janela do Triar e substitui a barra nativa do Windows.
+/// Mantém os controles de janela flutuando sobre o conteúdo, sem criar uma barra própria.
 /// </summary>
 internal static class FullscreenButtonDecorator
 {
@@ -25,15 +25,7 @@ internal static class FullscreenButtonDecorator
 #if WINDOWS
     private static void AplicarBarraWindows(ContentPage pagina, View conteudo)
     {
-        var raiz = new Grid
-        {
-            RowDefinitions =
-            {
-                new RowDefinition(GridLength.Auto),
-                new RowDefinition(GridLength.Star)
-            }
-        };
-        Grid.SetRow(conteudo, 1);
+        var raiz = new Grid();
         raiz.Children.Add(conteudo);
 
         var minimizar = CriarBotao("—", "Minimizar janela");
@@ -43,39 +35,12 @@ internal static class FullscreenButtonDecorator
 
         var controles = new HorizontalStackLayout
         {
-            Spacing = 2,
+            Spacing = 0,
             HorizontalOptions = LayoutOptions.End,
-            VerticalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Start,
+            Margin = new Thickness(0, 2, 3, 0),
+            ZIndex = 1000,
             Children = { minimizar, restaurar, fechar }
-        };
-
-        var areaArraste = new Grid { BackgroundColor = Colors.Transparent };
-        var arrastar = new PointerGestureRecognizer();
-        arrastar.PointerPressed += (_, _) => App.IniciarArrasteJanela();
-        areaArraste.GestureRecognizers.Add(arrastar);
-
-        var barraConteudo = new Grid
-        {
-            ColumnDefinitions =
-            {
-                new ColumnDefinition(GridLength.Star),
-                new ColumnDefinition(GridLength.Auto)
-            },
-            Padding = new Thickness(18, 4, 8, 4)
-        };
-        barraConteudo.Children.Add(areaArraste);
-        Grid.SetColumn(controles, 1);
-        barraConteudo.Children.Add(controles);
-
-        var barra = new Border
-        {
-            HeightRequest = 48,
-            BackgroundColor = Colors.White,
-            Stroke = Color.FromArgb("#E5EAF0"),
-            StrokeThickness = 1,
-            Content = barraConteudo,
-            IsVisible = true,
-            ZIndex = 1000
         };
 
         minimizar.Clicked += (_, _) =>
@@ -93,7 +58,7 @@ internal static class FullscreenButtonDecorator
         };
         fechar.Clicked += (_, _) => App.FecharJanela();
 
-        raiz.Children.Add(barra);
+        raiz.Children.Add(controles);
         pagina.Content = raiz;
     }
 
@@ -106,9 +71,9 @@ internal static class FullscreenButtonDecorator
             BorderWidth = 0,
             TextColor = Color.FromArgb(destrutivo ? "#DC2626" : "#40506A"),
             CornerRadius = 8,
-            FontSize = texto == "×" ? 24 : 18,
-            HeightRequest = 38,
-            WidthRequest = 46,
+            FontSize = texto == "×" ? 17 : 13,
+            HeightRequest = 27,
+            WidthRequest = 32,
             Padding = 0
         };
         SemanticProperties.SetDescription(botao, descricao);

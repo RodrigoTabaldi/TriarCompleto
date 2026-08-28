@@ -181,7 +181,7 @@
                 </CollectionView.ItemsLayout>
 
                 <CollectionView.Header>
-                    <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,18">
+                    <Grid RowDefinitions="Auto,Auto" Margin="0,0,110,18">
                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
                             <Border BackgroundColor="#009B72"
                                     StrokeThickness="0"

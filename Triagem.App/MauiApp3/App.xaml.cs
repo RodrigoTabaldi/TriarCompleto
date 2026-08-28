@@ -44,6 +44,7 @@ public partial class App : Application
                 var appWindow = AppWindow.GetFromWindowId(windowId);
 
                 AplicarTelaCheia(appWindow, _telaCheia);
+                OcultarBarraNativa(nativeWindow);
             }
         };
 #endif
@@ -64,6 +65,7 @@ public partial class App : Application
             var appWindow = AppWindow.GetFromWindowId(windowId);
 
             AplicarTelaCheia(appWindow, _telaCheia);
+            OcultarBarraNativa(nativeWindow);
         }
 #elif ANDROID
         if (Platform.CurrentActivity is MainActivity activity)
@@ -82,6 +84,8 @@ public partial class App : Application
 
         _telaCheia = false;
         AplicarTelaCheia(appWindow, false);
+        if (Current?.Windows[0].Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindow)
+            OcultarBarraNativa(nativeWindow);
         if (appWindow.Presenter is OverlappedPresenter presenter)
             presenter.Minimize();
 #endif
@@ -102,27 +106,18 @@ public partial class App : Application
             if (presenter.State == OverlappedPresenterState.Maximized)
             {
                 presenter.Restore();
+                if (Current?.Windows[0].Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindow)
+                    OcultarBarraNativa(nativeWindow);
                 return false;
             }
 
             presenter.Maximize();
+            if (Current?.Windows[0].Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindowMaximizada)
+                OcultarBarraNativa(nativeWindowMaximizada);
             return true;
         }
 #endif
         return false;
-    }
-
-    public static void IniciarArrasteJanela()
-    {
-#if WINDOWS
-        if (Current is not { Windows.Count: > 0 } ||
-            Current.Windows[0].Handler?.PlatformView is not Microsoft.UI.Xaml.Window nativeWindow)
-            return;
-
-        var windowHandle = WindowNative.GetWindowHandle(nativeWindow);
-        ReleaseCapture();
-        SendMessage(windowHandle, 0x00A1, (IntPtr)2, IntPtr.Zero);
-#endif
     }
 
 #if WINDOWS
@@ -136,7 +131,7 @@ public partial class App : Application
             : AppWindowPresenterKind.Default);
 
         if (!telaCheia && appWindow.Presenter is OverlappedPresenter presenter)
-            presenter.SetBorderAndTitleBar(true, false);
+            presenter.SetBorderAndTitleBar(false, false);
     }
 
     private static bool TentarObterAppWindow(out AppWindow appWindow)
@@ -152,10 +147,33 @@ public partial class App : Application
         return true;
     }
 
-    [DllImport("user32.dll")]
-    private static extern bool ReleaseCapture();
+    private static void OcultarBarraNativa(Microsoft.UI.Xaml.Window nativeWindow)
+    {
+        const int gwlStyle = -16;
+        const long wsCaption = 0x00C00000L;
+        const long wsThickFrame = 0x00040000L;
+        const uint frameChanged = 0x0020;
+        const uint noMove = 0x0002;
+        const uint noSize = 0x0001;
+        const uint noZOrder = 0x0004;
+        const uint noActivate = 0x0010;
+
+        var handle = WindowNative.GetWindowHandle(nativeWindow);
+        var estilo = GetWindowLongPtr(handle, gwlStyle).ToInt64();
+        SetWindowLongPtr(handle, gwlStyle, new IntPtr(estilo & ~wsCaption & ~wsThickFrame));
+        SetWindowPos(handle, IntPtr.Zero, 0, 0, 0, 0,
+            frameChanged | noMove | noSize | noZOrder | noActivate);
+    }
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+    private static extern IntPtr GetWindowLongPtr(IntPtr window, int index);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+    private static extern IntPtr SetWindowLongPtr(IntPtr window, int index, IntPtr newStyle);
 
     [DllImport("user32.dll")]
-    private static extern IntPtr SendMessage(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam);
+    private static extern bool SetWindowPos(
+        IntPtr window, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
+
 #endif
 }
