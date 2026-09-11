@@ -12,6 +12,11 @@
     FlyoutBehavior="Disabled">
 
     <ShellContent
+        Title="Abertura"
+        ContentTemplate="{DataTemplate local:SplashPage}"
+        Route="SplashPage" />
+
+    <ShellContent
         Title="Início"
         ContentTemplate="{DataTemplate local:EscolhaModoPage}"
         Route="EscolhaModoPage" />

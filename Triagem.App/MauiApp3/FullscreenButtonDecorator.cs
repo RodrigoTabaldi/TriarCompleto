@@ -17,7 +17,7 @@ internal static class FullscreenButtonDecorator
 #if WINDOWS
         AplicarBarraWindows(pagina, conteudo);
 #else
-        AplicarBotaoTelaCheia(pagina, conteudo);
+        pagina.Content = conteudo;
 #endif
         pagina.SetValue(DecoradaProperty, true);
     }

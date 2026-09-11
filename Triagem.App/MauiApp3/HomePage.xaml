@@ -305,40 +305,42 @@
 
             <CollectionView x:Name="ListaTriagensMobile"
                             SelectionMode="None"
-                            Margin="24,0"
+                            Margin="18,0"
+                            ItemSizingStrategy="MeasureFirstItem"
+                            ItemsUpdatingScrollMode="KeepScrollOffset"
                             VerticalScrollBarVisibility="Never">
                 <CollectionView.ItemsLayout>
                     <LinearItemsLayout Orientation="Vertical" ItemSpacing="16"/>
                 </CollectionView.ItemsLayout>
 
                 <CollectionView.Header>
-                    <VerticalStackLayout Spacing="0" Padding="0,34,0,18">
+                    <VerticalStackLayout Spacing="0" Padding="0,20,0,14">
                         <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
                             <Image Source="logo.png"
-                                   HeightRequest="86"
+                                   HeightRequest="64"
                                    HorizontalOptions="Start"/>
                             <Border Grid.Column="1"
                                     BackgroundColor="#009B72"
                                     StrokeThickness="0"
                                     StrokeShape="RoundRectangle 100"
-                                    HeightRequest="54"
-                                    WidthRequest="54"
+                                    HeightRequest="44"
+                                    WidthRequest="44"
                                     VerticalOptions="Center">
                                 <Label x:Name="InicialUsuarioMobile"
                                        Text="JS"
                                        TextColor="White"
-                                       FontSize="20"
+                                       FontSize="16"
                                        FontAttributes="Bold"
                                        HorizontalOptions="Center"
                                        VerticalOptions="Center"/>
                             </Border>
                         </Grid>
 
-                        <Label x:Name="SaudacaoUsuarioMobile" Text="Olá, João Silva" FontSize="26" FontAttributes="Bold" TextColor="#07142E" Margin="0,26,0,0"/>
-                        <Label Text="Como você está hoje?" FontSize="19" TextColor="#465674" Margin="0,6,0,0"/>
+                        <Label x:Name="SaudacaoUsuarioMobile" Text="Olá, João Silva" FontSize="20" FontAttributes="Bold" TextColor="#07142E" Margin="0,16,0,0"/>
+                        <Label Text="Como você está hoje?" FontSize="14" TextColor="#465674" Margin="0,3,0,0"/>
 
-                        <Label Text="Triagens disponíveis" FontSize="30" FontAttributes="Bold" TextColor="#07142E" Margin="0,40,0,0"/>
-                        <Label Text="Escolha uma triagem para iniciar" FontSize="20" TextColor="#465674" Margin="0,6,0,0"/>
+                        <Label Text="Triagens disponíveis" FontSize="22" FontAttributes="Bold" TextColor="#07142E" Margin="0,24,0,0"/>
+                        <Label Text="Escolha uma triagem para iniciar" FontSize="15" TextColor="#465674" Margin="0,3,0,0"/>
                     </VerticalStackLayout>
                 </CollectionView.Header>
 
@@ -348,10 +350,9 @@
                                 Stroke="#EDF0F3"
                                 StrokeThickness="1"
                                 StrokeShape="RoundRectangle 14"
-                                Padding="18,16"
-                                Shadow="0,3,14,#00000016">
-                            <Grid ColumnDefinitions="140,*" ColumnSpacing="14">
-                                <Border HeightRequest="112"
+                                Padding="14,12">
+                            <Grid ColumnDefinitions="112,*" ColumnSpacing="12">
+                                <Border HeightRequest="96"
                                         StrokeThickness="0"
                                         StrokeShape="RoundRectangle 10"
                                         BackgroundColor="#F4F8FC"
@@ -362,15 +363,15 @@
                                            VerticalOptions="Fill"/>
                                 </Border>
 
-                                <VerticalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
-                                    <Label Text="{Binding Titulo}" FontSize="20" FontAttributes="Bold" TextColor="#05070D" LineBreakMode="WordWrap"/>
+                                <VerticalStackLayout Grid.Column="1" Spacing="5" VerticalOptions="Center">
+                                    <Label Text="{Binding Titulo}" FontSize="16" FontAttributes="Bold" TextColor="#05070D" LineBreakMode="WordWrap"/>
                                     <VerticalStackLayout Spacing="0">
-                                        <Label Text="Público alvo:" FontSize="14" TextColor="#40506A"/>
-                                        <Label Text="{Binding PublicoAlvo}" FontSize="14" TextColor="#40506A"/>
+                                        <Label Text="Público alvo:" FontSize="12" TextColor="#40506A"/>
+                                        <Label Text="{Binding PublicoAlvo}" FontSize="12" TextColor="#40506A" MaxLines="2"/>
                                     </VerticalStackLayout>
                                     <Grid ColumnDefinitions="*,12,*" Margin="0,6,0,0">
-                                        <Button Text="Entrar" Clicked="AbrirTriagem" Style="{StaticResource PrimaryButton}" HeightRequest="48"/>
-                                        <Button Grid.Column="2" Text="Histórico" Clicked="AbrirHistorico" Style="{StaticResource OutlineButton}" HeightRequest="48"/>
+                                        <Button Text="Entrar" Clicked="AbrirTriagem" Style="{StaticResource PrimaryButton}" HeightRequest="40" FontSize="12" Padding="4,0"/>
+                                        <Button Grid.Column="2" Text="Ver histórico" Clicked="AbrirHistorico" Style="{StaticResource OutlineButton}" HeightRequest="40" FontSize="11" Padding="4,0"/>
                                     </Grid>
 
                                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" IsVisible="{Binding ModoEdicao}">
@@ -426,46 +427,78 @@
                 </CollectionView.Footer>
             </CollectionView>
 
-            <Border Grid.Row="1"
-                    BackgroundColor="White"
-                    Stroke="#EEF1F4"
-                    StrokeThickness="0,1,0,0"
-                    Padding="18,12,18,8">
-                <Grid ColumnDefinitions="*,*,*,*,*">
-                    <VerticalStackLayout Spacing="2" HorizontalOptions="Center">
-                        <Label Text="⌂" FontSize="28" TextColor="#009B72" HorizontalTextAlignment="Center"/>
-                        <Label Text="Início" FontSize="13" TextColor="#009B72" HorizontalTextAlignment="Center"/>
-                    </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Center">
-                        <VerticalStackLayout.GestureRecognizers>
+            <Grid Grid.Row="1" BackgroundColor="White"
+                  HorizontalOptions="Fill" VerticalOptions="End"
+                  HeightRequest="68" RowDefinitions="1,*">
+                <BoxView Color="#EEF1F4" HeightRequest="1"/>
+                <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*,*" ColumnSpacing="0" Padding="4,6,4,8">
+                    <Grid Grid.Column="0" RowDefinitions="24,Auto" RowSpacing="4"
+                          Padding="0,2" HorizontalOptions="Fill"
+                          SemanticProperties.Description="Início">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="Atualizar"/>
+                        </Grid.GestureRecognizers>
+                        <Image Source="nav_home.png" WidthRequest="22" HeightRequest="22"
+                               HorizontalOptions="Center" VerticalOptions="Center" InputTransparent="True"/>
+                        <Label Grid.Row="1" Text="Início" FontSize="9"
+                               TextColor="#009B72" HorizontalTextAlignment="Center"
+                               VerticalTextAlignment="Center" LineBreakMode="NoWrap"
+                               MaxLines="1" InputTransparent="True"/>
+                    </Grid>
+                    <Grid Grid.Column="1" RowDefinitions="24,Auto" RowSpacing="4"
+                          Padding="0,2" HorizontalOptions="Fill"
+                          SemanticProperties.Description="Créditos">
+                        <Grid.GestureRecognizers>
                             <TapGestureRecognizer Tapped="IrCreditos"/>
-                        </VerticalStackLayout.GestureRecognizers>
-                        <Label Text="⌬" FontSize="26" TextColor="#40506A" HorizontalTextAlignment="Center"/>
-                        <Label Text="Créditos" FontSize="13" TextColor="#40506A" HorizontalTextAlignment="Center"/>
-                    </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Column="2" Spacing="2" HorizontalOptions="Center">
-                        <VerticalStackLayout.GestureRecognizers>
+                        </Grid.GestureRecognizers>
+                        <Image Source="nav_credits.png" WidthRequest="22" HeightRequest="22"
+                               HorizontalOptions="Center" VerticalOptions="Center" InputTransparent="True"/>
+                        <Label Grid.Row="1" Text="Créditos" FontSize="9"
+                               TextColor="#40506A" HorizontalTextAlignment="Center"
+                               VerticalTextAlignment="Center" LineBreakMode="NoWrap"
+                               MaxLines="1" InputTransparent="True"/>
+                    </Grid>
+                    <Grid Grid.Column="2" RowDefinitions="24,Auto" RowSpacing="4"
+                          Padding="0,2" HorizontalOptions="Fill"
+                          SemanticProperties.Description="Contato">
+                        <Grid.GestureRecognizers>
                             <TapGestureRecognizer Tapped="IrContato"/>
-                        </VerticalStackLayout.GestureRecognizers>
-                        <Label Text="✉" FontSize="26" TextColor="#40506A" HorizontalTextAlignment="Center"/>
-                        <Label Text="Contato" FontSize="13" TextColor="#40506A" HorizontalTextAlignment="Center"/>
-                    </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Column="3" Spacing="2" HorizontalOptions="Center">
-                        <VerticalStackLayout.GestureRecognizers>
+                        </Grid.GestureRecognizers>
+                        <Image Source="nav_contact.png" WidthRequest="22" HeightRequest="22"
+                               HorizontalOptions="Center" VerticalOptions="Center" InputTransparent="True"/>
+                        <Label Grid.Row="1" Text="Contato" FontSize="9"
+                               TextColor="#40506A" HorizontalTextAlignment="Center"
+                               VerticalTextAlignment="Center" LineBreakMode="NoWrap"
+                               MaxLines="1" InputTransparent="True"/>
+                    </Grid>
+                    <Grid Grid.Column="3" RowDefinitions="24,Auto" RowSpacing="4"
+                          Padding="0,2" HorizontalOptions="Fill"
+                          SemanticProperties.Description="Sobre o projeto">
+                        <Grid.GestureRecognizers>
                             <TapGestureRecognizer Tapped="IrSobre"/>
-                        </VerticalStackLayout.GestureRecognizers>
-                        <Label Text="ⓘ" FontSize="26" TextColor="#40506A" HorizontalTextAlignment="Center"/>
-                        <Label Text="Sobre o projeto" FontSize="13" TextColor="#40506A" HorizontalTextAlignment="Center"/>
-                    </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Column="4" Spacing="2" HorizontalOptions="Center">
-                        <VerticalStackLayout.GestureRecognizers>
+                        </Grid.GestureRecognizers>
+                        <Image Source="nav_about.png" WidthRequest="22" HeightRequest="22"
+                               HorizontalOptions="Center" VerticalOptions="Center" InputTransparent="True"/>
+                        <Label Grid.Row="1" Text="Sobre o projeto" FontSize="9"
+                               TextColor="#40506A" HorizontalTextAlignment="Center"
+                               VerticalTextAlignment="Center" LineBreakMode="NoWrap"
+                               MaxLines="1" InputTransparent="True"/>
+                    </Grid>
+                    <Grid Grid.Column="4" RowDefinitions="24,Auto" RowSpacing="4"
+                          Padding="0,2" HorizontalOptions="Fill"
+                          SemanticProperties.Description="Criar triagem">
+                        <Grid.GestureRecognizers>
                             <TapGestureRecognizer Tapped="IrCriarTriagem"/>
-                        </VerticalStackLayout.GestureRecognizers>
-                        <Label Text="⊞" FontSize="26" TextColor="#40506A" HorizontalTextAlignment="Center"/>
-                        <Label Text="Criar triagem" FontSize="13" TextColor="#40506A" HorizontalTextAlignment="Center"/>
-                    </VerticalStackLayout>
+                        </Grid.GestureRecognizers>
+                        <Image Source="nav_create.png" WidthRequest="22" HeightRequest="22"
+                               HorizontalOptions="Center" VerticalOptions="Center" InputTransparent="True"/>
+                        <Label Grid.Row="1" Text="Criar triagem" FontSize="9"
+                               TextColor="#40506A" HorizontalTextAlignment="Center"
+                               VerticalTextAlignment="Center" LineBreakMode="NoWrap"
+                               MaxLines="1" InputTransparent="True"/>
+                    </Grid>
                 </Grid>
-            </Border>
+            </Grid>
         </Grid>
     </Grid>
 </ContentPage>
