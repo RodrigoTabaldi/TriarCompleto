@@ -36,7 +36,7 @@ public partial class HistoricoPage : ContentPage
             if (App.UsuarioLogado is not { } usuario)
             {
                 await DisplayAlertAsync("Erro", "Usuário não logado.", "OK");
-                await Shell.Current.GoToAsync("..");
+                await Navegacao.IrAsync(this, "..");
                 return;
             }
 
@@ -118,5 +118,5 @@ public partial class HistoricoPage : ContentPage
     }
 
     private async void Voltar(object? sender, EventArgs e) =>
-        await Shell.Current.GoToAsync("..");
+        await Navegacao.IrAsync(this, "..");
 }

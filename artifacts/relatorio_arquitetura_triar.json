@@ -1,0 +1,93 @@
+{
+  "meta": {
+    "project_name": "TRIAR",
+    "language_stack": [".NET 10", ".NET MAUI", "ASP.NET Core", "EF Core", "SQLite", "Azure SQL"],
+    "analysis_date": "11/09/2026",
+    "analyst": "Codex — Auditoria de Engenharia Sênior"
+  },
+  "scorecard": {
+    "overall": 7.2,
+    "Arquitetura": 8.0,
+    "Qualidade de Código": 7.0,
+    "Débito Técnico": 7.0,
+    "Segurança": 7.0,
+    "Performance": 7.0,
+    "Testes": 7.0,
+    "Dependências": 8.0
+  },
+  "executive_summary": "A separação entre Triagem Individual e Triagem em Grupo está implementada no cliente: Individual força SQLite local no dispositivo, enquanto Grupo autentica na API e persiste no banco SQL remoto. As regras de pontuação são compartilhadas pelo projeto Core, reduzindo divergência entre os dois modos.\n\nA API está preparada para Azure SQL, com EF Core, JWT, autorização por identidade do token, criptografia AES-GCM dos dados clínicos e políticas de rate limit. O bloqueio para produção é operacional: a URL pública da API ainda está como placeholder e o Azure SQL ainda precisa receber connection string, segredos e firewall conforme guia de deploy.",
+  "sections": [
+    {
+      "title": "Arquitetura",
+      "narrative": "O MAUI usa ApiService como fronteira única de dados. Individual ativa ModoLocal e delega tudo para BancoLocal/SQLite; Grupo usa HTTP autenticado contra ASP.NET Core. A API separa controller, serviço, domínio compartilhado e acesso EF Core.",
+      "findings": [
+        {
+          "severity": "Info",
+          "title": "Individual está local no dispositivo",
+          "description": "Selecionar Individual chama IniciarModoIndividualAsync; ModoLocal passa a verdadeiro e listar, responder e histórico usam BancoLocal. O banco fica em FileSystem.AppDataDirectory/triar-local.db3.",
+          "location": "Triagem.App/MauiApp3/EscolhaModoPage.xaml.cs:43-47; Triagem.App/MauiApp3/Services/ApiService.cs:28-38,270-294; Triagem.App/MauiApp3/Services/BancoLocal.cs:30-48",
+          "recommendation": "Manter. Exibir aviso claro: dados não sincronizam nem sobrevivem à limpeza dos dados do aplicativo."
+        },
+        {
+          "severity": "Info",
+          "title": "Grupo está preparado para nuvem",
+          "description": "Selecionar Grupo navega para login. Com build normal, login, triagens e resultados são enviados à API com JWT; API grava em SQL Server/Azure SQL pelo EF Core.",
+          "location": "Triagem.App/MauiApp3/EscolhaModoPage.xaml.cs:48-51; Triagem.App/MauiApp3/Services/ApiService.cs:229-258,316-359; Triagem.API/Triagem.API/Program.cs:25-42",
+          "recommendation": "Publicar API HTTPS e configurar Azure SQL antes de liberar build Release."
+        },
+        {
+          "severity": "Alto",
+          "title": "Produção em grupo ainda não está configurada",
+          "description": "A URL de produção ainda usa SUA-API-DE-PRODUCAO.com. O Release falha propositalmente até receber URL HTTPS real; sem isto Grupo não alcança nuvem.",
+          "location": "Triagem.App/MauiApp3/Services/ApiService.cs:47-84",
+          "recommendation": "Após publicar API, trocar UrlProducao pela URL HTTPS pública e gerar Release sem -p:TriarModoLocal=true."
+        }
+      ]
+    },
+    {
+      "title": "Segurança e dados",
+      "narrative": "A API usa JWT e deriva o usuário autenticado do token, evitando confiar no ID da rota. Dados clínicos são criptografados antes da persistência. A operação Azure depende de segredos de ambiente e firewall restrito.",
+      "findings": [
+        {
+          "severity": "Médio",
+          "title": "Chaves e connection string dependem de configuração externa",
+          "description": "Configuração versionada está vazia, corretamente. API se recusa a iniciar sem Jwt:Key, DataProtection:Key e ConnectionStrings:DefaultConnection válidas.",
+          "location": "Triagem.API/Triagem.API/appsettings.json:2-13; Triagem.API/Triagem.API/Program.cs:25-32,38-70",
+          "recommendation": "Configurar ConnectionStrings__DefaultConnection, Jwt__Key e DataProtection__Key como segredos do host. Fazer backup protegido da chave DataProtection antes de gravar dados reais."
+        },
+        {
+          "severity": "Info",
+          "title": "Isolamento entre usuários está aplicado",
+          "description": "Rotas protegidas usam User.GetUserId(); histórico legado ignora ID enviado pelo cliente. Modelos privados e histórico são filtrados pelo usuário autenticado.",
+          "location": "Triagem.API/Triagem.API/Controllers/TriagensController.cs:10-85; Triagem.API/Triagem.API/Services/TriagemService.cs:25-63,219-285",
+          "recommendation": "Manter testes de autorização e negar acesso cruzado em toda nova rota."
+        }
+      ]
+    },
+    {
+      "title": "Operação Azure",
+      "narrative": "A infraestrutura proposta é app MAUI → HTTPS API → Azure SQL. A API já habilita retry de falhas transitórias e timeout adequado para Azure SQL serverless. Há guia de deploy com firewall, TLS e seed inicial.",
+      "findings": [
+        {
+          "severity": "Médio",
+          "title": "Azure SQL ainda exige provisionamento",
+          "description": "Não existe connection string preenchida no repositório, então não há evidência de banco Azure configurado neste ambiente.",
+          "location": "Triagem.API/Triagem.API/appsettings.json:2-5; deploy/render/README.md:1-160",
+          "recommendation": "Criar Azure SQL, usuário de aplicação, firewall só para host da API, TLS obrigatório; aplicar migrations/seed no primeiro deploy; depois desligar Database__SeedOnStartup."
+        }
+      ]
+    }
+  ],
+  "roadmap": [
+    {"priority": 1, "title": "Provisionar Azure SQL e segredos", "category": "Operação Azure", "effort": "Médio", "impact": "Crítico — habilita persistência em nuvem"},
+    {"priority": 2, "title": "Publicar API HTTPS e configurar UrlProducao", "category": "Arquitetura", "effort": "Baixo", "impact": "Alto — habilita login e grupo fora da rede local"},
+    {"priority": 3, "title": "Executar primeira migration/seed e desligar seed contínuo", "category": "Operação Azure", "effort": "Baixo", "impact": "Alto — evita custo e alterações em reinício"},
+    {"priority": 4, "title": "Testar Grupo em aparelho físico", "category": "Testes", "effort": "Baixo", "impact": "Alto — confirma login, escrita e isolamento"},
+    {"priority": 5, "title": "Mostrar aviso de retenção no modo Individual", "category": "Produto", "effort": "Baixo", "impact": "Médio — esclarece que SQLite não sincroniza"}
+  ],
+  "appendix": {
+    "CI configurado": "Sim, GitHub Actions compila API/app Android, executa testes e verifica vulnerabilidades",
+    "Cobertura de testes configurada": "Sim, coleta XPlat Code Coverage na API",
+    "Limitação da análise": "Scan automático indisponível porque Python não está instalado; análise dirigida dos fluxos e arquivos centrais."
+  }
+}

@@ -28,6 +28,7 @@ public partial class EscolhaModoPage : ContentPage
 
     private void Selecionar(Modo modo)
     {
+        if (_entrando) return;
         _modoEscolhido = modo;
         BotaoContinuar.IsEnabled = true;
 
@@ -53,11 +54,13 @@ public partial class EscolhaModoPage : ContentPage
             {
                 App.UsuarioLogado = await ApiService.IniciarModoIndividualAsync();
                 App.ModoIndividual = true;
-                await Shell.Current.GoToAsync(nameof(HomePage));
+                await Navegacao.IrAsync(this, nameof(HomePage));
             }
             else
             {
-                await Shell.Current.GoToAsync(nameof(LoginPage));
+                ApiService.PrepararModoGrupo();
+                App.ModoIndividual = false;
+                await Navegacao.IrAsync(this, nameof(LoginPage));
             }
         }
         catch (Exception ex)
@@ -68,6 +71,7 @@ public partial class EscolhaModoPage : ContentPage
         finally
         {
             _entrando = false;
+            BotaoContinuar.IsEnabled = _modoEscolhido != Modo.Nenhum;
         }
     }
 }

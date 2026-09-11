@@ -34,7 +34,7 @@ public partial class TriagemPage : ContentPage
             if (!int.TryParse(TriagemId, out var id))
             {
                 await DisplayAlertAsync("Erro", "Triagem inválida.", "OK");
-                await Shell.Current.GoToAsync("..");
+                await Navegacao.IrAsync(this, "..");
                 return;
             }
 
@@ -42,7 +42,7 @@ public partial class TriagemPage : ContentPage
             if (_triagem is null)
             {
                 await DisplayAlertAsync("Erro", "Triagem não encontrada.", "OK");
-                await Shell.Current.GoToAsync("..");
+                await Navegacao.IrAsync(this, "..");
                 return;
             }
 
@@ -160,7 +160,7 @@ public partial class TriagemPage : ContentPage
             }
 
             ResultadoPage.UltimoResultado = resultado;
-            await Shell.Current.GoToAsync($"{nameof(ResultadoPage)}?triagemId={_triagem.Id}");
+            await Navegacao.IrAsync(this, $"{nameof(ResultadoPage)}?triagemId={_triagem.Id}");
         }
         catch (Exception ex)
         {
@@ -173,5 +173,5 @@ public partial class TriagemPage : ContentPage
     }
 
     private async void VoltarHome(object? sender, EventArgs e) =>
-        await Shell.Current.GoToAsync("..");
+        await Navegacao.IrAsync(this, "..");
 }

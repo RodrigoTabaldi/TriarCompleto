@@ -35,7 +35,7 @@ public partial class CadastroPage : ContentPage
                 // Cadastro já autentica (a API devolve o token). Entra direto na home.
                 App.UsuarioLogado = usuario;
                 App.ModoIndividual = false;
-                await Shell.Current.GoToAsync(nameof(HomePage));
+                await Navegacao.IrAsync(this, nameof(HomePage));
             }
             else
             {
@@ -54,5 +54,5 @@ public partial class CadastroPage : ContentPage
     }
 
     private async void IrLogin(object? sender, EventArgs e) =>
-        await Shell.Current.GoToAsync("..");
+        await Navegacao.IrAsync(this, "..");
 }

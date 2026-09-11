@@ -10,6 +10,7 @@ public partial class HomePage : ContentPage
     private readonly ObservableCollection<TriagemResumo> _triagensMobile = [];
     private List<TriagemResumo> _todas = [];
     private bool _modoEdicao;
+    private bool _carregando;
 
     public HomePage()
     {
@@ -54,11 +55,13 @@ public partial class HomePage : ContentPage
 
     private async Task CarregarAsync()
     {
+        if (_carregando) return;
+        _carregando = true;
         try
         {
             if (App.UsuarioLogado is not { } usuario)
             {
-                await Shell.Current.GoToAsync($"//{nameof(EscolhaModoPage)}");
+                await Navegacao.IrAsync(this, $"//{nameof(EscolhaModoPage)}");
                 return;
             }
 
@@ -78,6 +81,10 @@ public partial class HomePage : ContentPage
             await DisplayAlertAsync("Erro",
                 $"Não foi possível carregar as triagens. Verifique se a API está no ar.\n\n{ex.Message}", "OK");
         }
+        finally
+        {
+            _carregando = false;
+        }
     }
 
     private async Task TratarSessaoExpiradaAsync()
@@ -86,7 +93,7 @@ public partial class HomePage : ContentPage
         App.ModoIndividual = false;
         ApiService.Logout();
         await DisplayAlertAsync("Sessão expirada", "Faça login novamente para continuar.", "OK");
-        await Shell.Current.GoToAsync($"//{nameof(EscolhaModoPage)}");
+        await Navegacao.IrAsync(this, $"//{nameof(EscolhaModoPage)}");
     }
 
     private void AplicarFiltro()
@@ -94,9 +101,7 @@ public partial class HomePage : ContentPage
         var visiveis = _todas.Where(t => _modoEdicao || t.VisivelNaHome).ToList();
 
         _linhasDesktop.Clear();
-        // A Home de PC apresenta seis cartões: duas linhas por três colunas.
-        // No modo de edição, mantém todos disponíveis para configuração.
-        var itensDesktop = (_modoEdicao ? visiveis : visiveis.Take(6)).ToList();
+        var itensDesktop = visiveis;
         for (var i = 0; i < itensDesktop.Count; i += 3)
         {
             _linhasDesktop.Add(new LinhaTriagens
@@ -117,22 +122,22 @@ public partial class HomePage : ContentPage
     private async void AbrirTriagem(object? sender, EventArgs e)
     {
         if ((sender as BindableObject)?.BindingContext is TriagemResumo t)
-            await Shell.Current.GoToAsync($"{nameof(TriagemPage)}?triagemId={t.Id}");
+            await Navegacao.IrAsync(this, $"{nameof(TriagemPage)}?triagemId={t.Id}");
     }
 
     private async void AbrirHistorico(object? sender, EventArgs e)
     {
         if ((sender as BindableObject)?.BindingContext is TriagemResumo t)
-            await Shell.Current.GoToAsync($"{nameof(HistoricoPage)}?triagemId={t.Id}&titulo={Uri.EscapeDataString(t.Titulo)}");
+            await Navegacao.IrAsync(this, $"{nameof(HistoricoPage)}?triagemId={t.Id}&titulo={Uri.EscapeDataString(t.Titulo)}");
     }
 
     private async void IrCriarTriagem(object? sender, EventArgs e) =>
-        await Shell.Current.GoToAsync(nameof(CriarTriagemPage));
+        await Navegacao.IrAsync(this, nameof(CriarTriagemPage));
 
     private async void EditarTriagem(object? sender, EventArgs e)
     {
         if ((sender as BindableObject)?.BindingContext is TriagemResumo t)
-            await Shell.Current.GoToAsync($"{nameof(CriarTriagemPage)}?triagemId={t.Id}");
+            await Navegacao.IrAsync(this, $"{nameof(CriarTriagemPage)}?triagemId={t.Id}");
     }
 
     private async void ExcluirTriagem(object? sender, EventArgs e)
@@ -158,16 +163,16 @@ public partial class HomePage : ContentPage
     }
 
     private async void IrSobre(object? sender, EventArgs e) =>
-        await Shell.Current.GoToAsync(nameof(SobrePage));
+        await Navegacao.IrAsync(this, nameof(SobrePage));
 
     private async void IrHistoricoGeral(object? sender, EventArgs e) =>
-        await Shell.Current.GoToAsync(nameof(HistoricoPage));
+        await Navegacao.IrAsync(this, nameof(HistoricoPage));
 
     private async void IrCreditos(object? sender, EventArgs e) =>
-        await Shell.Current.GoToAsync(nameof(CreditosPage));
+        await Navegacao.IrAsync(this, nameof(CreditosPage));
 
     private async void IrContato(object? sender, EventArgs e) =>
-        await Shell.Current.GoToAsync(nameof(ContatoPage));
+        await Navegacao.IrAsync(this, nameof(ContatoPage));
 
     private async void Sair(object? sender, EventArgs e)
     {
@@ -180,7 +185,7 @@ public partial class HomePage : ContentPage
 
             App.UsuarioLogado = null;
             App.ModoIndividual = false;
-            await Shell.Current.GoToAsync($"//{nameof(EscolhaModoPage)}");
+            await Navegacao.IrAsync(this, $"//{nameof(EscolhaModoPage)}");
             return;
         }
 
@@ -189,7 +194,7 @@ public partial class HomePage : ContentPage
 
         App.UsuarioLogado = null;
         ApiService.Logout();
-        await Shell.Current.GoToAsync($"//{nameof(EscolhaModoPage)}");
+        await Navegacao.IrAsync(this, $"//{nameof(EscolhaModoPage)}");
     }
 
     private async void AlternarEdicaoHome(object? sender, EventArgs e)

@@ -105,6 +105,7 @@ public static class ApiService
     /// <summary>Encerra a sessão: limpa token, cache local e a sessão persistida no dispositivo.</summary>
     public static void Logout()
     {
+        _forcarModoLocalIndividual = false;
         DefinirToken(null);
         LimparCache();
         _usuarioAtualId = 0;
@@ -285,6 +286,7 @@ public static class ApiService
 
     public static async Task<Usuario> IniciarModoIndividualAsync()
     {
+        DefinirToken(null);
         _forcarModoLocalIndividual = true;
         LimparCache();
 
@@ -306,6 +308,13 @@ public static class ApiService
     }
 
     // ---------------- Triagens ----------------
+    public static void PrepararModoGrupo()
+    {
+        _forcarModoLocalIndividual = false;
+        _usuarioAtualId = 0;
+        DefinirToken(null);
+        LimparCache();
+    }
 
     public static async Task<List<TriagemResumo>> ListarTriagensAsync(int usuarioId)
     {
@@ -440,5 +449,6 @@ public static class ApiService
         };
         using var resp = await Http.PutAsJsonAsync($"{BaseUrl}/api/usuarios/home", payload, JsonOptions);
         resp.EnsureSuccessStatusCode();
+        InvalidarCache("triagens_");
     }
 }

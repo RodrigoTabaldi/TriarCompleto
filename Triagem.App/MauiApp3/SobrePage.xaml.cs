@@ -8,7 +8,7 @@ public partial class SobrePage : ContentPage
     }
 
     private async void Voltar(object? sender, EventArgs e) =>
-        await Shell.Current.GoToAsync("..");
+        await Navegacao.IrAsync(this, "..");
 
     private async void AbrirNormas(object? sender, EventArgs e) =>
         await Browser.Default.OpenAsync(

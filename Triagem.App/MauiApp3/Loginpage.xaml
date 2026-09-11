@@ -62,6 +62,9 @@
                             <Label Text="Email" TextColor="#374151"/>
                             <Entry 
                                 x:Name="Email"
+                                Keyboard="Email"
+                                ReturnType="Next"
+                                Completed="FocarSenha"
                                 Placeholder="Email"
                                 TextColor="Black"
                                 PlaceholderColor="#9CA3AF"/>
@@ -72,6 +75,8 @@
                             <Label Text="Senha" TextColor="#374151"/>
                             <Entry 
                                 x:Name="Senha"
+                                ReturnType="Go"
+                                Completed="Entrar"
                                 Placeholder="Sua senha"
                                 IsPassword="True"
                                 TextColor="Black"
@@ -81,6 +86,7 @@
                         <!-- BOTÃO LOGIN -->
                         <Button 
                             Text="Entrar"
+                            x:Name="BotaoEntrar"
                             Clicked="Entrar"
                             BackgroundColor="#10B981"
                             TextColor="White"
@@ -103,6 +109,13 @@
                             TextColor="#10B981"
                             CornerRadius="10"
                             HeightRequest="50"/>
+
+                        <Button
+                            Text="← Voltar"
+                            Clicked="Voltar"
+                            BackgroundColor="Transparent"
+                            TextColor="#6B7280"
+                            HeightRequest="36"/>
 
                     </VerticalStackLayout>
 

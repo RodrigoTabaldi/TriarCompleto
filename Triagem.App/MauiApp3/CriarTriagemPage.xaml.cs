@@ -54,7 +54,7 @@ public partial class CriarTriagemPage : ContentPage
             if (detalhe is null)
             {
                 await DisplayAlertAsync("Erro", "Triagem não encontrada.", "OK");
-                await Shell.Current.GoToAsync("..");
+                await Navegacao.IrAsync(this, "..");
                 return;
             }
 
@@ -312,7 +312,7 @@ public partial class CriarTriagemPage : ContentPage
 
             await DisplayAlertAsync("Sucesso",
                 "Triagem salva! Ela já está disponível na sua home.", "OK");
-            await Shell.Current.GoToAsync("..");
+            await Navegacao.IrAsync(this, "..");
         }
         catch (Exception ex)
         {
@@ -325,5 +325,5 @@ public partial class CriarTriagemPage : ContentPage
     }
 
     private async void Voltar(object? sender, EventArgs e) =>
-        await Shell.Current.GoToAsync("..");
+        await Navegacao.IrAsync(this, "..");
 }

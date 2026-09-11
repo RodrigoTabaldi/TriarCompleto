@@ -43,17 +43,16 @@ public partial class ResultadoPage : ContentPage
     {
         var id = UltimoResultado?.TriagemModeloId.ToString(CultureInfo.InvariantCulture) ?? TriagemId;
         // remove a TriagemPage anterior da pilha e abre uma nova em branco
-        await Shell.Current.GoToAsync($"../..");
-        await Shell.Current.GoToAsync($"{nameof(TriagemPage)}?triagemId={id}");
+        await Navegacao.IrAsync(this, $"../../{nameof(TriagemPage)}?triagemId={id}");
     }
 
     private async void VerHistorico(object? sender, EventArgs e)
     {
         if (UltimoResultado is not { } r) return;
-        await Shell.Current.GoToAsync(
+        await Navegacao.IrAsync(this,
             $"{nameof(HistoricoPage)}?triagemId={r.TriagemModeloId}&titulo={Uri.EscapeDataString(r.TituloTriagem)}");
     }
 
     private async void VoltarHome(object? sender, EventArgs e) =>
-        await Shell.Current.GoToAsync("../..");
+        await Navegacao.IrAsync(this, "../..");
 }

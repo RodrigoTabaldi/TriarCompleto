@@ -32,7 +32,7 @@ public partial class LoginPage : ContentPage
         // Routing.RegisterRoute (rota global), e o Shell não aceita rota global como
         // única página da pilha — a forma absoluta lançava exceção e derrubava o app
         // sempre que havia uma sessão salva para restaurar.
-        await Shell.Current.GoToAsync(nameof(HomePage));
+        await Navegacao.IrAsync(this, nameof(HomePage));
     }
 
     private async void Entrar(object? sender, EventArgs e)
@@ -48,6 +48,8 @@ public partial class LoginPage : ContentPage
             }
 
             _entrando = true;
+            BotaoEntrar.IsEnabled = false;
+            BotaoEntrar.Text = "Entrando…";
 
             var usuario = await ApiService.LoginAsync(Email.Text.Trim(), Senha.Text);
 
@@ -61,7 +63,7 @@ public partial class LoginPage : ContentPage
             App.ModoIndividual = false;
             Senha.Text = "";
 
-            await Shell.Current.GoToAsync(nameof(HomePage));
+            await Navegacao.IrAsync(this, nameof(HomePage));
         }
         catch (Exception ex)
         {
@@ -71,9 +73,20 @@ public partial class LoginPage : ContentPage
         finally
         {
             _entrando = false;
+            BotaoEntrar.IsEnabled = true;
+            BotaoEntrar.Text = "Entrar";
         }
     }
 
-    private async void IrCadastro(object? sender, EventArgs e) =>
-        await Shell.Current.GoToAsync(nameof(CadastroPage));
+    private void FocarSenha(object? sender, EventArgs e) => Senha.Focus();
+
+    private async void IrCadastro(object? sender, EventArgs e)
+    {
+        if (!_entrando) await Navegacao.IrAsync(this, nameof(CadastroPage));
+    }
+
+    private async void Voltar(object? sender, EventArgs e)
+    {
+        if (!_entrando) await Navegacao.IrAsync(this, "..");
+    }
 }
