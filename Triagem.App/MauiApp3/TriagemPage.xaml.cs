@@ -1,22 +1,33 @@
-using System.Collections.ObjectModel;
 using MauiApp3.Models;
 using MauiApp3.Services;
 
 namespace MauiApp3;
 
-[QueryProperty(nameof(TriagemId), "triagemId")]
-public partial class TriagemPage : ContentPage
+public partial class TriagemPage : ContentPage, IQueryAttributable
 {
-    private readonly ObservableCollection<PerguntaRespondivel> _perguntas = [];
+    private List<PerguntaRespondivel> _perguntas = [];
     private TriagemDetalhe? _triagem;
     private bool _enviando;
+    private bool _carregando;
+    private bool _limpando;
 
     public string? TriagemId { get; set; }
 
     public TriagemPage()
     {
         InitializeComponent();
-        BindableLayout.SetItemsSource(ListaPerguntas, _perguntas);
+    }
+
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        if (query.TryGetValue("triagemId", out var id)) TriagemId = id.ToString();
+        if (query.TryGetValue("novaPessoa", out var nova) && nova.ToString() == "true")
+        {
+            query.Remove("novaPessoa");
+            Limpar(null, EventArgs.Empty);
+            if (_perguntas.Count > 0)
+                ListaPerguntas.ScrollTo(0, position: ScrollToPosition.Start, animate: false);
+        }
     }
 
     protected override async void OnAppearing()
@@ -29,6 +40,8 @@ public partial class TriagemPage : ContentPage
 
     private async Task CarregarAsync()
     {
+        if (_carregando) return;
+        _carregando = true;
         try
         {
             if (!int.TryParse(TriagemId, out var id))
@@ -49,7 +62,8 @@ public partial class TriagemPage : ContentPage
             TituloTriagem.Text = _triagem.Titulo;
             ImagemTriagem.Source = TriagemImagem.CriarImageSourceDaTriagem(_triagem.Imagem, _triagem.Titulo);
 
-            _perguntas.Clear();
+            foreach (var antiga in _perguntas) antiga.RespostaAlterada -= AtualizarProgresso;
+            _perguntas = [];
             foreach (var (p, i) in _triagem.Perguntas.OrderBy(p => p.Ordem).Select((p, i) => (p, i)))
             {
                 var item = new PerguntaRespondivel
@@ -63,6 +77,7 @@ public partial class TriagemPage : ContentPage
                 _perguntas.Add(item);
             }
 
+            ListaPerguntas.ItemsSource = _perguntas;
             AtualizarProgresso();
         }
         catch (Exception ex)
@@ -70,10 +85,12 @@ public partial class TriagemPage : ContentPage
             await DisplayAlertAsync("Erro",
                 $"Não foi possível carregar a triagem. Verifique se a API está no ar.\n\n{ex.Message}", "OK");
         }
+        finally { _carregando = false; }
     }
 
     private void AtualizarProgresso()
     {
+        if (_limpando) return;
         var total = _perguntas.Count;
         var respondidas = _perguntas.Count(p => p.Resposta is not null);
         var progresso = total == 0 ? 0 : (double)respondidas / total;
@@ -100,7 +117,10 @@ public partial class TriagemPage : ContentPage
         Nome.Text = "";
         Idade.Text = "";
         Sexo.SelectedIndex = -1;
+        _limpando = true;
         foreach (var p in _perguntas) p.Resposta = null;
+        _limpando = false;
+        AtualizarProgresso();
     }
 
     private async void Finalizar(object? sender, EventArgs e)

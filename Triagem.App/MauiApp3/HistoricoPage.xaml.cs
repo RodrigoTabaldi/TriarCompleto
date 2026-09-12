@@ -9,6 +9,8 @@ namespace MauiApp3;
 public partial class HistoricoPage : ContentPage
 {
     private List<HistoricoItem> _itens = [];
+    private bool _carregando;
+    private bool _exportando;
 
     /// <summary>Opcional: filtra o histórico por uma triagem específica.</summary>
     public string? TriagemId { get; set; }
@@ -31,6 +33,8 @@ public partial class HistoricoPage : ContentPage
 
     private async Task CarregarAsync()
     {
+        if (_carregando) return;
+        _carregando = true;
         try
         {
             if (App.UsuarioLogado is not { } usuario)
@@ -49,10 +53,13 @@ public partial class HistoricoPage : ContentPage
             await DisplayAlertAsync("Erro",
                 $"Não foi possível carregar o histórico.\n\n{ex.Message}", "OK");
         }
+        finally { _carregando = false; }
     }
 
     private async void ExportarExcel(object? sender, EventArgs e)
     {
+        if (_exportando) return;
+        _exportando = true;
         string? caminhoTemporario = null;
         try
         {
@@ -62,6 +69,11 @@ public partial class HistoricoPage : ContentPage
                 return;
             }
 
+            var itens = _itens.ToArray();
+            caminhoTemporario = Path.Combine(FileSystem.Current.AppDataDirectory,
+                $"Triagens_{Guid.NewGuid():N}.xlsx");
+            await Task.Run(() =>
+            {
             using var workbook = new XLWorkbook();
             var planilha = workbook.Worksheets.Add("Triagens");
 
@@ -75,7 +87,7 @@ public partial class HistoricoPage : ContentPage
             header.Style.Font.FontColor = XLColor.White;
 
             var linha = 2;
-            foreach (var item in _itens)
+            foreach (var item in itens)
             {
                 planilha.Cell(linha, 1).Value = item.TituloTriagem;
                 planilha.Cell(linha, 2).Value = item.Nome;
@@ -90,11 +102,8 @@ public partial class HistoricoPage : ContentPage
 
             planilha.Columns().AdjustToContents();
 
-            caminhoTemporario = Path.Combine(
-                FileSystem.Current.AppDataDirectory,
-                $"Triagens_{DateTime.Now:ddMMyyyyHHmmss}.xlsx");
-
             workbook.SaveAs(caminhoTemporario);
+            });
 
             await Share.Default.RequestAsync(new ShareFileRequest
             {
@@ -108,6 +117,7 @@ public partial class HistoricoPage : ContentPage
         }
         finally
         {
+            _exportando = false;
             if (!string.IsNullOrWhiteSpace(caminhoTemporario) && File.Exists(caminhoTemporario))
             {
                 try { File.Delete(caminhoTemporario); }

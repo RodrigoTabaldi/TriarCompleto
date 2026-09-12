@@ -13,11 +13,9 @@ internal static class FullscreenButtonDecorator
         if (pagina?.Content is not View conteudo || (bool)pagina.GetValue(DecoradaProperty))
             return;
 
-        pagina.Content = null;
 #if WINDOWS
+        pagina.Content = null;
         AplicarBarraWindows(pagina, conteudo);
-#else
-        pagina.Content = conteudo;
 #endif
         pagina.SetValue(DecoradaProperty, true);
     }

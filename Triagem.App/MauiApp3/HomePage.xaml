@@ -306,8 +306,7 @@
             <CollectionView x:Name="ListaTriagensMobile"
                             SelectionMode="None"
                             Margin="18,0"
-                            ItemSizingStrategy="MeasureFirstItem"
-                            ItemsUpdatingScrollMode="KeepScrollOffset"
+                            ItemSizingStrategy="MeasureAllItems"
                             VerticalScrollBarVisibility="Never">
                 <CollectionView.ItemsLayout>
                     <LinearItemsLayout Orientation="Vertical" ItemSpacing="16"/>
@@ -387,43 +386,12 @@
                 </CollectionView.ItemTemplate>
 
                 <CollectionView.Footer>
-                    <VerticalStackLayout Spacing="22" Padding="0,28,0,22">
-                        <Button x:Name="BotaoSalvarHomeMobile"
-                                Text="Salvar configuração da home"
-                                Clicked="SalvarConfiguracaoHome"
-                                IsVisible="False"
-                                Style="{StaticResource PrimaryButton}"/>
-
-                        <Border BackgroundColor="#EEF8F5" StrokeThickness="0" StrokeShape="RoundRectangle 13" Padding="26,22">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="IrSobre"/>
-                            </Border.GestureRecognizers>
-                            <Grid ColumnDefinitions="60,*,Auto" ColumnSpacing="18">
-                                <Border BackgroundColor="#009B72" StrokeThickness="0" StrokeShape="RoundRectangle 100" HeightRequest="50" WidthRequest="50">
-                                    <Label Text="i" TextColor="White" FontSize="26" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
-                                </Border>
-                                <VerticalStackLayout Grid.Column="1" Spacing="8">
-                                    <Label Text="Sobre o projeto" FontSize="22" FontAttributes="Bold" TextColor="#07142E"/>
-                                    <Label Text="Saiba mais sobre o Triar, seus objetivos e como as triagens funcionam." FontSize="16" TextColor="#40506A"/>
-                                </VerticalStackLayout>
-                                <Label Grid.Column="2" Text="›" FontSize="42" TextColor="#009B72" VerticalOptions="Center"/>
-                            </Grid>
-                        </Border>
-
-                        <Border BackgroundColor="White" Stroke="#009B72" StrokeThickness="1" StrokeShape="RoundRectangle 13" Padding="26,20">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="IrCriarTriagem"/>
-                            </Border.GestureRecognizers>
-                            <Grid ColumnDefinitions="60,*,Auto" ColumnSpacing="18">
-                                <Label Text="⊕" FontSize="40" TextColor="#009B72" VerticalOptions="Center" HorizontalOptions="Center"/>
-                                <VerticalStackLayout Grid.Column="1" Spacing="6">
-                                    <Label Text="Criar sua triagem" FontSize="22" FontAttributes="Bold" TextColor="#07142E"/>
-                                    <Label Text="Monte uma triagem personalizada de acordo com sua necessidade." FontSize="15" TextColor="#40506A"/>
-                                </VerticalStackLayout>
-                                <Label Grid.Column="2" Text="›" FontSize="42" TextColor="#009B72" VerticalOptions="Center"/>
-                            </Grid>
-                        </Border>
-                    </VerticalStackLayout>
+                    <Button x:Name="BotaoSalvarHomeMobile"
+                            Text="Salvar configuração da home"
+                            Clicked="SalvarConfiguracaoHome"
+                            IsVisible="False"
+                            Margin="0,20,0,22"
+                            Style="{StaticResource PrimaryButton}"/>
                 </CollectionView.Footer>
             </CollectionView>
 

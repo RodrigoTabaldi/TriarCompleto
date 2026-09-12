@@ -7,8 +7,13 @@
     BackgroundColor="#F5F7F6"
     Shell.NavBarIsVisible="False">
 
-    <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="18"
+    <CollectionView x:Name="ListaPerguntas" SelectionMode="None" Margin="20,0"
+                    MaximumWidthRequest="820" HorizontalOptions="Fill">
+        <CollectionView.ItemsLayout>
+            <LinearItemsLayout Orientation="Vertical" ItemSpacing="12"/>
+        </CollectionView.ItemsLayout>
+        <CollectionView.Header>
+        <VerticalStackLayout Padding="0,20,0,18" Spacing="18"
                              MaximumWidthRequest="820"
                              HorizontalOptions="Fill">
 
@@ -87,10 +92,11 @@
             <!-- PERGUNTAS -->
             <Label Text="Perguntas da triagem" FontSize="18" FontAttributes="Bold" TextColor="#0F172A"/>
 
-            <VerticalStackLayout x:Name="ListaPerguntas" Spacing="12">
-                <BindableLayout.ItemTemplate>
+        </VerticalStackLayout>
+        </CollectionView.Header>
+                <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:PerguntaRespondivel">
-                        <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="18" Shadow="0,2,10,#00000012">
+                        <Border BackgroundColor="White" Stroke="#EDF0F3" StrokeThickness="1" StrokeShape="RoundRectangle 15" Padding="18">
                             <VerticalStackLayout Spacing="12">
 
                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
@@ -136,8 +142,9 @@
                             </VerticalStackLayout>
                         </Border>
                     </DataTemplate>
-                </BindableLayout.ItemTemplate>
-            </VerticalStackLayout>
+                </CollectionView.ItemTemplate>
+        <CollectionView.Footer>
+        <VerticalStackLayout Padding="0,18,0,20" Spacing="18">
 
             <!-- AÇÕES -->
             <Button Text="🗑 Limpar respostas"
@@ -157,5 +164,6 @@
 
             <BoxView HeightRequest="20" Color="Transparent"/>
         </VerticalStackLayout>
-    </ScrollView>
+        </CollectionView.Footer>
+    </CollectionView>
 </ContentPage>

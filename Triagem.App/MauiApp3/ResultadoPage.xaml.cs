@@ -41,9 +41,8 @@ public partial class ResultadoPage : ContentPage
     /// <summary>Volta para a mesma triagem, limpa, para aplicar em outra pessoa.</summary>
     private async void RepetirTriagem(object? sender, EventArgs e)
     {
-        var id = UltimoResultado?.TriagemModeloId.ToString(CultureInfo.InvariantCulture) ?? TriagemId;
-        // remove a TriagemPage anterior da pilha e abre uma nova em branco
-        await Navegacao.IrAsync(this, $"../../{nameof(TriagemPage)}?triagemId={id}");
+        // Reutiliza as perguntas carregadas, mas reinicia explicitamente o atendimento.
+        await Navegacao.IrAsync(this, "..?novaPessoa=true");
     }
 
     private async void VerHistorico(object? sender, EventArgs e)

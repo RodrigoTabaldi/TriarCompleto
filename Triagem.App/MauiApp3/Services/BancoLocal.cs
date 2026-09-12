@@ -193,7 +193,7 @@ public static partial class BancoLocal
         {
             Nome = nome.Trim(),
             Email = emailNormalizado,
-            SenhaHash = HashSenha(senha)
+            SenhaHash = await Task.Run(() => HashSenha(senha))
         };
         await db.InsertAsync(usuario);
 
@@ -208,7 +208,7 @@ public static partial class BancoLocal
         var emailNormalizado = email.Trim().ToLowerInvariant();
 
         var usuario = await db.Table<UsuarioLocal>().Where(u => u.Email == emailNormalizado).FirstOrDefaultAsync();
-        if (usuario is null || !VerificarSenha(senha, usuario.SenhaHash)) return null;
+        if (usuario is null || !await Task.Run(() => VerificarSenha(senha, usuario.SenhaHash))) return null;
 
         return new Usuario { Id = usuario.Id, Nome = usuario.Nome, Email = usuario.Email };
     }
@@ -241,7 +241,7 @@ public static partial class BancoLocal
         {
             Nome = "Você",
             Email = $"individual-{Guid.NewGuid():N}@local.triar",
-            SenhaHash = HashSenha(Guid.NewGuid().ToString())
+            SenhaHash = await Task.Run(() => HashSenha(Guid.NewGuid().ToString()))
         };
         await db.InsertAsync(usuario);
 
@@ -584,7 +584,7 @@ public static partial class BancoLocal
         var titulos = (await db.Table<TriagemModeloLocal>().ToListAsync())
             .ToDictionary(t => t.Id, t => t.Titulo);
 
-        return resultados.Select(r =>
+        return await Task.Run(() => resultados.Select(r =>
         {
             var dados = ObterDadosSensiveis(r);
             return new HistoricoItem
@@ -601,7 +601,7 @@ public static partial class BancoLocal
                 Cor = dados.Cor,
                 Data = r.Data
             };
-        }).ToList();
+        }).ToList());
     }
 
     private static ResultadoSensivelLocal ObterDadosSensiveis(ResultadoLocal resultado)

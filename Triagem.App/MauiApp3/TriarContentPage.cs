@@ -178,7 +178,7 @@ internal sealed class TriarDialogPage : ContentPage
     {
         if (_fechando) return;
         _fechando = true;
-        _resultado.TrySetResult(resultado);
         await Navigation.PopModalAsync(false);
+        _resultado.TrySetResult(resultado);
     }
 }

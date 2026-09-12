@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using MauiApp3.Models;
 using MauiApp3.Services;
 
@@ -6,18 +5,15 @@ namespace MauiApp3;
 
 public partial class HomePage : ContentPage
 {
-    private readonly ObservableCollection<LinhaTriagens> _linhasDesktop = [];
-    private readonly ObservableCollection<TriagemResumo> _triagensMobile = [];
     private List<TriagemResumo> _todas = [];
     private bool _modoEdicao;
     private bool _carregando;
+    private bool? _layoutDesktop;
 
     public HomePage()
     {
         InitializeComponent();
 
-        ListaTriagensDesktop.ItemsSource = _linhasDesktop;
-        ListaTriagensMobile.ItemsSource = _triagensMobile;
         SizeChanged += AjustarLayout;
 
         if (App.UsuarioLogado is { } u)
@@ -46,9 +42,12 @@ public partial class HomePage : ContentPage
         // da escala de exibição configurada no Windows. Fora da tela cheia, usa a largura.
         var desktopEmTelaCheia = DeviceInfo.Current.Idiom == DeviceIdiom.Desktop && App.TelaCheia;
         var desktop = desktopEmTelaCheia || Width >= 1000;
+        if (_layoutDesktop == desktop) return;
+
+        _layoutDesktop = desktop;
         DesktopRoot.IsVisible = desktop;
         MobileRoot.IsVisible = !desktop;
-
+        AplicarFiltro();
     }
 
     internal void AtualizarLayoutResponsivo() => AjustarLayout(this, EventArgs.Empty);
@@ -65,7 +64,26 @@ public partial class HomePage : ContentPage
                 return;
             }
 
-            _todas = await ApiService.ListarTriagensAsync(usuario.Id);
+            // Modais e retornos não devem apagar alterações ainda não salvas.
+            if (_modoEdicao) return;
+            var carregadas = await ApiService.ListarTriagensAsync(usuario.Id);
+            if (_todas.Count > 0 && _todas.Count == carregadas.Count &&
+                _todas.Zip(carregadas).All(par =>
+                    par.First.Id == par.Second.Id &&
+                    par.First.Titulo == par.Second.Titulo &&
+                    par.First.PublicoAlvo == par.Second.PublicoAlvo &&
+                    par.First.Imagem == par.Second.Imagem &&
+                    par.First.MinhaAutoria == par.Second.MinhaAutoria &&
+                    par.First.VisivelNaHome == par.Second.VisivelNaHome))
+                return;
+            _todas = carregadas;
+            await Task.Run(() =>
+            {
+                // Imagens personalizadas chegam em Base64. Prepará-las fora da thread
+                // visual evita decodificações pesadas enquanto o usuário rola a lista.
+                foreach (var triagem in _todas)
+                    _ = triagem.ImagemHome;
+            });
             foreach (var t in _todas) t.ModoEdicao = _modoEdicao;
             AplicarFiltro();
             AjustarLayout(this, EventArgs.Empty);
@@ -100,21 +118,22 @@ public partial class HomePage : ContentPage
     {
         var visiveis = _todas.Where(t => _modoEdicao || t.VisivelNaHome).ToList();
 
-        _linhasDesktop.Clear();
-        var itensDesktop = visiveis;
-        for (var i = 0; i < itensDesktop.Count; i += 3)
+        var linhasDesktop = new List<LinhaTriagens>((visiveis.Count + 2) / 3);
+        for (var i = 0; i < visiveis.Count; i += 3)
         {
-            _linhasDesktop.Add(new LinhaTriagens
+            linhasDesktop.Add(new LinhaTriagens
             {
-                Primeira = itensDesktop[i],
-                Segunda = i + 1 < itensDesktop.Count ? itensDesktop[i + 1] : null,
-                Terceira = i + 2 < itensDesktop.Count ? itensDesktop[i + 2] : null
+                Primeira = visiveis[i],
+                Segunda = i + 1 < visiveis.Count ? visiveis[i + 1] : null,
+                Terceira = i + 2 < visiveis.Count ? visiveis[i + 2] : null
             });
         }
 
-        _triagensMobile.Clear();
-        foreach (var t in visiveis)
-            _triagensMobile.Add(t);
+        // Uma troca de fonte gera apenas uma atualização visual. Limpar e adicionar
+        // item a item fazia a CollectionView recalcular o layout repetidas vezes.
+        // A lista invisível não precisa criar cartões, bindings e imagens.
+        ListaTriagensDesktop.ItemsSource = _layoutDesktop == true ? linhasDesktop : null;
+        ListaTriagensMobile.ItemsSource = _layoutDesktop == true ? null : visiveis;
     }
 
     private async void Atualizar(object? sender, EventArgs e) => await CarregarAsync();
