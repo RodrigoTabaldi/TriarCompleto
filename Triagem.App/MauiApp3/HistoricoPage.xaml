@@ -49,7 +49,7 @@
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:HistoricoItem">
                     <Border BackgroundColor="White" Padding="18" Margin="0,0,0,12"
-                            StrokeThickness="0" StrokeShape="RoundRectangle 16" Shadow="0,2,10,#00000015">
+                            Stroke="#EDF0F3" StrokeThickness="1" StrokeShape="RoundRectangle 16">
                         <VerticalStackLayout Spacing="10">
 
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">

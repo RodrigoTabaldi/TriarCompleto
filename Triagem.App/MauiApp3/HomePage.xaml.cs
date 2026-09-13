@@ -8,6 +8,8 @@ public partial class HomePage : ContentPage
     private List<TriagemResumo> _todas = [];
     private bool _modoEdicao;
     private bool _carregando;
+    private bool _carregada;
+    private int _versaoCarregada = -1;
     private bool? _layoutDesktop;
 
     public HomePage()
@@ -31,7 +33,7 @@ public partial class HomePage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        await CarregarAsync();
+        await CarregarAsync(forceRefresh: false);
     }
 
     private void AjustarLayout(object? sender, EventArgs e)
@@ -52,9 +54,12 @@ public partial class HomePage : ContentPage
 
     internal void AtualizarLayoutResponsivo() => AjustarLayout(this, EventArgs.Empty);
 
-    private async Task CarregarAsync()
+    private async Task CarregarAsync(bool forceRefresh)
     {
         if (_carregando) return;
+        if (!forceRefresh && _carregada && _versaoCarregada == ApiService.VersaoTriagens)
+            return;
+
         _carregando = true;
         try
         {
@@ -66,7 +71,7 @@ public partial class HomePage : ContentPage
 
             // Modais e retornos não devem apagar alterações ainda não salvas.
             if (_modoEdicao) return;
-            var carregadas = await ApiService.ListarTriagensAsync(usuario.Id);
+            var carregadas = await ApiService.ListarTriagensAsync(usuario.Id, forceRefresh);
             if (_todas.Count > 0 && _todas.Count == carregadas.Count &&
                 _todas.Zip(carregadas).All(par =>
                     par.First.Id == par.Second.Id &&
@@ -75,7 +80,11 @@ public partial class HomePage : ContentPage
                     par.First.Imagem == par.Second.Imagem &&
                     par.First.MinhaAutoria == par.Second.MinhaAutoria &&
                     par.First.VisivelNaHome == par.Second.VisivelNaHome))
+            {
+                _carregada = true;
+                _versaoCarregada = ApiService.VersaoTriagens;
                 return;
+            }
             _todas = carregadas;
             await Task.Run(() =>
             {
@@ -87,6 +96,8 @@ public partial class HomePage : ContentPage
             foreach (var t in _todas) t.ModoEdicao = _modoEdicao;
             AplicarFiltro();
             AjustarLayout(this, EventArgs.Empty);
+            _carregada = true;
+            _versaoCarregada = ApiService.VersaoTriagens;
         }
         catch (Exception ex)
         {
@@ -136,7 +147,13 @@ public partial class HomePage : ContentPage
         ListaTriagensMobile.ItemsSource = _layoutDesktop == true ? null : visiveis;
     }
 
-    private async void Atualizar(object? sender, EventArgs e) => await CarregarAsync();
+    private async void Atualizar(object? sender, EventArgs e) => await CarregarAsync(forceRefresh: true);
+
+    private void TocarInicio(object? sender, EventArgs e)
+    {
+        // A aba ativa não deve repetir a consulta nem reconstruir todos os cartões.
+        // A página e sua posição permanecem intactas.
+    }
 
     private async void AbrirTriagem(object? sender, EventArgs e)
     {
@@ -173,6 +190,7 @@ public partial class HomePage : ContentPage
         if (ok)
         {
             _todas.Remove(t);
+            _versaoCarregada = ApiService.VersaoTriagens;
             AplicarFiltro();
         }
         else
@@ -249,6 +267,7 @@ public partial class HomePage : ContentPage
             BotaoSalvarHomeMobile.IsVisible = false;
             BotaoSalvarHomeDesktop.IsVisible = false;
             foreach (var t in _todas) t.ModoEdicao = false;
+            _versaoCarregada = ApiService.VersaoTriagens;
             AplicarFiltro();
 
             await DisplayAlertAsync("Pronto", "Sua home foi atualizada!", "OK");

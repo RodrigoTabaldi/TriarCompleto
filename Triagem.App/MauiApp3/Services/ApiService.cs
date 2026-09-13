@@ -25,6 +25,11 @@ public static class ApiService
     // Cache thread-safe com expiração (5 min para triagens, 10 min para histórico)
     private static readonly ConcurrentDictionary<string, (object Data, DateTime ExpiresAt)> Cache = new();
     private static bool _forcarModoLocalIndividual;
+    private static int _versaoTriagens;
+    private static int _versaoHistorico;
+
+    public static int VersaoTriagens => Volatile.Read(ref _versaoTriagens);
+    public static int VersaoHistorico => Volatile.Read(ref _versaoHistorico);
 
     /// <summary>
     /// Modo local (demonstração): o app não fala com API nenhuma e usa o
@@ -316,13 +321,14 @@ public static class ApiService
         LimparCache();
     }
 
-    public static async Task<List<TriagemResumo>> ListarTriagensAsync(int usuarioId)
+    public static async Task<List<TriagemResumo>> ListarTriagensAsync(int usuarioId, bool forceRefresh = false)
     {
         // O cache existe para poupar chamadas de rede; contra o banco local ele só
         // criaria leituras desatualizadas logo depois de criar ou editar uma triagem.
         if (ModoLocal) return await BancoLocal.ListarTriagensAsync(usuarioId);
 
         var cacheKey = $"triagens_{usuarioId}";
+        if (forceRefresh) Cache.TryRemove(cacheKey, out _);
         var cached = GetCache<List<TriagemResumo>>(cacheKey);
         if (cached is not null) return cached;
 
@@ -349,12 +355,18 @@ public static class ApiService
 
     public static async Task<(bool Ok, string? Erro)> CriarTriagemAsync(CriarTriagemPayload payload)
     {
-        if (ModoLocal) return await BancoLocal.CriarTriagemAsync(_usuarioAtualId, payload);
+        if (ModoLocal)
+        {
+            var resultadoLocal = await BancoLocal.CriarTriagemAsync(_usuarioAtualId, payload);
+            if (resultadoLocal.Ok) Interlocked.Increment(ref _versaoTriagens);
+            return resultadoLocal;
+        }
 
         using var resp = await Http.PostAsJsonAsync($"{BaseUrl}/api/triagens", payload, JsonOptions);
         if (resp.IsSuccessStatusCode)
         {
             InvalidarCache("triagens_", "historico_");
+            Interlocked.Increment(ref _versaoTriagens);
             return (true, null);
         }
         return (false, await resp.Content.ReadAsStringAsync());
@@ -362,13 +374,24 @@ public static class ApiService
 
     public static async Task<(bool Ok, string? Erro)> AtualizarTriagemAsync(int id, CriarTriagemPayload payload)
     {
-        if (ModoLocal) return await BancoLocal.AtualizarTriagemAsync(_usuarioAtualId, id, payload);
+        if (ModoLocal)
+        {
+            var resultadoLocal = await BancoLocal.AtualizarTriagemAsync(_usuarioAtualId, id, payload);
+            if (resultadoLocal.Ok)
+            {
+                Interlocked.Increment(ref _versaoTriagens);
+                Interlocked.Increment(ref _versaoHistorico);
+            }
+            return resultadoLocal;
+        }
 
         using var resp = await Http.PutAsJsonAsync($"{BaseUrl}/api/triagens/{id}", payload, JsonOptions);
         if (resp.IsSuccessStatusCode)
         {
             Cache.TryRemove($"triagem_{id}", out _);
             InvalidarCache("triagens_", "historico_");
+            Interlocked.Increment(ref _versaoTriagens);
+            Interlocked.Increment(ref _versaoHistorico);
             return (true, null);
         }
         return (false, await resp.Content.ReadAsStringAsync());
@@ -376,13 +399,19 @@ public static class ApiService
 
     public static async Task<(bool Ok, string? Erro)> ExcluirTriagemAsync(int id)
     {
-        if (ModoLocal) return await BancoLocal.ExcluirTriagemAsync(_usuarioAtualId, id);
+        if (ModoLocal)
+        {
+            var resultadoLocal = await BancoLocal.ExcluirTriagemAsync(_usuarioAtualId, id);
+            if (resultadoLocal.Ok) Interlocked.Increment(ref _versaoTriagens);
+            return resultadoLocal;
+        }
 
         using var resp = await Http.DeleteAsync($"{BaseUrl}/api/triagens/{id}");
         if (resp.IsSuccessStatusCode)
         {
             Cache.TryRemove($"triagem_{id}", out _);
             InvalidarCache("triagens_", "historico_");
+            Interlocked.Increment(ref _versaoTriagens);
             return (true, null);
         }
         return (false, await resp.Content.ReadAsStringAsync());
@@ -392,7 +421,12 @@ public static class ApiService
 
     public static async Task<(ResultadoTriagem? Resultado, string? Erro)> ResponderAsync(int triagemId, ResponderTriagemPayload payload)
     {
-        if (ModoLocal) return await BancoLocal.ResponderAsync(_usuarioAtualId, triagemId, payload);
+        if (ModoLocal)
+        {
+            var resultadoLocal = await BancoLocal.ResponderAsync(_usuarioAtualId, triagemId, payload);
+            if (resultadoLocal.Resultado is not null) Interlocked.Increment(ref _versaoHistorico);
+            return resultadoLocal;
+        }
 
         using var resp = await Http.PostAsJsonAsync($"{BaseUrl}/api/triagens/{triagemId}/responder", payload, JsonOptions);
         if (!resp.IsSuccessStatusCode)
@@ -400,6 +434,7 @@ public static class ApiService
 
         // novo resultado gravado: invalida o histórico em cache
         InvalidarCache("historico_");
+        Interlocked.Increment(ref _versaoHistorico);
 
         return (await resp.Content.ReadFromJsonAsync<ResultadoTriagem>(JsonOptions), null);
     }
@@ -440,6 +475,7 @@ public static class ApiService
         if (ModoLocal)
         {
             await BancoLocal.ConfigurarHomeAsync(usuarioId, itens);
+            Interlocked.Increment(ref _versaoTriagens);
             return;
         }
 
@@ -450,5 +486,6 @@ public static class ApiService
         using var resp = await Http.PutAsJsonAsync($"{BaseUrl}/api/usuarios/home", payload, JsonOptions);
         resp.EnsureSuccessStatusCode();
         InvalidarCache("triagens_");
+        Interlocked.Increment(ref _versaoTriagens);
     }
 }

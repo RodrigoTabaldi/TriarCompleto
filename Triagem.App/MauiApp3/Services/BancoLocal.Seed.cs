@@ -210,7 +210,7 @@ public static partial class BancoLocal
         {
             Nome = "Usuário Demonstração",
             Email = EmailDemo,
-            SenhaHash = HashSenha(SenhaDemo)
+            SenhaHash = await Task.Run(() => HashSenha(SenhaDemo))
         };
         await db.InsertAsync(demo);
 

@@ -119,29 +119,34 @@ public static partial class BancoLocal
                 .ToListAsync();
             if (resultados.Count == 0) break;
 
-            foreach (var r in resultados)
+            // Serialização e AES-GCM são CPU-bound. Em bancos legados este lote
+            // pode ser grande e a continuação da inicialização pode estar na UI.
+            await Task.Run(() =>
             {
-                var dados = new ResultadoSensivelLocal
+                foreach (var r in resultados)
                 {
-                    NomePaciente = r.NomePaciente,
-                    Idade = r.Idade,
-                    Sexo = r.Sexo,
-                    Pontuacao = r.Pontuacao,
-                    PontuacaoMaxima = r.PontuacaoMaxima,
-                    Classificacao = r.Classificacao,
-                    Recomendacao = r.Recomendacao,
-                    Cor = r.Cor
-                };
-                r.DadosProtegidos = LocalDataProtection.Proteger(JsonSerializer.Serialize(dados, JsonOptions));
-                r.NomePaciente = "";
-                r.Idade = 0;
-                r.Sexo = "";
-                r.Pontuacao = 0;
-                r.PontuacaoMaxima = 0;
-                r.Classificacao = "";
-                r.Recomendacao = "";
-                r.Cor = "#000000";
-            }
+                    var dados = new ResultadoSensivelLocal
+                    {
+                        NomePaciente = r.NomePaciente,
+                        Idade = r.Idade,
+                        Sexo = r.Sexo,
+                        Pontuacao = r.Pontuacao,
+                        PontuacaoMaxima = r.PontuacaoMaxima,
+                        Classificacao = r.Classificacao,
+                        Recomendacao = r.Recomendacao,
+                        Cor = r.Cor
+                    };
+                    r.DadosProtegidos = LocalDataProtection.Proteger(JsonSerializer.Serialize(dados, JsonOptions));
+                    r.NomePaciente = "";
+                    r.Idade = 0;
+                    r.Sexo = "";
+                    r.Pontuacao = 0;
+                    r.PontuacaoMaxima = 0;
+                    r.Classificacao = "";
+                    r.Recomendacao = "";
+                    r.Cor = "#000000";
+                }
+            });
 
             await conexao.RunInTransactionAsync(conn => conn.UpdateAll(resultados));
         }
@@ -154,11 +159,14 @@ public static partial class BancoLocal
                 .ToListAsync();
             if (respostas.Count == 0) break;
 
-            foreach (var r in respostas)
+            await Task.Run(() =>
             {
-                r.ValorProtegido = LocalDataProtection.Proteger(r.Valor ? "1" : "0");
-                r.Valor = false;
-            }
+                foreach (var r in respostas)
+                {
+                    r.ValorProtegido = LocalDataProtection.Proteger(r.Valor ? "1" : "0");
+                    r.Valor = false;
+                }
+            });
 
             await conexao.RunInTransactionAsync(conn => conn.UpdateAll(respostas));
         }

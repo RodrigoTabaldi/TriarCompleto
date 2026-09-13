@@ -96,6 +96,9 @@
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
+		<!-- A marca nunca aparece acima de 120 px de altura; evita decodificar a
+		     textura original de 1774x887 em cada página. -->
+		<MauiImage Update="Resources\Images\logo.png" BaseSize="320,160" Resize="true" />
 		<!-- Os cartões usam miniaturas; evita texturas de até 3600x2400 no Android. -->
 		<MauiImage Update="Resources\Images\triagem_*.svg" BaseSize="300,200" Resize="true" />
 		

@@ -306,7 +306,7 @@
             <CollectionView x:Name="ListaTriagensMobile"
                             SelectionMode="None"
                             Margin="18,0"
-                            ItemSizingStrategy="MeasureAllItems"
+                            ItemSizingStrategy="MeasureFirstItem"
                             VerticalScrollBarVisibility="Never">
                 <CollectionView.ItemsLayout>
                     <LinearItemsLayout Orientation="Vertical" ItemSpacing="16"/>
@@ -363,7 +363,8 @@
                                 </Border>
 
                                 <VerticalStackLayout Grid.Column="1" Spacing="5" VerticalOptions="Center">
-                                    <Label Text="{Binding Titulo}" FontSize="16" FontAttributes="Bold" TextColor="#05070D" LineBreakMode="WordWrap"/>
+                                    <Label Text="{Binding Titulo}" FontSize="16" FontAttributes="Bold" TextColor="#05070D"
+                                           LineBreakMode="WordWrap" MaxLines="2" MinimumHeightRequest="40"/>
                                     <VerticalStackLayout Spacing="0">
                                         <Label Text="Público alvo:" FontSize="12" TextColor="#40506A"/>
                                         <Label Text="{Binding PublicoAlvo}" FontSize="12" TextColor="#40506A" MaxLines="2"/>
@@ -404,7 +405,7 @@
                           Padding="0,2" HorizontalOptions="Fill"
                           SemanticProperties.Description="Início">
                         <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="Atualizar"/>
+                            <TapGestureRecognizer Tapped="TocarInicio"/>
                         </Grid.GestureRecognizers>
                         <Image Source="nav_home.png" WidthRequest="22" HeightRequest="22"
                                HorizontalOptions="Center" VerticalOptions="Center" InputTransparent="True"/>

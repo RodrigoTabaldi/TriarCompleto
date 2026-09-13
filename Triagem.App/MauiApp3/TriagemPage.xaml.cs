@@ -10,6 +10,7 @@ public partial class TriagemPage : ContentPage, IQueryAttributable
     private bool _enviando;
     private bool _carregando;
     private bool _limpando;
+    private int _respondidas;
 
     public string? TriagemId { get; set; }
 
@@ -62,7 +63,7 @@ public partial class TriagemPage : ContentPage, IQueryAttributable
             TituloTriagem.Text = _triagem.Titulo;
             ImagemTriagem.Source = TriagemImagem.CriarImageSourceDaTriagem(_triagem.Imagem, _triagem.Titulo);
 
-            foreach (var antiga in _perguntas) antiga.RespostaAlterada -= AtualizarProgresso;
+            foreach (var antiga in _perguntas) antiga.RespostaAlterada -= RespostaAlterada;
             _perguntas = [];
             foreach (var (p, i) in _triagem.Perguntas.OrderBy(p => p.Ordem).Select((p, i) => (p, i)))
             {
@@ -73,11 +74,12 @@ public partial class TriagemPage : ContentPage, IQueryAttributable
                     Texto = p.Texto,
                     Peso = p.Peso
                 };
-                item.RespostaAlterada += AtualizarProgresso;
+                item.RespostaAlterada += RespostaAlterada;
                 _perguntas.Add(item);
             }
 
             ListaPerguntas.ItemsSource = _perguntas;
+            _respondidas = 0;
             AtualizarProgresso();
         }
         catch (Exception ex)
@@ -88,14 +90,21 @@ public partial class TriagemPage : ContentPage, IQueryAttributable
         finally { _carregando = false; }
     }
 
+    private void RespostaAlterada(bool? anterior, bool? atual)
+    {
+        if (anterior is null && atual is not null) _respondidas++;
+        else if (anterior is not null && atual is null) _respondidas--;
+
+        AtualizarProgresso();
+    }
+
     private void AtualizarProgresso()
     {
         if (_limpando) return;
         var total = _perguntas.Count;
-        var respondidas = _perguntas.Count(p => p.Resposta is not null);
-        var progresso = total == 0 ? 0 : (double)respondidas / total;
+        var progresso = total == 0 ? 0 : (double)_respondidas / total;
 
-        ProgressoTexto.Text = $"Pergunta {respondidas} de {total}";
+        ProgressoTexto.Text = $"Pergunta {_respondidas} de {total}";
         ProgressoPercentual.Text = $"{(int)(progresso * 100)}%";
         BarraProgresso.Progress = progresso;
     }
@@ -120,6 +129,7 @@ public partial class TriagemPage : ContentPage, IQueryAttributable
         _limpando = true;
         foreach (var p in _perguntas) p.Resposta = null;
         _limpando = false;
+        _respondidas = 0;
         AtualizarProgresso();
     }
 

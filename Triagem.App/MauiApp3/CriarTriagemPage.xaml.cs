@@ -131,7 +131,9 @@ public partial class CriarTriagemPage : ContentPage
                 return;
             }
 
-            _imagemDataUrl = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+            var imagemDataUrl = await Task.Run(
+                () => $"data:{mime};base64,{Convert.ToBase64String(bytes)}");
+            _imagemDataUrl = imagemDataUrl;
             PreviewImagem.Source = ImageSource.FromStream(() => new MemoryStream(bytes, writable: false));
             BotaoEscolherImagem.Text = "Trocar imagem";
             BotaoRemoverImagem.IsVisible = true;

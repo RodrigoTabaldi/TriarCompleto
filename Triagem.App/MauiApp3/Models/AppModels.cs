@@ -240,6 +240,9 @@ public class ObservableBase : INotifyPropertyChanged
 
     protected void Notificar(string nome) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nome));
+
+    protected void Notificar(PropertyChangedEventArgs args) =>
+        PropertyChanged?.Invoke(this, args);
 }
 
 public class PerguntaEditavel : ObservableBase
@@ -280,6 +283,8 @@ public class HomeConfigItem : ObservableBase
 
 public class PerguntaRespondivel : ObservableBase
 {
+    private static readonly PropertyChangedEventArgs SimSelecionadoAlterado = new(nameof(SimSelecionado));
+    private static readonly PropertyChangedEventArgs NaoSelecionadoAlterado = new(nameof(NaoSelecionado));
     private bool? _resposta;
 
     public int PerguntaId { get; set; }
@@ -292,17 +297,21 @@ public class PerguntaRespondivel : ObservableBase
         get => _resposta;
         set
         {
-            if (Set(ref _resposta, value))
-            {
-                Notificar(nameof(SimSelecionado));
-                Notificar(nameof(NaoSelecionado));
-                RespostaAlterada?.Invoke();
-            }
+            if (_resposta == value) return;
+            var anterior = _resposta;
+            _resposta = value;
+
+            // Resposta não possui binding visual. Notificar somente as duas
+            // propriedades consumidas pelo template evita um evento e uma alocação
+            // por toque, mantendo a atualização restrita ao card selecionado.
+            Notificar(SimSelecionadoAlterado);
+            Notificar(NaoSelecionadoAlterado);
+            RespostaAlterada?.Invoke(anterior, value);
         }
     }
 
     public bool SimSelecionado => Resposta == true;
     public bool NaoSelecionado => Resposta == false;
 
-    public event Action? RespostaAlterada;
+    public event Action<bool?, bool?>? RespostaAlterada;
 }

@@ -11,6 +11,8 @@ public partial class HistoricoPage : ContentPage
     private List<HistoricoItem> _itens = [];
     private bool _carregando;
     private bool _exportando;
+    private bool _carregado;
+    private int _versaoCarregada = -1;
 
     /// <summary>Opcional: filtra o histórico por uma triagem específica.</summary>
     public string? TriagemId { get; set; }
@@ -28,7 +30,8 @@ public partial class HistoricoPage : ContentPage
         if (!string.IsNullOrEmpty(Titulo))
             Subtitulo.Text = Uri.UnescapeDataString(Titulo);
 
-        await CarregarAsync();
+        if (!_carregado || _versaoCarregada != ApiService.VersaoHistorico)
+            await CarregarAsync();
     }
 
     private async Task CarregarAsync()
@@ -47,6 +50,8 @@ public partial class HistoricoPage : ContentPage
             int? triagemId = int.TryParse(TriagemId, out var id) ? id : null;
             _itens = await ApiService.HistoricoAsync(usuario.Id, triagemId);
             Lista.ItemsSource = _itens;
+            _carregado = true;
+            _versaoCarregada = ApiService.VersaoHistorico;
         }
         catch (Exception ex)
         {

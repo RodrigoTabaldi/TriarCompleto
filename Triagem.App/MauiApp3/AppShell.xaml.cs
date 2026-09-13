@@ -6,15 +6,11 @@ public partial class AppShell : Shell
     {
         InitializeComponent();
 
-        Navigated += (_, _) => MainThread.BeginInvokeOnMainThread(() =>
+        Navigated += (_, _) =>
         {
             if (CurrentPage is not ContentPage pagina) return;
-
-            Shell.SetNavBarIsVisible(pagina, false);
-            Shell.SetTabBarIsVisible(pagina, false);
-            Shell.SetBackButtonBehavior(pagina, new BackButtonBehavior { IsVisible = false });
             FullscreenButtonDecorator.Aplicar(pagina);
-        });
+        };
 
         Routing.RegisterRoute(nameof(LoginPage), typeof(LoginPage));
         Routing.RegisterRoute(nameof(HomePage), typeof(HomePage));
@@ -31,10 +27,6 @@ public partial class AppShell : Shell
         MainThread.BeginInvokeOnMainThread(() =>
         {
             if (CurrentPage is not ContentPage pagina) return;
-
-            Shell.SetNavBarIsVisible(pagina, false);
-            Shell.SetTabBarIsVisible(pagina, false);
-            Shell.SetBackButtonBehavior(pagina, new BackButtonBehavior { IsVisible = false });
             FullscreenButtonDecorator.Aplicar(pagina);
         });
     }
