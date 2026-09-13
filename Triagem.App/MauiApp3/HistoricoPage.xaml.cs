@@ -1,4 +1,5 @@
 using ClosedXML.Excel;
+using System.Collections.ObjectModel;
 using MauiApp3.Models;
 using MauiApp3.Services;
 
@@ -8,11 +9,14 @@ namespace MauiApp3;
 [QueryProperty(nameof(Titulo), "titulo")]
 public partial class HistoricoPage : ContentPage
 {
-    private List<HistoricoItem> _itens = [];
+    private readonly ObservableCollection<HistoricoItem> _itens = [];
     private bool _carregando;
     private bool _exportando;
     private bool _carregado;
     private int _versaoCarregada = -1;
+    private int _pagina = 1;
+    private bool _fimDoHistorico;
+    private const int TamanhoPagina = 50;
 
     /// <summary>Opcional: filtra o histórico por uma triagem específica.</summary>
     public string? TriagemId { get; set; }
@@ -21,6 +25,7 @@ public partial class HistoricoPage : ContentPage
     public HistoricoPage()
     {
         InitializeComponent();
+        Lista.ItemsSource = _itens;
     }
 
     protected override async void OnAppearing()
@@ -47,9 +52,10 @@ public partial class HistoricoPage : ContentPage
                 return;
             }
 
-            int? triagemId = int.TryParse(TriagemId, out var id) ? id : null;
-            _itens = await ApiService.HistoricoAsync(usuario.Id, triagemId);
-            Lista.ItemsSource = _itens;
+            _itens.Clear();
+            _pagina = 1;
+            _fimDoHistorico = false;
+            await CarregarPaginaAsync(usuario.Id);
             _carregado = true;
             _versaoCarregada = ApiService.VersaoHistorico;
         }
@@ -59,6 +65,41 @@ public partial class HistoricoPage : ContentPage
                 $"Não foi possível carregar o histórico.\n\n{ex.Message}", "OK");
         }
         finally { _carregando = false; }
+    }
+
+    private async Task CarregarPaginaAsync(int usuarioId)
+    {
+        int? triagemId = int.TryParse(TriagemId, out var id) ? id : null;
+        var lote = await ApiService.HistoricoPaginaAsync(
+            usuarioId, triagemId, _pagina, TamanhoPagina);
+        foreach (var item in lote)
+            _itens.Add(item);
+
+        _fimDoHistorico = lote.Count < TamanhoPagina;
+        if (!_fimDoHistorico) _pagina++;
+    }
+
+    private async void CarregarMais(object? sender, EventArgs e)
+    {
+        if (_carregando || _fimDoHistorico || App.UsuarioLogado is not { } usuario) return;
+
+        _carregando = true;
+        IndicadorMais.IsVisible = true;
+        IndicadorMais.IsRunning = true;
+        try
+        {
+            await CarregarPaginaAsync(usuario.Id);
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("Erro", $"Não foi possível carregar mais resultados.\n\n{ex.Message}", "OK");
+        }
+        finally
+        {
+            IndicadorMais.IsRunning = false;
+            IndicadorMais.IsVisible = false;
+            _carregando = false;
+        }
     }
 
     private async void ExportarExcel(object? sender, EventArgs e)
@@ -79,35 +120,35 @@ public partial class HistoricoPage : ContentPage
                 $"Triagens_{Guid.NewGuid():N}.xlsx");
             await Task.Run(() =>
             {
-            using var workbook = new XLWorkbook();
-            var planilha = workbook.Worksheets.Add("Triagens");
+                using var workbook = new XLWorkbook();
+                var planilha = workbook.Worksheets.Add("Triagens");
 
-            string[] cabecalho = ["Triagem", "Nome", "Idade", "Sexo", "Pontuação", "Máximo", "Resultado", "Data"];
-            for (var c = 0; c < cabecalho.Length; c++)
-                planilha.Cell(1, c + 1).Value = cabecalho[c];
+                string[] cabecalho = ["Triagem", "Nome", "Idade", "Sexo", "Pontuação", "Máximo", "Resultado", "Data"];
+                for (var c = 0; c < cabecalho.Length; c++)
+                    planilha.Cell(1, c + 1).Value = cabecalho[c];
 
-            var header = planilha.Range(1, 1, 1, cabecalho.Length);
-            header.Style.Font.Bold = true;
-            header.Style.Fill.BackgroundColor = XLColor.Green;
-            header.Style.Font.FontColor = XLColor.White;
+                var header = planilha.Range(1, 1, 1, cabecalho.Length);
+                header.Style.Font.Bold = true;
+                header.Style.Fill.BackgroundColor = XLColor.Green;
+                header.Style.Font.FontColor = XLColor.White;
 
-            var linha = 2;
-            foreach (var item in itens)
-            {
-                planilha.Cell(linha, 1).Value = item.TituloTriagem;
-                planilha.Cell(linha, 2).Value = item.Nome;
-                planilha.Cell(linha, 3).Value = item.Idade;
-                planilha.Cell(linha, 4).Value = item.Sexo;
-                planilha.Cell(linha, 5).Value = item.Pontuacao;
-                planilha.Cell(linha, 6).Value = item.PontuacaoMaxima;
-                planilha.Cell(linha, 7).Value = item.Resultado;
-                planilha.Cell(linha, 8).Value = item.DataFormatada;
-                linha++;
-            }
+                var linha = 2;
+                foreach (var item in itens)
+                {
+                    planilha.Cell(linha, 1).Value = item.TituloTriagem;
+                    planilha.Cell(linha, 2).Value = item.Nome;
+                    planilha.Cell(linha, 3).Value = item.Idade;
+                    planilha.Cell(linha, 4).Value = item.Sexo;
+                    planilha.Cell(linha, 5).Value = item.Pontuacao;
+                    planilha.Cell(linha, 6).Value = item.PontuacaoMaxima;
+                    planilha.Cell(linha, 7).Value = item.Resultado;
+                    planilha.Cell(linha, 8).Value = item.DataFormatada;
+                    linha++;
+                }
 
-            planilha.Columns().AdjustToContents();
+                planilha.Columns().AdjustToContents();
 
-            workbook.SaveAs(caminhoTemporario);
+                workbook.SaveAs(caminhoTemporario);
             });
 
             await Share.Default.RequestAsync(new ShareFileRequest

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Text.Json;
 using Triagem.API.Models;
 using Triagem.API.Services;
+using Triagem.Core.Domain;
 
 namespace Triagem.API.Data;
 
@@ -28,47 +29,55 @@ public static class DbSeeder
                 "EXEC sp_getapplock @Resource = 'TriarSeed', @LockMode = 'Exclusive', " +
                 "@LockOwner = 'Transaction', @LockTimeout = 60000;");
 
-            if (!await db.TriagemModelos.AnyAsync())
-            {
-                db.TriagemModelos.AddRange(CriarModelosPadrao());
-                await db.SaveChangesAsync();
-            }
-            else
-            {
-                await AtualizarModelosPadraoFonoAsync(db);
-            }
+            await SincronizarModelosPadraoAsync(db);
 
             await tx.CommitAsync();
         });
     }
 
-    private static async Task AtualizarModelosPadraoFonoAsync(TriagemDbContext db)
+    private static async Task SincronizarModelosPadraoAsync(TriagemDbContext db)
     {
-        var ajustes = new (string Antigo, string Novo, string Publico, string Descricao)[]
-        {
-            ("Triagem em Saúde Mental", "Triagem de Linguagem e Cognição", "Adultos e idosos",
-                "Rastreio inicial de linguagem, comunicação funcional e aspectos cognitivos relacionados."),
-            ("Triagem em Saúde Infantil", "Triagem Fonoaudiológica Infantil", "Crianças de 0 a 12 anos",
-                "Acompanhamento de sinais de fala, linguagem, audição e comunicação na infância."),
-            ("Triagem em Saúde da Mulher", "Triagem de Motricidade Orofacial", "Todas as idades",
-                "Rastreio de sinais relacionados a mastigação, deglutição, respiração oral e musculatura orofacial."),
-            ("Triagem em Saúde do Idoso", "Triagem Auditiva do Idoso", "Pessoas com 60 anos ou mais",
-                "Avaliação inicial de sinais de perda auditiva e impacto funcional na comunicação do idoso."),
-            ("Triagem Respiratória", "Triagem de Voz", "Profissionais da voz e adultos",
-                "Identificação de sinais vocais como rouquidão, esforço, fadiga e alterações persistentes da voz."),
-            ("Triagem Clínica Geral", "Triagem Auditiva", "Todas as idades",
-                "Rastreio inicial de dificuldades auditivas e necessidade de avaliação fonoaudiológica."),
-        };
-
-        foreach (var ajuste in ajustes)
+        foreach (var item in DefaultTriageCatalog.Items)
         {
             var modelo = await db.TriagemModelos
-                .FirstOrDefaultAsync(t => t.Titulo == ajuste.Antigo || t.Titulo == ajuste.Novo);
-            if (modelo is null) continue;
+                .Include(t => t.Perguntas)
+                .Include(t => t.Faixas)
+                .FirstOrDefaultAsync(t => t.CriadorUsuarioId == null &&
+                    (t.Titulo == item.LegacyTitle || t.Titulo == item.Title));
 
-            modelo.Titulo = ajuste.Novo;
-            modelo.PublicoAlvo = ajuste.Publico;
-            modelo.Descricao = ajuste.Descricao;
+            if (modelo is null)
+            {
+                db.TriagemModelos.Add(CriarModeloPadrao(item));
+                continue;
+            }
+
+            modelo.Titulo = item.Title;
+            modelo.PublicoAlvo = item.Audience;
+            modelo.Icone = item.Icon;
+            modelo.Descricao = item.Description;
+            modelo.Ativa = true;
+
+            var perguntasAtuais = modelo.Perguntas.OrderBy(p => p.Ordem).ToList();
+            var faixasEsperadas = CriarFaixas(item.Questions.Sum(p => p.Weight));
+            var faixasAtuais = modelo.Faixas.OrderBy(f => f.Ordem).ToList();
+            var perguntasMudaram = perguntasAtuais.Count != item.Questions.Count ||
+                perguntasAtuais.Where((p, i) =>
+                    p.Texto != item.Questions[i].Text || p.Peso != item.Questions[i].Weight).Any();
+            var faixasMudaram = faixasAtuais.Count != faixasEsperadas.Count ||
+                faixasAtuais.Where((f, i) =>
+                    f.Titulo != faixasEsperadas[i].Titulo ||
+                    f.Recomendacao != faixasEsperadas[i].Recomendacao ||
+                    f.PontuacaoMin != faixasEsperadas[i].PontuacaoMin ||
+                    f.PontuacaoMax != faixasEsperadas[i].PontuacaoMax ||
+                    f.Cor != faixasEsperadas[i].Cor).Any();
+
+            if (perguntasMudaram || faixasMudaram)
+            {
+                db.Perguntas.RemoveRange(modelo.Perguntas);
+                db.FaixasResultado.RemoveRange(modelo.Faixas);
+                modelo.Perguntas = CriarPerguntas(item);
+                modelo.Faixas = faixasEsperadas;
+            }
         }
 
         await db.SaveChangesAsync();
@@ -92,8 +101,14 @@ public static class DbSeeder
             {
                 var dados = new
                 {
-                    r.NomePaciente, r.Idade, r.Sexo, r.Pontuacao, r.PontuacaoMaxima,
-                    r.Classificacao, r.Recomendacao, r.Cor
+                    r.NomePaciente,
+                    r.Idade,
+                    r.Sexo,
+                    r.Pontuacao,
+                    r.PontuacaoMaxima,
+                    r.Classificacao,
+                    r.Recomendacao,
+                    r.Cor
                 };
                 r.DadosProtegidos = encryptor.Encrypt(JsonSerializer.Serialize(dados));
                 r.NomePaciente = "";
@@ -186,141 +201,54 @@ public static class DbSeeder
         await db.Database.MigrateAsync();
     }
 
-    private static List<TriagemModelo> CriarModelosPadrao()
+    private static TriagemModelo CriarModeloPadrao(DefaultTriage item)
     {
-
-        var modelos = new List<TriagemModelo>
-        {
-            Modelo("Triagem de Linguagem e Cognição", "Adultos e idosos", "🧠",
-                "Rastreio inicial de linguagem, comunicação funcional e aspectos cognitivos relacionados.",
-                [
-                    ("Nas últimas duas semanas, sentiu-se triste, desanimado(a) ou sem esperança?", 2),
-                    ("Perdeu o interesse ou prazer em atividades que antes gostava?", 2),
-                    ("Tem tido dificuldade para dormir ou tem dormido demais?", 1),
-                    ("Sente-se cansado(a) ou sem energia com frequência?", 1),
-                    ("Tem se sentido nervoso(a), ansioso(a) ou muito preocupado(a)?", 2),
-                    ("Tem dificuldade para se concentrar em tarefas do dia a dia?", 1),
-                    ("Sente-se agitado(a) ou irritado(a) com facilidade?", 1),
-                    ("Tem evitado contato com amigos ou familiares?", 1),
-                    ("Já teve pensamentos de se machucar ou de que seria melhor não existir?", 3),
-                    ("Sente que o estresse tem afetado seu trabalho ou estudos?", 1),
-                ]),
-            Modelo("Triagem Fonoaudiológica Infantil", "Crianças de 0 a 12 anos", "🧒",
-                "Acompanhamento de sinais de fala, linguagem, audição e comunicação na infância.",
-                [
-                    ("A criança teve febre alta (acima de 38,5°C) nos últimos dias?", 2),
-                    ("Apresenta tosse persistente ou dificuldade para respirar?", 2),
-                    ("Tem recusado alimentação ou líquidos?", 2),
-                    ("Apresenta vômitos ou diarreia frequentes?", 2),
-                    ("Está mais sonolenta ou irritada que o normal?", 1),
-                    ("A vacinação está atrasada?", 1),
-                    ("Houve perda de peso ou dificuldade para ganhar peso?", 1),
-                    ("Apresenta manchas na pele ou palidez?", 1),
-                    ("Tem dificuldades de fala ou de interação esperadas para a idade?", 1),
-                    ("Dorme mal ou apresenta agitação constante à noite?", 1),
-                ]),
-            Modelo("Triagem de Motricidade Orofacial", "Todas as idades", "👩",
-                "Rastreio de sinais relacionados a mastigação, deglutição, respiração oral e musculatura orofacial.",
-                [
-                    ("Sente dores pélvicas frequentes ou intensas?", 2),
-                    ("Notou alterações no ciclo menstrual nos últimos meses?", 1),
-                    ("Percebeu nódulos, secreção ou alterações nas mamas?", 3),
-                    ("Tem sangramentos fora do período menstrual?", 2),
-                    ("Está com exames preventivos (Papanicolau) atrasados?", 1),
-                    ("Sente dor ou desconforto nas relações íntimas?", 1),
-                    ("Apresenta sintomas urinários como ardência ou urgência?", 1),
-                    ("Tem histórico familiar de câncer de mama ou colo do útero?", 1),
-                    ("Está gestante ou suspeita de gravidez sem acompanhamento?", 2),
-                    ("Sente ondas de calor, insônia ou alterações de humor intensas?", 1),
-                ]),
-            Modelo("Triagem Auditiva do Idoso", "Pessoas com 60 anos ou mais", "🧓",
-                "Avaliação inicial de sinais de perda auditiva e impacto funcional na comunicação do idoso.",
-                [
-                    ("Sofreu alguma queda nos últimos seis meses?", 2),
-                    ("Tem dificuldade para caminhar ou manter o equilíbrio?", 2),
-                    ("Esquece com frequência compromissos ou onde guardou objetos?", 2),
-                    ("Toma cinco ou mais medicamentos por dia?", 1),
-                    ("Perdeu peso sem intenção nos últimos meses?", 2),
-                    ("Tem dificuldade para enxergar ou ouvir mesmo com correção?", 1),
-                    ("Sente-se sozinho(a) ou desanimado(a) na maior parte do tempo?", 1),
-                    ("Precisa de ajuda para atividades básicas como banho ou vestir-se?", 2),
-                    ("Tem incontinência urinária que atrapalha o dia a dia?", 1),
-                    ("Deixou de sair de casa ou de fazer atividades que gostava?", 1),
-                ]),
-            Modelo("Triagem de Voz", "Profissionais da voz e adultos", "🫁",
-                "Identificação de sinais vocais como rouquidão, esforço, fadiga e alterações persistentes da voz.",
-                [
-                    ("Tem tosse há mais de três semanas?", 2),
-                    ("Sente falta de ar ao realizar esforços leves?", 2),
-                    ("Apresenta chiado ou aperto no peito?", 2),
-                    ("Teve febre nos últimos dias acompanhada de sintomas respiratórios?", 1),
-                    ("Tem produção de catarro com sangue?", 3),
-                    ("É fumante ou convive com fumantes?", 1),
-                    ("Acorda à noite com crises de tosse ou falta de ar?", 2),
-                    ("Teve contato com alguém com tuberculose ou infecção respiratória?", 1),
-                    ("Sente dor no peito ao respirar fundo?", 1),
-                    ("Percebeu piora dos sintomas nas últimas semanas?", 1),
-                ]),
-            Modelo("Triagem Auditiva", "Todas as idades", "🩺",
-                "Rastreio inicial de dificuldades auditivas e necessidade de avaliação fonoaudiológica.",
-                [
-                    ("Sente dores frequentes que não melhoram com repouso?", 2),
-                    ("Teve febre recorrente na última semana?", 2),
-                    ("Perdeu peso sem motivo aparente?", 2),
-                    ("Sente cansaço excessivo mesmo após descansar?", 1),
-                    ("Notou alterações na pressão arterial ou glicemia?", 2),
-                    ("Tem dores de cabeça fortes ou frequentes?", 1),
-                    ("Apresenta inchaço nas pernas ou no rosto?", 1),
-                    ("Percebeu alterações no intestino ou na urina?", 1),
-                    ("Está com consultas ou exames de rotina atrasados?", 1),
-                    ("Tem alguma dor ou sintoma que o(a) preocupa há mais de um mês?", 1),
-                ]),
-        };
-
-        return modelos;
-    }
-
-    private static TriagemModelo Modelo(
-        string titulo, string publico, string icone, string descricao,
-        (string Texto, int Peso)[] perguntas)
-    {
-        var pesoTotal = perguntas.Sum(p => p.Peso);
-        var corte1 = pesoTotal / 3;
-        var corte2 = (pesoTotal * 2) / 3;
+        var pesoTotal = item.Questions.Sum(p => p.Weight);
 
         return new TriagemModelo
         {
-            Titulo = titulo,
-            PublicoAlvo = publico,
-            Icone = icone,
-            Descricao = descricao,
-            Perguntas = perguntas
-                .Select((p, i) => new Pergunta { Texto = p.Texto, Peso = p.Peso, Ordem = i + 1 })
-                .ToList(),
-            Faixas =
-            [
-                new FaixaResultado
-                {
-                    Titulo = "Baixo risco", Ordem = 1,
-                    PontuacaoMin = 0, PontuacaoMax = corte1,
-                    Cor = "#10B981",
-                    Recomendacao = "Sem sinais de alerta relevantes no momento. Mantenha hábitos saudáveis e acompanhamento de rotina."
-                },
-                new FaixaResultado
-                {
-                    Titulo = "Risco moderado", Ordem = 2,
-                    PontuacaoMin = corte1 + 1, PontuacaoMax = corte2,
-                    Cor = "#F59E0B",
-                    Recomendacao = "Alguns sinais merecem atenção. Recomenda-se agendar uma avaliação com um profissional de saúde."
-                },
-                new FaixaResultado
-                {
-                    Titulo = "Alto risco", Ordem = 3,
-                    PontuacaoMin = corte2 + 1, PontuacaoMax = pesoTotal,
-                    Cor = "#EF4444",
-                    Recomendacao = "Vários sinais de alerta identificados. Procure atendimento profissional o quanto antes."
-                },
-            ]
+            Titulo = item.Title,
+            PublicoAlvo = item.Audience,
+            Icone = item.Icon,
+            Descricao = item.Description,
+            Perguntas = CriarPerguntas(item),
+            Faixas = CriarFaixas(pesoTotal),
         };
+    }
+
+    private static List<Pergunta> CriarPerguntas(DefaultTriage item) =>
+        item.Questions
+            .Select((p, i) => new Pergunta { Texto = p.Text, Peso = p.Weight, Ordem = i + 1 })
+            .ToList();
+
+    private static List<FaixaResultado> CriarFaixas(int pesoTotal)
+    {
+        var corte1 = pesoTotal / 3;
+        var corte2 = (pesoTotal * 2) / 3;
+
+        return
+        [
+            new FaixaResultado
+            {
+                Titulo = "Poucos sinais relatados", Ordem = 1,
+                PontuacaoMin = 0, PontuacaoMax = corte1,
+                Cor = "#10B981",
+                Recomendacao = "Foram relatados poucos sinais neste rastreio. Observe a evolução e mantenha o acompanhamento de rotina."
+            },
+            new FaixaResultado
+            {
+                Titulo = "Sinais que merecem avaliação", Ordem = 2,
+                PontuacaoMin = corte1 + 1, PontuacaoMax = corte2,
+                Cor = "#F59E0B",
+                Recomendacao = "Há sinais que merecem atenção. Considere agendar uma avaliação com profissional habilitado."
+            },
+            new FaixaResultado
+            {
+                Titulo = "Vários sinais relatados", Ordem = 3,
+                PontuacaoMin = corte2 + 1, PontuacaoMax = pesoTotal,
+                Cor = "#EF4444",
+                Recomendacao = "Foram relatados vários sinais. Procure avaliação profissional; este resultado não é um diagnóstico."
+            },
+        ];
     }
 }

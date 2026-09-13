@@ -36,12 +36,12 @@ App MAUI ──► nginx (load balancer :5036) ──► api1 / api2 (ASP.NET Co
 - **Segurança**:
   - **Autenticação JWT** — login/cadastro emitem um token; **todos** os endpoints de dados exigem `Authorization: Bearer <token>`. A identidade do usuário vem sempre do token, nunca de um `usuarioId` enviado pelo cliente (fecha IDOR) — inclusive na leitura de detalhe de uma triagem (`GET /api/triagens/{id}`), que só retorna triagens padrão do sistema ou criadas pelo próprio usuário autenticado.
   - Senhas com PBKDF2 (SHA-256, 100 mil iterações, salt aleatório); mínimo de 8 caracteres.
-  - **Dados clínicos criptografados em repouso** (AES-256-GCM, chave em `DataProtection:Key`) — nome, idade, sexo, pontuação, classificação, recomendação e respostas das novas gravações ficam em envelopes protegidos. Registros antigos são migrados em lotes na inicialização.
+  - **Dados clínicos criptografados em repouso** (AES-256-GCM, key ring em `DataProtection`) — nome, idade, sexo, pontuação, classificação, recomendação e respostas ficam em envelopes versionados. Chaves anteriores podem permanecer configuradas durante rotação e recuperação.
   - **Segredos fora do código**: senha do banco, chave JWT e chave de criptografia vêm de variáveis de ambiente (`.env` no Docker), nunca versionadas.
   - **CORS restrito** por lista de origens (`Cors:AllowedOrigins`) e `X-Forwarded-For` aceito só de proxies confiáveis (evita spoof do rate limit).
   - **SQL Server e Redis não publicam porta no host** no docker-compose — só nginx expõe a porta pública; os demais serviços só são alcançáveis pela rede interna do compose.
   - Validação de autoria nas triagens personalizadas.
-  - **Histórico paginado** (`pagina`/`tamanhoPagina`, teto de 200 itens por página) — evita que a consulta cresça sem limite conforme o histórico do usuário aumenta.
+  - **Histórico paginado de ponta a ponta** (`pagina`/`tamanhoPagina`, teto de 200 itens por página) — o app carrega novas páginas conforme a rolagem, sem materializar todo o histórico na abertura.
   - **Sessão persistida no app** via SecureStorage (Keychain/Keystore/DPAPI conforme a plataforma) — o usuário não precisa logar de novo a cada abertura.
 
 ## Como rodar
@@ -152,10 +152,11 @@ O projeto já vem preparado para isso:
 - **Login / cadastro** de usuários.
 - **Home dinâmica e responsiva** (1 coluna no celular, 2–3 no computador) com as triagens padrão
   e as criadas pelo usuário; botão **Editar home** para escolher quais triagens aparecem.
-- **6 triagens padrão**: Saúde Mental, Saúde Infantil, Saúde da Mulher, Saúde do Idoso,
-  Respiratória e Clínica Geral (10 perguntas cada).
+- **6 triagens padrão**: Linguagem e Cognição, Fonoaudiológica Infantil, Motricidade
+  Orofacial, Auditiva do Idoso, Voz e Auditiva (10 perguntas orientativas cada).
 - **Criar sua triagem**: perguntas sim/não com peso configurável e faixas de resultado
-  (metas) com título, intervalo de pontuação e recomendação. Pode editar e excluir depois.
+  (metas) com título, intervalo de pontuação e recomendação. Cada conta pode manter até
+  20 triagens personalizadas ativas; imagens são limitadas a 512 KB.
 - **Execução da triagem** com dados do paciente, barra de progresso e validação.
 - **Tela de resultado** com pontuação, classificação colorida, recomendação e botão
   para **aplicar a mesma triagem em outra pessoa**.
@@ -198,7 +199,8 @@ visível para outro) — além de `PasswordHasher`, `TokenService`,
 `ClaimsPrincipalExtensions` e `FieldEncryptionService`; e testes de integração HTTP
 (`Integration/`, via `WebApplicationFactory<Program>`) que sobem a API real (JWT,
 rate limiting, `[Authorize]`) contra um banco EF InMemory, cobrindo registro/login e
-o bloqueio de rotas autenticadas sem token. A validação de modelo de triagem em si
+o bloqueio de rotas autenticadas sem token. Na CI, uma prova adicional aplica migrations
+e executa o seed duas vezes contra SQL Server real. A validação de modelo de triagem em si
 (título/perguntas/faixas/imagem) vive em `Triagem.Core.TriagemRules`, compartilhada
 com o modo offline do app (`BancoLocal`) e testada em `Triagem.Core.Tests`. Rodar
 localmente:
@@ -208,8 +210,8 @@ dotnet test Triagem.Core.Tests/Triagem.Core.Tests.csproj
 dotnet test Triagem.API.Tests/Triagem.API.Tests.csproj
 ```
 
-O CI também coleta cobertura, compila o alvo Android, verifica dependências, procura
-segredos acidentalmente versionados e executa análise estática CodeQL. O esquema do
+O CI também coleta cobertura, compila o alvo Android em Release, verifica formatação e
+dependências, procura segredos acidentalmente versionados e executa análise estática CodeQL. O esquema do
 SQL Server é evoluído por migrations do EF Core; bancos antigos criados por
 `EnsureCreated` recebem automaticamente o baseline antes das migrations seguintes.
 

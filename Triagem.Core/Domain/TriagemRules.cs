@@ -26,7 +26,8 @@ public readonly record struct FaixaEntrada(string Titulo, string? Recomendacao, 
 /// </summary>
 public static partial class TriagemRules
 {
-    public const int TamanhoMaximoImagemBytes = 2 * 1024 * 1024;
+    public const int TamanhoMaximoImagemBytes = 512 * 1024;
+    public const int MaximoTriagensPersonalizadasPorUsuario = 20;
     private const int TamanhoMaximoBase64Imagem = ((TamanhoMaximoImagemBytes + 2) / 3) * 4;
 
     [GeneratedRegex("^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$")]
@@ -124,13 +125,13 @@ public static partial class TriagemRules
 
         var base64 = valor[prefixo.Length..];
         if (base64.Length > TamanhoMaximoBase64Imagem)
-            return "A imagem deve ter no máximo 2 MB.";
+            return "A imagem deve ter no máximo 512 KB.";
 
         try
         {
             var bytes = Convert.FromBase64String(base64);
             if (bytes.Length > TamanhoMaximoImagemBytes)
-                return "A imagem deve ter no máximo 2 MB.";
+                return "A imagem deve ter no máximo 512 KB.";
 
             if (!AssinaturaImagemValida(prefixo, bytes))
                 return "O conteúdo do arquivo não corresponde ao formato de imagem informado.";

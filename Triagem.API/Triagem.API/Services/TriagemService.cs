@@ -38,7 +38,12 @@ public partial class TriagemService(
                 .OrderBy(t => t.CriadorUsuarioId == null ? 0 : 1).ThenBy(t => t.Id)
                 .Select(t => new
                 {
-                    t.Id, t.Titulo, t.PublicoAlvo, t.Descricao, t.Icone, t.Imagem,
+                    t.Id,
+                    t.Titulo,
+                    t.PublicoAlvo,
+                    t.Descricao,
+                    t.Icone,
+                    t.Imagem,
                     t.CriadorUsuarioId,
                     TotalPerguntas = t.Perguntas.Count
                 })
@@ -99,6 +104,11 @@ public partial class TriagemService(
 
         if (!await db.Usuarios.AnyAsync(u => u.Id == usuarioId, ct))
             return (null, "Usuário não encontrado.");
+
+        var totalPersonalizadas = await db.TriagemModelos.CountAsync(
+            t => t.CriadorUsuarioId == usuarioId && t.Ativa, ct);
+        if (totalPersonalizadas >= TriagemRules.MaximoTriagensPersonalizadasPorUsuario)
+            return (null, $"Cada conta pode manter até {TriagemRules.MaximoTriagensPersonalizadasPorUsuario} triagens personalizadas ativas.");
 
         var modelo = new TriagemModelo
         {
@@ -175,12 +185,18 @@ public partial class TriagemService(
 
     public async Task<(bool Ok, string? Erro)> DesativarAsync(int usuarioId, int id, CancellationToken ct = default)
     {
-        var modelo = await db.TriagemModelos.FirstOrDefaultAsync(t => t.Id == id, ct);
+        var modelo = await db.TriagemModelos
+            .Include(t => t.Perguntas)
+            .Include(t => t.Faixas)
+            .FirstOrDefaultAsync(t => t.Id == id, ct);
         if (modelo is null) return (false, "Triagem não encontrada.");
         if (modelo.CriadorUsuarioId != usuarioId)
             return (false, "Apenas o criador pode excluir esta triagem.");
 
         modelo.Ativa = false;
+        modelo.Imagem = null;
+        db.Perguntas.RemoveRange(modelo.Perguntas);
+        db.FaixasResultado.RemoveRange(modelo.Faixas);
         await db.SaveChangesAsync(ct);
         await InvalidateCacheAsync();
         return (true, null);
@@ -324,6 +340,8 @@ public partial class TriagemService(
     {
         pagina = Math.Max(pagina, 1);
         tamanhoPagina = Math.Clamp(tamanhoPagina, 1, TamanhoPaginaMaximo);
+        var deslocamento = ((long)pagina - 1) * tamanhoPagina;
+        if (deslocamento > int.MaxValue) return [];
 
         var query = db.TriagemResultados
             .AsNoTracking()
@@ -335,14 +353,24 @@ public partial class TriagemService(
 
         var registros = await query
             .OrderByDescending(r => r.Data)
-            .Skip((pagina - 1) * tamanhoPagina)
+            .ThenByDescending(r => r.Id)
+            .Skip((int)deslocamento)
             .Take(tamanhoPagina)
             .Select(r => new
             {
-                r.Id, r.TriagemModeloId,
+                r.Id,
+                r.TriagemModeloId,
                 TituloTriagem = r.TriagemModelo!.Titulo,
-                r.NomePaciente, r.Idade, r.Sexo, r.Pontuacao, r.PontuacaoMaxima,
-                r.Classificacao, r.Recomendacao, r.Cor, r.Data, r.DadosProtegidos
+                r.NomePaciente,
+                r.Idade,
+                r.Sexo,
+                r.Pontuacao,
+                r.PontuacaoMaxima,
+                r.Classificacao,
+                r.Recomendacao,
+                r.Cor,
+                r.Data,
+                r.DadosProtegidos
             })
             .ToListAsync(ct);
 

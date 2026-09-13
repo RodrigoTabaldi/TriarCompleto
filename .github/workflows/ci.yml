@@ -9,6 +9,19 @@ jobs:
   build-and-test-api:
     name: Build + testes (Triagem.API)
     runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: "Your_password123"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Your_password123' -C -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - uses: actions/checkout@v4
 
@@ -23,8 +36,13 @@ jobs:
       - name: Build (Release)
         run: dotnet build Triagem.API.Tests/Triagem.API.Tests.csproj --no-restore -c Release
 
+      - name: Verificar formatação
+        run: dotnet format Triagem.API.Tests/Triagem.API.Tests.csproj --verify-no-changes --no-restore --verbosity minimal
+
       - name: Testes
         run: dotnet test Triagem.API.Tests/Triagem.API.Tests.csproj --no-build -c Release --settings coverlet.runsettings --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx"
+        env:
+          TRIAR_TEST_SQLSERVER: "Server=localhost,1433;Database=TriarCi;User Id=sa;Password=Your_password123;Encrypt=True;TrustServerCertificate=True"
 
       - name: Testes do núcleo compartilhado
         run: dotnet test Triagem.Core.Tests/Triagem.Core.Tests.csproj -c Release --logger "trx;LogFileName=core-test-results.trx"
@@ -70,8 +88,11 @@ jobs:
         # ao Triagem.Core (net10.0), gerando NETSDK1005. No Linux o csproj já expõe só Android.
         run: dotnet restore Triagem.App/MauiApp3/MauiApp3.csproj --force-evaluate
 
-      - name: Compilar app Android
-        run: dotnet build Triagem.App/MauiApp3/MauiApp3.csproj -f net10.0-android -c Debug --no-restore
+      - name: Compilar app Android (Release)
+        run: dotnet build Triagem.App/MauiApp3/MauiApp3.csproj -f net10.0-android -c Release --no-restore
+
+      - name: Verificar formatação do app
+        run: dotnet format Triagem.App/MauiApp3/MauiApp3.csproj --verify-no-changes --no-restore --verbosity minimal
 
       - name: Checar dependências do app
         run: dotnet list Triagem.App/MauiApp3/MauiApp3.csproj package --vulnerable --include-transitive --no-restore

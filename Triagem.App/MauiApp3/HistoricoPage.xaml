@@ -27,7 +27,7 @@
                 <Label x:Name="Subtitulo" Text="Visualize as avaliações realizadas"
                        FontSize="14" TextColor="#6B7280"/>
 
-                <Button Text="📄 Exportar para Excel"
+                <Button Text="📄 Exportar itens carregados"
                         Clicked="ExportarExcel"
                         BackgroundColor="#E6F6F1" TextColor="#10B981" FontAttributes="Bold"
                         CornerRadius="10" HeightRequest="42"
@@ -36,7 +36,9 @@
         </Border>
 
         <!-- LISTA -->
-        <CollectionView Grid.Row="1" x:Name="Lista" Margin="15" SelectionMode="None">
+        <CollectionView Grid.Row="1" x:Name="Lista" Margin="15" SelectionMode="None"
+                        RemainingItemsThreshold="5"
+                        RemainingItemsThresholdReached="CarregarMais">
 
             <CollectionView.EmptyView>
                 <VerticalStackLayout Padding="30" Spacing="8" VerticalOptions="Center">
@@ -89,6 +91,11 @@
                     </Border>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
+            <CollectionView.Footer>
+                <ActivityIndicator x:Name="IndicadorMais" Margin="0,8,0,20"
+                                   IsRunning="False" IsVisible="False"
+                                   SemanticProperties.Description="Carregando mais resultados"/>
+            </CollectionView.Footer>
         </CollectionView>
     </Grid>
 </ContentPage>

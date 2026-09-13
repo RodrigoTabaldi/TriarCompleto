@@ -69,9 +69,10 @@ openssl rand -base64 48   # DataProtection__Key
 
 - **`Jwt__Key`** — assina os tokens de sessão. Quem tiver essa chave emite token de
   qualquer usuário. A API se recusa a subir se ela tiver menos de 32 caracteres.
-- **`DataProtection__Key`** — criptografa o **nome do paciente** em repouso (AES-256-GCM).
-  **Se você perder essa chave, os nomes já gravados tornam-se ilegíveis para sempre** —
-  não há recuperação. Guarde uma cópia num gerenciador de senhas antes de subir.
+- **`DataProtection__Key`** — criptografa os dados clínicos em repouso (AES-256-GCM).
+  Guarde uma cópia num cofre de segredos separado do backup do banco.
+- **`DataProtection__KeyId`** — identificador não secreto da chave atual (por exemplo,
+  `primary` ou `2026-09`). O identificador é gravado no envelope criptográfico.
 - **`ConnectionStrings__DefaultConnection`** — a string do Passo 3.
 
 Nunca coloque nenhum dos três em arquivo versionado.
@@ -110,10 +111,23 @@ O Render vai pedir os três valores marcados como `sync: false`:
 | `ConnectionStrings__DefaultConnection` | a string do Passo 3 |
 | `Jwt__Key` | o segredo do Passo 2 |
 | `DataProtection__Key` | o outro segredo do Passo 2 |
+| `DataProtection__KeyId` | `primary` no primeiro deploy |
 
 > O duplo sublinhado (`__`) é como o .NET traduz hierarquia de configuração em
 > variável de ambiente: `ConnectionStrings__DefaultConnection` corresponde a
 > `ConnectionStrings:DefaultConnection` do `appsettings.json`.
+
+### Rotação e recuperação da chave clínica
+
+Nunca substitua `DataProtection__Key` sem preservar a chave anterior. Para rotacionar:
+
+1. copie a chave atual para `DataProtection__PreviousKeys__ID_ANTIGO`;
+2. configure uma nova `DataProtection__Key` e um novo `DataProtection__KeyId`;
+3. faça o deploy e valide a leitura de registros antigos e novos;
+4. mantenha a chave anterior enquanto existir registro cifrado com seu identificador.
+
+Um backup recuperável é composto pelo banco **e** pelas versões de chave necessárias,
+guardados em controles separados. Teste a restauração em ambiente isolado.
 
 Feito o primeiro deploy, copie os **IPs de saída** do serviço (Render → seu serviço →
 Connect → Outbound) e cadastre-os no firewall do Azure SQL (Passo 1).

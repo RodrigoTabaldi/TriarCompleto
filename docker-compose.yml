@@ -52,6 +52,7 @@ services:
       ConnectionStrings__Redis: "redis:6379"
       Jwt__Key: "${JWT_KEY:?defina JWT_KEY (>=32 caracteres) no arquivo .env}"
       DataProtection__Key: "${DATA_PROTECTION_KEY:?defina DATA_PROTECTION_KEY (>=32 caracteres) no arquivo .env}"
+      DataProtection__KeyId: "${DATA_PROTECTION_KEY_ID:-primary}"
     depends_on:
       sqlserver:
         condition: service_healthy

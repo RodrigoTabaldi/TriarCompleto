@@ -46,3 +46,5 @@ services:
         sync: false
       - key: DataProtection__Key
         sync: false
+      - key: DataProtection__KeyId
+        value: "primary"

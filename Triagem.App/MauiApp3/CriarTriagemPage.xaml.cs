@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Globalization;
 using MauiApp3.Models;
 using MauiApp3.Services;
+using Triagem.Core.Domain;
 
 namespace MauiApp3;
 
@@ -14,7 +15,7 @@ public partial class CriarTriagemPage : ContentPage
     private bool _carregouEdicao;
     private bool _salvando;
     private string? _imagemDataUrl;
-    private const int TamanhoMaximoImagem = 2 * 1024 * 1024;
+    private const int TamanhoMaximoImagem = TriagemRules.TamanhoMaximoImagemBytes;
 
     /// <summary>Quando presente, a página edita uma triagem existente.</summary>
     public string? TriagemId { get; set; }
@@ -120,14 +121,14 @@ public partial class CriarTriagemPage : ContentPage
             await using var stream = await arquivo.OpenReadAsync();
             if (stream.CanSeek && stream.Length > TamanhoMaximoImagem)
             {
-                await DisplayAlertAsync("Imagem muito grande", "Escolha uma imagem de até 2 MB.", "OK");
+                await DisplayAlertAsync("Imagem muito grande", "Escolha uma imagem de até 512 KB.", "OK");
                 return;
             }
 
             var bytes = await LerImagemComLimiteAsync(stream);
             if (bytes is null)
             {
-                await DisplayAlertAsync("Imagem muito grande", "Escolha uma imagem de até 2 MB.", "OK");
+                await DisplayAlertAsync("Imagem muito grande", "Escolha uma imagem de até 512 KB.", "OK");
                 return;
             }
 
@@ -290,7 +291,8 @@ public partial class CriarTriagemPage : ContentPage
                 Imagem = _imagemDataUrl,
                 Perguntas = _perguntas.Select(p => new PerguntaTriagemPayload
                 {
-                    Texto = p.Texto.Trim(), Peso = int.Parse(p.Peso, CultureInfo.InvariantCulture)
+                    Texto = p.Texto.Trim(),
+                    Peso = int.Parse(p.Peso, CultureInfo.InvariantCulture)
                 }).ToList(),
                 Faixas = _faixas.Select(f => new FaixaTriagemPayload
                 {

@@ -26,8 +26,8 @@ public partial class AuthController(TriagemDbContext db, TokenService tokens, IL
     // — a mesma classe de vazamento que Register já neutraliza abaixo.
     private static readonly string HashParaEmailInexistente = PasswordHasher.Hash(Guid.NewGuid().ToString("N"));
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Novo usuário cadastrado: {Email}")]
-    private static partial void LogNovoUsuarioCadastrado(ILogger logger, string email);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Novo usuário cadastrado: id {UsuarioId}")]
+    private static partial void LogNovoUsuarioCadastrado(ILogger logger, int usuarioId);
 
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req, CancellationToken ct)
@@ -76,7 +76,7 @@ public partial class AuthController(TriagemDbContext db, TokenService tokens, IL
             throw;
         }
 
-        LogNovoUsuarioCadastrado(logger, email);
+        LogNovoUsuarioCadastrado(logger, usuario.Id);
         return Ok(Autenticar(usuario));
     }
 

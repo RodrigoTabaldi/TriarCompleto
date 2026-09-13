@@ -441,29 +441,24 @@ public static class ApiService
 
     // ---------------- Histórico ----------------
 
-    public static async Task<List<HistoricoItem>> HistoricoAsync(int usuarioId, int? triagemId = null)
+    public static async Task<List<HistoricoItem>> HistoricoPaginaAsync(
+        int usuarioId, int? triagemId = null, int pagina = 1, int tamanhoPagina = 50)
     {
-        if (ModoLocal) return await BancoLocal.HistoricoAsync(usuarioId, triagemId);
+        pagina = Math.Max(1, pagina);
+        tamanhoPagina = Math.Clamp(tamanhoPagina, 1, 200);
+        if (ModoLocal)
+            return await BancoLocal.HistoricoAsync(usuarioId, triagemId, pagina, tamanhoPagina);
 
         var cacheKey = triagemId is not null
-            ? $"historico_{usuarioId}_{triagemId}"
-            : $"historico_{usuarioId}";
+            ? $"historico_{usuarioId}_{triagemId}_{pagina}_{tamanhoPagina}"
+            : $"historico_{usuarioId}_{pagina}_{tamanhoPagina}";
 
         var cached = GetCache<List<HistoricoItem>>(cacheKey);
         if (cached is not null) return cached;
 
-        const int tamanhoPagina = 200;
-        var result = new List<HistoricoItem>();
-
-        for (var pagina = 1; ; pagina++)
-        {
-            var query = triagemId is not null ? $"triagemModeloId={triagemId}&" : "";
-            var url = $"{BaseUrl}/api/triagem/usuario/{usuarioId}?{query}pagina={pagina}&tamanhoPagina={tamanhoPagina}";
-            var lote = await Http.GetFromJsonAsync<List<HistoricoItem>>(url, JsonOptions) ?? [];
-            result.AddRange(lote);
-            if (lote.Count < tamanhoPagina) break;
-        }
-
+        var query = triagemId is not null ? $"triagemModeloId={triagemId}&" : "";
+        var url = $"{BaseUrl}/api/triagem/usuario/{usuarioId}?{query}pagina={pagina}&tamanhoPagina={tamanhoPagina}";
+        var result = await Http.GetFromJsonAsync<List<HistoricoItem>>(url, JsonOptions) ?? [];
         SetCache(cacheKey, result, TimeSpan.FromMinutes(10));
         return result;
     }

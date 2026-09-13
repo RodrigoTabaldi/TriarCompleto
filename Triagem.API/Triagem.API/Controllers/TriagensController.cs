@@ -27,7 +27,7 @@ public class TriagensController(TriagemService service) : ControllerBase
 
     /// <summary>Cria uma triagem personalizada (perguntas sim/não com pesos + faixas de resultado).</summary>
     [HttpPost]
-    [RequestSizeLimit(4 * 1024 * 1024)]
+    [RequestSizeLimit(1024 * 1024)]
     public async Task<IActionResult> Criar([FromBody] CriarTriagemRequest req, CancellationToken ct)
     {
         var (detalhe, erro) = await service.CriarAsync(User.GetUserId(), req, ct);
@@ -36,7 +36,7 @@ public class TriagensController(TriagemService service) : ControllerBase
 
     /// <summary>Edita uma triagem criada pelo usuário autenticado.</summary>
     [HttpPut("{id:int}")]
-    [RequestSizeLimit(4 * 1024 * 1024)]
+    [RequestSizeLimit(1024 * 1024)]
     public async Task<IActionResult> Atualizar(int id, [FromBody] CriarTriagemRequest req, CancellationToken ct)
     {
         var (ok, erro) = await service.AtualizarAsync(User.GetUserId(), id, req, ct);

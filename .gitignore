@@ -2,6 +2,7 @@
 bin/
 obj/
 publish/
+artifacts/local-test/
 
 # IDE
 .vs/

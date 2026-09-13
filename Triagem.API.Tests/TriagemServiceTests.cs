@@ -455,4 +455,34 @@ public class TriagemServiceTests
 
         Assert.Empty(historicoDeB);
     }
+
+    [Fact]
+    public async Task CriarAsync_AcimaDaCotaPorUsuario_RejeitaSemPersistir()
+    {
+        var (db, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+        db.TriagemModelos.AddRange(Enumerable.Range(
+            1, Triagem.Core.Domain.TriagemRules.MaximoTriagensPersonalizadasPorUsuario)
+            .Select(i => new TriagemModelo
+            {
+                Titulo = $"Personalizada {i}", CriadorUsuarioId = usuarioA, Ativa = true
+            }));
+        await db.SaveChangesAsync();
+
+        var (detalhe, erro) = await service.CriarAsync(usuarioA, RequestValido("Além da cota"));
+
+        Assert.Null(detalhe);
+        Assert.Contains("pode manter até", erro);
+        Assert.DoesNotContain(db.TriagemModelos, t => t.Titulo == "Além da cota");
+    }
+
+    [Fact]
+    public async Task HistoricoAsync_PaginaQueEstourariaOffset_RetornaVazio()
+    {
+        var (_, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+
+        var resultado = await service.HistoricoAsync(
+            usuarioA, pagina: int.MaxValue, tamanhoPagina: 200);
+
+        Assert.Empty(resultado);
+    }
 }

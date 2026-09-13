@@ -343,6 +343,12 @@ public static partial class BancoLocal
 
         var db = await ConexaoAsync();
 
+        var totalPersonalizadas = await db.Table<TriagemModeloLocal>()
+            .Where(t => t.CriadorUsuarioId == usuarioId && t.Ativa)
+            .CountAsync();
+        if (totalPersonalizadas >= TriagemRules.MaximoTriagensPersonalizadasPorUsuario)
+            return (false, $"Cada conta pode manter até {TriagemRules.MaximoTriagensPersonalizadasPorUsuario} triagens personalizadas ativas.");
+
         var modelo = new TriagemModeloLocal
         {
             Titulo = req.Titulo.Trim(),
@@ -410,7 +416,13 @@ public static partial class BancoLocal
 
         // Exclusão lógica: o histórico de aplicações continua apontando para o modelo.
         modelo.Ativa = false;
-        await db.UpdateAsync(modelo);
+        modelo.Imagem = null;
+        await db.RunInTransactionAsync(conn =>
+        {
+            conn.Update(modelo);
+            conn.Execute("DELETE FROM perguntas WHERE TriagemModeloId = ?", id);
+            conn.Execute("DELETE FROM faixas WHERE TriagemModeloId = ?", id);
+        });
         return (true, null);
     }
 
@@ -573,8 +585,13 @@ public static partial class BancoLocal
 
     private const int TamanhoPaginaMaximo = 200;
 
-    public static async Task<List<HistoricoItem>> HistoricoAsync(int usuarioId, int? triagemId = null)
+    public static async Task<List<HistoricoItem>> HistoricoAsync(
+        int usuarioId, int? triagemId = null, int pagina = 1, int tamanhoPagina = 50)
     {
+        pagina = Math.Max(1, pagina);
+        tamanhoPagina = Math.Clamp(tamanhoPagina, 1, TamanhoPaginaMaximo);
+        var deslocamento = ((long)pagina - 1) * tamanhoPagina;
+        if (deslocamento > int.MaxValue) return [];
         var db = await ConexaoAsync();
 
         var query = db.Table<ResultadoLocal>().Where(r => r.UsuarioId == usuarioId);
@@ -586,7 +603,8 @@ public static partial class BancoLocal
 
         var resultados = await query
             .OrderByDescending(r => r.Data)
-            .Take(TamanhoPaginaMaximo)
+            .Skip((int)deslocamento)
+            .Take(tamanhoPagina)
             .ToListAsync();
 
         var titulos = (await db.Table<TriagemModeloLocal>().ToListAsync())

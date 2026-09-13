@@ -54,4 +54,43 @@ public class FieldEncryptionServiceTests
 
         Assert.ThrowsAny<Exception>(() => encB.Decrypt(cifrado));
     }
+
+    [Fact]
+    public void Rotacao_LeEnvelopeNovoComChaveAnterior()
+    {
+        const string antiga = "chave-antiga-de-teste-com-mais-de-32-caracteres";
+        var escritorAntigo = new FieldEncryptionService(new DataProtectionOptions
+        {
+            Key = antiga,
+            KeyId = "2026-01"
+        });
+        var cifrado = escritorAntigo.Encrypt("histórico clínico");
+
+        var leitorRotacionado = new FieldEncryptionService(new DataProtectionOptions
+        {
+            Key = "chave-nova-de-teste-com-mais-de-32-caracteres",
+            KeyId = "2026-09",
+            PreviousKeys = new Dictionary<string, string> { ["2026-01"] = antiga }
+        });
+
+        Assert.Equal("histórico clínico", leitorRotacionado.Decrypt(cifrado));
+        Assert.StartsWith("enc:v2:2026-01:", cifrado);
+    }
+
+    [Fact]
+    public void Rotacao_LeEnvelopeLegadoComChaveAnterior()
+    {
+        const string antiga = "chave-antiga-de-teste-com-mais-de-32-caracteres";
+        var chaveDerivada = System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(antiga));
+        var legado = Triagem.Core.Security.AesGcmEnvelope.Encrypt(chaveDerivada, "dado legado");
+        var leitor = new FieldEncryptionService(new DataProtectionOptions
+        {
+            Key = "chave-nova-de-teste-com-mais-de-32-caracteres",
+            KeyId = "nova",
+            PreviousKeys = new Dictionary<string, string> { ["antiga"] = antiga }
+        });
+
+        Assert.Equal("dado legado", leitor.Decrypt(legado));
+    }
 }
