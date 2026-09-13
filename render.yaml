@@ -37,6 +37,8 @@ services:
       # acorda o Azure SQL junto e consome a cota mensal à toa.
       - key: Database__SeedOnStartup
         value: "true"
+      - key: Database__MigrateOnStartup
+        value: "true"
 
       # ---- Segredos: preencher no painel do Render, nunca neste arquivo ----
       # "sync: false" faz o Render pedir o valor na criação e mantê-lo fora do Git.

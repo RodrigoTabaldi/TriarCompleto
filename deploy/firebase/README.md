@@ -29,11 +29,9 @@ Num celular real, `localhost` é o próprio telefone. Então:
 
 1. Hospede a API .NET num lugar público com **HTTPS** (Azure App Service, Render,
    uma VPS com o `docker-compose.yml` deste repositório + um proxy TLS, etc.).
-2. Em `Triagem.App/MauiApp3/Services/ApiService.cs`, troque a constante:
-   ```csharp
-   private const string UrlProducao = "https://SUA-API-DE-PRODUCAO.com";
-   ```
-   pela URL real. Em builds de **Release** o app usa essa URL automaticamente.
+2. Passe a URL real no build com `-p:TriarApiBaseUrl=https://sua-api`. Builds de
+   **Release** conectados falham antes da compilação se a propriedade estiver ausente
+   ou não usar HTTPS; a URL é incorporada como metadado do assembly.
 
 > Use **HTTPS**. O Android bloqueia tráfego HTTP em texto puro em builds de produção.
 
@@ -66,7 +64,7 @@ $env:TRIAR_KEY_ALIAS = "triar"
 $env:TRIAR_STORE_PASS = "SUA_SENHA_STORE"
 $env:TRIAR_KEY_PASS   = "SUA_SENHA_CHAVE"
 
-dotnet publish -f net10.0-android -c Release
+dotnet publish -f net10.0-android -c Release -p:TriarApiBaseUrl=https://sua-api
 ```
 
 O pacote sai em:

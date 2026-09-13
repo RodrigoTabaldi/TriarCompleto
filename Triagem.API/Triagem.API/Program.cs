@@ -300,8 +300,9 @@ app.MapGet("/", () => Results.Ok(new
     status = "online"
 }));
 
-// ---------- Criação/seed do banco, com retry (aguarda o banco subir) ----------
-// Controlado por "Database:SeedOnStartup" (padrão: ligado).
+// ---------- Migrations e seed do banco, com retry (aguarda o banco subir) ----------
+// São controles independentes: migrations podem permanecer automáticas mesmo quando
+// a sincronização do catálogo padrão for desativada.
 //
 // No docker-compose isso precisa rodar a cada boot, porque o SQL Server sobe vazio.
 // Num PaaS com Azure SQL serverless é o contrário: o banco já existe e persiste, e
@@ -309,7 +310,9 @@ app.MapGet("/", () => Results.Ok(new
 // o seed rodasse aí, cada despertar da API acordaria o banco junto, gastando a cota
 // mensal mesmo quando ninguém abriu o app. Depois do primeiro deploy bem-sucedido,
 // defina Database__SeedOnStartup=false no Render.
-if (app.Configuration.GetValue("Database:SeedOnStartup", true))
+var migrarNoStartup = app.Configuration.GetValue("Database:MigrateOnStartup", true);
+var semearNoStartup = app.Configuration.GetValue("Database:SeedOnStartup", true);
+if (migrarNoStartup || semearNoStartup)
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<TriagemDbContext>();
@@ -320,7 +323,10 @@ if (app.Configuration.GetValue("Database:SeedOnStartup", true))
     {
         try
         {
-            await DbSeeder.SeedAsync(db, encryptor);
+            if (migrarNoStartup)
+                await DbSeeder.PrepararSchemaAsync(db);
+            if (semearNoStartup)
+                await DbSeeder.SeedDataAsync(db, encryptor);
             Program.LogBancoPronto(logger);
             break;
         }

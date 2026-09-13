@@ -87,6 +87,21 @@ public class TriagemLegacyController(TriagemService service) : ControllerBase
 [EnableRateLimiting("api")]
 public class UsuariosController(TriagemService service) : ControllerBase
 {
+    [HttpGet("me/export")]
+    public async Task<IActionResult> ExportarMeusDados(CancellationToken ct)
+    {
+        var exportacao = await service.ExportarDadosAsync(User.GetUserId(), ct);
+        return exportacao is null ? NotFound() : Ok(exportacao);
+    }
+
+    [HttpDelete("me")]
+    [RequestSizeLimit(16 * 1024)]
+    public async Task<IActionResult> ExcluirMinhaConta([FromBody] ExcluirContaRequest req, CancellationToken ct)
+    {
+        var (ok, erro) = await service.ExcluirContaAsync(User.GetUserId(), req.Senha, ct);
+        return ok ? NoContent() : BadRequest(erro);
+    }
+
     /// <summary>Define quais triagens aparecem na home do usuário autenticado (sempre o do token — nunca um id da rota).</summary>
     [HttpPut("home")]
     [RequestSizeLimit(64 * 1024)]

@@ -89,7 +89,7 @@ jobs:
         run: dotnet restore Triagem.App/MauiApp3/MauiApp3.csproj --force-evaluate
 
       - name: Compilar app Android (Release)
-        run: dotnet build Triagem.App/MauiApp3/MauiApp3.csproj -f net10.0-android -c Release --no-restore
+        run: dotnet build Triagem.App/MauiApp3/MauiApp3.csproj -f net10.0-android -c Release --no-restore -p:TriarApiBaseUrl=https://ci.example.invalid
 
       - name: Verificar formatação do app
         run: dotnet format Triagem.App/MauiApp3/MauiApp3.csproj --verify-no-changes --no-restore --verbosity minimal

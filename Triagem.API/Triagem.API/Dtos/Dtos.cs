@@ -31,6 +31,16 @@ public record CriarTriagemRequest(
 // ---------- Home ----------
 public record HomeItemInput(int TriagemModeloId, bool Visivel, int Ordem);
 public record ConfigurarHomeRequest(List<HomeItemInput> Itens);
+public record ExcluirContaRequest(string Senha);
+
+public record ExportacaoTriagem(
+    int Id, string Titulo, string PublicoAlvo, string Descricao,
+    List<PerguntaDto> Perguntas, List<FaixaDto> Faixas);
+public record ExportacaoResultado(
+    int Id, int TriagemModeloId, string TituloTriagem, DateTime Data, System.Text.Json.JsonElement Dados);
+public record ExportacaoDadosResponse(
+    UsuarioResponse Usuario, DateTime GeradoEm,
+    List<ExportacaoTriagem> TriagensCriadas, List<ExportacaoResultado> Resultados);
 
 // ---------- Execução de triagem ----------
 public record RespostaInput(int PerguntaId, bool Valor);

@@ -1,3 +1,4 @@
+using System.Data;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Triagem.API.Data;
@@ -43,7 +44,6 @@ public partial class TriagemService(
                     t.PublicoAlvo,
                     t.Descricao,
                     t.Icone,
-                    t.Imagem,
                     t.CriadorUsuarioId,
                     TotalPerguntas = t.Perguntas.Count
                 })
@@ -55,7 +55,7 @@ public partial class TriagemService(
                 .ToDictionaryAsync(h => h.TriagemModeloId, ct);
 
             return modelos.Select(t => new TriagemModeloResumo(
-                t.Id, t.Titulo, t.PublicoAlvo, t.Descricao, t.Icone, t.Imagem,
+                t.Id, t.Titulo, t.PublicoAlvo, t.Descricao, t.Icone, null,
                 Padrao: t.CriadorUsuarioId == null,
                 MinhaAutoria: t.CriadorUsuarioId == usuarioId,
                 VisivelNaHome: !prefs.TryGetValue(t.Id, out var p) || p.Visivel,
@@ -105,11 +105,6 @@ public partial class TriagemService(
         if (!await db.Usuarios.AnyAsync(u => u.Id == usuarioId, ct))
             return (null, "Usuário não encontrado.");
 
-        var totalPersonalizadas = await db.TriagemModelos.CountAsync(
-            t => t.CriadorUsuarioId == usuarioId && t.Ativa, ct);
-        if (totalPersonalizadas >= TriagemRules.MaximoTriagensPersonalizadasPorUsuario)
-            return (null, $"Cada conta pode manter até {TriagemRules.MaximoTriagensPersonalizadasPorUsuario} triagens personalizadas ativas.");
-
         var modelo = new TriagemModelo
         {
             Titulo = req.Titulo.Trim(),
@@ -126,9 +121,19 @@ public partial class TriagemService(
         // Uma transação garante que o modelo e a preferência de home sejam gravados
         // juntos — sem risco de uma triagem "órfã" na home se a segunda gravação falhar.
         var estrategia = db.Database.CreateExecutionStrategy();
+        var limiteExcedido = false;
         await estrategia.ExecuteAsync(async () =>
         {
-            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
+            var totalPersonalizadas = await db.TriagemModelos.CountAsync(
+                t => t.CriadorUsuarioId == usuarioId && t.Ativa, ct);
+            if (totalPersonalizadas >= TriagemRules.MaximoTriagensPersonalizadasPorUsuario)
+            {
+                limiteExcedido = true;
+                await tx.RollbackAsync(ct);
+                return;
+            }
 
             db.TriagemModelos.Add(modelo);
             await db.SaveChangesAsync(ct);
@@ -144,6 +149,9 @@ public partial class TriagemService(
 
             await tx.CommitAsync(ct);
         });
+
+        if (limiteExcedido)
+            return (null, $"Cada conta pode manter até {TriagemRules.MaximoTriagensPersonalizadasPorUsuario} triagens personalizadas ativas.");
 
         await InvalidateCacheAsync();
         LogTriagemCriada(logger, usuarioId, modelo.Id, modelo.Titulo);
@@ -246,6 +254,60 @@ public partial class TriagemService(
         return null;
     }
 
+    public async Task<ExportacaoDadosResponse?> ExportarDadosAsync(int usuarioId, CancellationToken ct = default)
+    {
+        var usuario = await db.Usuarios.AsNoTracking().FirstOrDefaultAsync(u => u.Id == usuarioId, ct);
+        if (usuario is null) return null;
+
+        var modelos = await db.TriagemModelos.AsNoTracking()
+            .Include(t => t.Perguntas)
+            .Include(t => t.Faixas)
+            .Where(t => t.CriadorUsuarioId == usuarioId)
+            .OrderBy(t => t.Id)
+            .ToListAsync(ct);
+        var triagens = modelos.Select(t => new ExportacaoTriagem(
+            t.Id, t.Titulo, t.PublicoAlvo, t.Descricao,
+            t.Perguntas.OrderBy(p => p.Ordem).Select(p => new PerguntaDto(p.Id, p.Texto, p.Peso, p.Ordem)).ToList(),
+            t.Faixas.OrderBy(f => f.Ordem).Select(f =>
+                new FaixaDto(f.Id, f.Titulo, f.Recomendacao, f.PontuacaoMin, f.PontuacaoMax, f.Cor, f.Ordem)).ToList())).ToList();
+
+        var registros = await db.TriagemResultados.AsNoTracking()
+            .Include(r => r.TriagemModelo)
+            .Where(r => r.UsuarioId == usuarioId)
+            .OrderBy(r => r.Id)
+            .ToListAsync(ct);
+        var resultados = registros.Select(r => new ExportacaoResultado(
+            r.Id, r.TriagemModeloId, r.TriagemModelo?.Titulo ?? "Triagem", r.Data,
+            JsonSerializer.Deserialize<JsonElement>(encryptor.Decrypt(r.DadosProtegidos)))).ToList();
+
+        return new ExportacaoDadosResponse(
+            new UsuarioResponse(usuario.Id, usuario.Nome, usuario.Email), DateTime.UtcNow, triagens, resultados);
+    }
+
+    public async Task<(bool Ok, string? Erro)> ExcluirContaAsync(
+        int usuarioId, string senha, CancellationToken ct = default)
+    {
+        var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Id == usuarioId, ct);
+        if (usuario is null) return (false, "Usuário não encontrado.");
+        if (string.IsNullOrWhiteSpace(senha) || !PasswordHasher.Verify(senha, usuario.SenhaHash))
+            return (false, "Senha inválida.");
+
+        var estrategia = db.Database.CreateExecutionStrategy();
+        await estrategia.ExecuteAsync(async () =>
+        {
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            db.TriagemResultados.RemoveRange(await db.TriagemResultados.Where(r => r.UsuarioId == usuarioId).ToListAsync(ct));
+            db.UsuarioTriagensHome.RemoveRange(await db.UsuarioTriagensHome.Where(h => h.UsuarioId == usuarioId).ToListAsync(ct));
+            db.TriagemModelos.RemoveRange(await db.TriagemModelos.Where(t => t.CriadorUsuarioId == usuarioId).ToListAsync(ct));
+            db.Usuarios.Remove(usuario);
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        });
+
+        await InvalidateCacheAsync();
+        return (true, null);
+    }
+
     // ---------------- Execução ----------------
 
     public async Task<(ResultadoResponse? Resultado, string? Erro)> ResponderAsync(int usuarioId, int triagemModeloId, ResponderTriagemRequest req, CancellationToken ct = default)
@@ -305,7 +367,14 @@ public partial class TriagemService(
             PontuacaoMaxima = pontuacaoMaxima,
             Classificacao = faixa?.Titulo ?? "Sem classificação",
             Recomendacao = faixa?.Recomendacao ?? "",
-            Cor = faixa?.Cor ?? "#10B981"
+            Cor = faixa?.Cor ?? "#10B981",
+            TituloTriagem = modelo.Titulo,
+            ModeloCatalogoVersao = modelo.CriadorUsuarioId is null ? DefaultTriageCatalog.Version : null,
+            Questionario = respostasRecebidas.Select(r =>
+            {
+                var pergunta = perguntasPorId[r.PerguntaId];
+                return new RespostaSnapshot(pergunta.Texto, pergunta.Peso, r.Valor);
+            }).ToList()
         };
 
         var resultado = new TriagemResultado
@@ -426,7 +495,12 @@ public partial class TriagemService(
         public string Classificacao { get; set; } = "";
         public string Recomendacao { get; set; } = "";
         public string Cor { get; set; } = "#10B981";
+        public string TituloTriagem { get; set; } = "";
+        public int? ModeloCatalogoVersao { get; set; }
+        public List<RespostaSnapshot> Questionario { get; set; } = [];
     }
+
+    private sealed record RespostaSnapshot(string Pergunta, int Peso, bool Valor);
 
     // ---------------- Mapeamento (compartilhado por Criar/Atualizar) ----------------
 

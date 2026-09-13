@@ -18,6 +18,9 @@ public sealed record DefaultTriage(
 public static class DefaultTriageCatalog
 {
     public const int Version = 2;
+    public const bool ClinicallyValidated = false;
+    public const string ValidationNotice =
+        "Protótipo acadêmico ainda não homologado clinicamente. O resultado é educativo e não deve orientar diagnóstico, tratamento ou urgência.";
 
     public static IReadOnlyList<DefaultTriage> Items { get; } =
     [

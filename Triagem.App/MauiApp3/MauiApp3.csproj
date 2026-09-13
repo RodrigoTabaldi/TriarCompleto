@@ -58,6 +58,21 @@
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>TriarApiBaseUrl</_Parameter1>
+			<_Parameter2>$(TriarApiBaseUrl)</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
+
+	<Target Name="ValidateProductionApiUrl" BeforeTargets="CoreCompile"
+	        Condition="'$(Configuration)' == 'Release' and '$(TriarModoLocal)' != 'true'">
+		<Error Condition="'$(TriarApiBaseUrl)' == ''"
+		       Text="Defina -p:TriarApiBaseUrl=https://sua-api antes de compilar um Release conectado." />
+		<Error Condition="$([System.String]::Copy('$(TriarApiBaseUrl)').StartsWith('https://')) != 'True'"
+		       Text="TriarApiBaseUrl deve usar HTTPS em Release." />
+	</Target>
+
 	<!-- ===== Build de RELEASE do Android (Firebase App Distribution / Play) ===== -->
 	<!-- Gera .aab e assina com o keystore. Os segredos NÃO ficam no projeto:
 	     passe por variáveis de ambiente na hora do build (veja deploy/firebase/README.md). -->

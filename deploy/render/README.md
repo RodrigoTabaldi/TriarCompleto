@@ -165,38 +165,31 @@ done
 
 ---
 
-## Passo 6 — Desligar o seed (importante)
+## Passo 6 — Inicialização do banco
 
-Assim que o Passo 5 passar, mude no Render:
+Migrations e seed são independentes:
 
 ```
-Database__SeedOnStartup = false
+Database__MigrateOnStartup = true
+Database__SeedOnStartup = true
 ```
 
-**Por quê:** o serviço gratuito do Render dorme após 15 minutos sem tráfego e acorda na
-requisição seguinte. Com o seed ligado, **todo despertar da API abre conexão com o
-banco** — inclusive um simples acesso à página inicial — e isso tira o Azure SQL do
-auto-pause. Com o seed desligado, o banco só acorda quando alguém realmente usa o app.
-
-Opcionalmente, remova também o `db_ddladmin` do usuário `triar_app` (Passo 1).
+Esses valores priorizam consistência: toda versão aplica migrations e sincroniza o
+catálogo antes de aceitar requisições. Em produção com um job de migration separado,
+ambos podem ser desligados no processo web depois que o job concluir. Enquanto
+`MigrateOnStartup=true`, mantenha a permissão de DDL do usuário da aplicação.
 
 ---
 
 ## Passo 7 — Apontar o app para a API
 
-Em `Triagem.App/MauiApp3/Services/ApiService.cs`, troque o placeholder:
-
-```csharp
-private const string UrlProducao = "https://SEU-SERVICO.onrender.com";
-```
-
-Não precisa procurar: se você esquecer, o build de Release **falha de propósito** com
-uma mensagem explicando o que falta. Depois é só gerar o APK normalmente — **sem** a
+Passe a URL ao build; se esquecer, o Release **falha de propósito** antes de gerar o
+pacote. Gere o APK — **sem** a
 flag `-p:TriarModoLocal=true`, que é a do APK de demonstração offline:
 
 ```bash
 dotnet publish Triagem.App/MauiApp3/MauiApp3.csproj -f net10.0-android -c Release \
-  -p:AndroidPackageFormat=apk
+  -p:AndroidPackageFormat=apk -p:TriarApiBaseUrl=https://SEU-SERVICO.onrender.com
 ```
 
 ---
@@ -225,6 +218,6 @@ Uma sessão aberta impede o auto-pause pela noite inteira.
 
 O esquema é versionado por **EF Core Migrations** em `Data/Migrations`. Bancos antigos
 criados com `EnsureCreated` são detectados e recebem o baseline automaticamente, sem
-apagar dados. Mantenha `Database__SeedOnStartup=true` no primeiro deploy e em qualquer
-deploy que introduza migration; depois de a inicialização concluir, ele pode voltar a
-`false` para não acordar o Azure SQL quando o serviço reiniciar sem tráfego de usuário.
+apagar dados. `Database__MigrateOnStartup` controla somente o esquema;
+`Database__SeedOnStartup` controla o backfill clínico e o catálogo. Nenhuma alternância
+manual é necessária com os valores do Blueprint.

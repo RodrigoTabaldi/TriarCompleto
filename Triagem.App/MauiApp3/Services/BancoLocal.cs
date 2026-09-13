@@ -538,7 +538,14 @@ public static partial class BancoLocal
             PontuacaoMaxima = pontuacaoMaxima,
             Classificacao = faixa?.Titulo ?? "Sem classificação",
             Recomendacao = faixa?.Recomendacao ?? "",
-            Cor = faixa?.Cor ?? "#10B981"
+            Cor = faixa?.Cor ?? "#10B981",
+            TituloTriagem = modelo.Titulo,
+            ModeloCatalogoVersao = modelo.CriadorUsuarioId is null ? DefaultTriageCatalog.Version : null,
+            Questionario = respostasRecebidas.Select(r =>
+            {
+                var pergunta = perguntasPorId[r.PerguntaId];
+                return new RespostaSnapshotLocal(pergunta.Texto, pergunta.Peso, r.Valor);
+            }).ToList()
         };
 
         var resultado = new ResultadoLocal
@@ -685,7 +692,64 @@ public static partial class BancoLocal
         public string Classificacao { get; set; } = "";
         public string Recomendacao { get; set; } = "";
         public string Cor { get; set; } = "#10B981";
+        public string TituloTriagem { get; set; } = "";
+        public int? ModeloCatalogoVersao { get; set; }
+        public List<RespostaSnapshotLocal> Questionario { get; set; } = [];
     }
+
+    public static async Task<string> ExportarDadosJsonAsync(int usuarioId)
+    {
+        var db = await ConexaoAsync();
+        var usuario = await db.Table<UsuarioLocal>().Where(u => u.Id == usuarioId).FirstOrDefaultAsync()
+            ?? throw new InvalidOperationException("Usuário não encontrado.");
+        var modelos = await db.Table<TriagemModeloLocal>().Where(t => t.CriadorUsuarioId == usuarioId).ToListAsync();
+        var resultados = await db.Table<ResultadoLocal>().Where(r => r.UsuarioId == usuarioId).ToListAsync();
+        var dados = resultados.Select(r => new
+        {
+            r.Id,
+            r.TriagemModeloId,
+            r.Data,
+            Dados = JsonSerializer.Deserialize<JsonElement>(LocalDataProtection.Desproteger(r.DadosProtegidos))
+        });
+        return JsonSerializer.Serialize(new
+        {
+            usuario = new { usuario.Id, usuario.Nome, usuario.Email },
+            geradoEm = DateTime.UtcNow,
+            triagensCriadas = modelos,
+            resultados = dados
+        }, JsonOptions);
+    }
+
+    public static async Task<(bool Ok, string? Erro)> ExcluirContaAsync(int usuarioId, string senha)
+    {
+        var db = await ConexaoAsync();
+        var usuario = await db.Table<UsuarioLocal>().Where(u => u.Id == usuarioId).FirstOrDefaultAsync();
+        if (usuario is null) return (false, "Usuário não encontrado.");
+        if (string.IsNullOrWhiteSpace(senha) || !VerificarSenha(senha, usuario.SenhaHash))
+            return (false, "Senha inválida.");
+
+        var resultados = await db.Table<ResultadoLocal>().Where(r => r.UsuarioId == usuarioId).ToListAsync();
+        var modelos = await db.Table<TriagemModeloLocal>().Where(t => t.CriadorUsuarioId == usuarioId).ToListAsync();
+        await db.RunInTransactionAsync(conn =>
+        {
+            foreach (var resultado in resultados)
+            {
+                conn.Execute("DELETE FROM respostas WHERE ResultadoId = ?", resultado.Id);
+                conn.Delete(resultado);
+            }
+            conn.Execute("DELETE FROM home_prefs WHERE UsuarioId = ?", usuarioId);
+            foreach (var modelo in modelos)
+            {
+                conn.Execute("DELETE FROM perguntas WHERE TriagemModeloId = ?", modelo.Id);
+                conn.Execute("DELETE FROM faixas WHERE TriagemModeloId = ?", modelo.Id);
+                conn.Delete(modelo);
+            }
+            conn.Delete(usuario);
+        });
+        return (true, null);
+    }
+
+    private sealed record RespostaSnapshotLocal(string Pergunta, int Peso, bool Valor);
 
     // ---------------- Senha (PBKDF2, igual à API) ----------------
 

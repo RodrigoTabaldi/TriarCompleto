@@ -17,6 +17,9 @@
             <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="22" Shadow="0,3,14,#0000001A">
                 <VerticalStackLayout Spacing="13">
                     <Label Text="Sobre o TRIAR" FontAttributes="Bold" FontSize="18" TextColor="#0F172A"/>
+                    <Border BackgroundColor="#FFF7ED" Stroke="#F59E0B" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="12">
+                        <Label Text="Protótipo acadêmico ainda não homologado clinicamente. Os questionários e cortes são educativos e não devem orientar diagnóstico, tratamento ou decisões de urgência." TextColor="#92400E" FontAttributes="Bold" FontSize="13" SemanticProperties.Description="Aviso importante sobre ausência de validação clínica"/>
+                    </Border>
                     <Label TextColor="#374151" FontSize="14" LineHeight="1.25" Text="O TRIAR é um projeto interdisciplinar que integra Fonoaudiologia, tecnologia e saúde digital para o desenvolvimento de soluções voltadas à triagem, ao acompanhamento preventivo e à promoção da saúde. Em sua etapa inicial, a plataforma é direcionada à saúde vocal de professores, uma população profissional submetida diariamente a elevada demanda vocal e a diferentes fatores que podem contribuir para o surgimento de alterações na voz."/>
                     <Label TextColor="#374151" FontSize="14" LineHeight="1.25" Text="A proposta do TRIAR é transformar conhecimentos científicos e instrumentos de avaliação em uma experiência digital acessível, organizada e de fácil utilização, permitindo que o usuário reconheça sinais e fatores relacionados à sua saúde vocal de maneira simples e orientada."/>
                     <Label TextColor="#374151" FontSize="14" LineHeight="1.25" Text="Por meio de um questionário digital estruturado, a plataforma reúne informações relacionadas a sintomas vocais, hábitos, frequência de desconfortos, demanda de uso da voz e condições associadas ao ambiente profissional. As respostas são analisadas de acordo com parâmetros previamente definidos, possibilitando a apresentação de uma classificação inicial de risco vocal, organizada em diferentes níveis."/>
@@ -25,6 +28,14 @@
                     <Label TextColor="#374151" FontSize="14" LineHeight="1.25" Text="Além de sua aplicação inicial na saúde vocal docente, o TRIAR foi concebido como uma plataforma com potencial de evolução e expansão para outras demandas da Fonoaudiologia e áreas correlatas, permitindo que novos instrumentos, fluxos de triagem e funcionalidades possam ser incorporados conforme o avanço científico e tecnológico do projeto."/>
                     <Label TextColor="#374151" FontSize="14" LineHeight="1.25" Text="O TRIAR possui finalidade educativa, preventiva e de triagem. A plataforma não realiza diagnóstico clínico e não substitui a avaliação, o acompanhamento ou a conduta de profissionais habilitados. Seus resultados funcionam como um recurso inicial de orientação e apoio à identificação de possíveis fatores de risco."/>
                     <Label TextColor="#374151" FontSize="14" LineHeight="1.25" Text="Ao unir ciência, saúde e tecnologia, o TRIAR busca contribuir para a construção de ferramentas digitais capazes de ampliar o acesso à informação, fortalecer ações preventivas e incentivar uma participação mais ativa das pessoas no cuidado com a própria saúde."/>
+                </VerticalStackLayout>
+            </Border>
+            <Border BackgroundColor="White" Stroke="#D8E2DE" StrokeThickness="1" StrokeShape="RoundRectangle 15" Padding="22">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Seus dados" FontAttributes="Bold" FontSize="18" TextColor="#0F172A"/>
+                    <Label Text="Você pode obter uma cópia dos dados da conta ou apagá-los definitivamente." TextColor="#374151" FontSize="14"/>
+                    <Button Text="Exportar meus dados" Clicked="ExportarDados" BackgroundColor="#E6F5F0" TextColor="#007A5A" SemanticProperties.Description="Exportar uma cópia dos dados pessoais"/>
+                    <Button Text="Excluir minha conta" Clicked="ExcluirConta" BackgroundColor="#FEE2E2" TextColor="#B91C1C" SemanticProperties.Description="Excluir permanentemente a conta e seus dados"/>
                 </VerticalStackLayout>
             </Border>
             <BoxView HeightRequest="20" Color="Transparent"/>

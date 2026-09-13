@@ -36,7 +36,7 @@ App MAUI ──► nginx (load balancer :5036) ──► api1 / api2 (ASP.NET Co
 - **Segurança**:
   - **Autenticação JWT** — login/cadastro emitem um token; **todos** os endpoints de dados exigem `Authorization: Bearer <token>`. A identidade do usuário vem sempre do token, nunca de um `usuarioId` enviado pelo cliente (fecha IDOR) — inclusive na leitura de detalhe de uma triagem (`GET /api/triagens/{id}`), que só retorna triagens padrão do sistema ou criadas pelo próprio usuário autenticado.
   - Senhas com PBKDF2 (SHA-256, 100 mil iterações, salt aleatório); mínimo de 8 caracteres.
-  - **Dados clínicos criptografados em repouso** (AES-256-GCM, key ring em `DataProtection`) — nome, idade, sexo, pontuação, classificação, recomendação e respostas ficam em envelopes versionados. Chaves anteriores podem permanecer configuradas durante rotação e recuperação.
+  - **Dados clínicos criptografados em repouso** (AES-256-GCM, key ring em `DataProtection`) — nome, idade, sexo, pontuação, classificação, recomendação e um snapshot imutável de perguntas/pesos/respostas ficam em envelopes versionados. Chaves anteriores podem permanecer configuradas durante rotação e recuperação.
   - **Segredos fora do código**: senha do banco, chave JWT e chave de criptografia vêm de variáveis de ambiente (`.env` no Docker), nunca versionadas.
   - **CORS restrito** por lista de origens (`Cors:AllowedOrigins`) e `X-Forwarded-For` aceito só de proxies confiáveis (evita spoof do rate limit).
   - **SQL Server e Redis não publicam porta no host** no docker-compose — só nginx expõe a porta pública; os demais serviços só são alcançáveis pela rede interna do compose.
@@ -140,8 +140,8 @@ O projeto já vem preparado para isso:
   Render monitora) e **`/health`** (consulta o banco, para diagnóstico sob demanda).
   A separação existe porque uma conexão ao Azure SQL serverless impede o auto-pause,
   e um monitor periódico no endpoint errado consumiria a cota mensal em poucos dias.
-- `Database:SeedOnStartup` permite desligar a criação/seed do banco depois do primeiro
-  deploy, para que acordar a API não acorde o banco junto.
+- `Database:MigrateOnStartup` e `Database:SeedOnStartup` controlam separadamente a
+  evolução do esquema e a sincronização idempotente do catálogo.
 - `ForwardedHeaders:TrustPlatformProxy` faz o rate limit por IP funcionar atrás do
   proxy da plataforma sem abrir espaço para spoof do `X-Forwarded-For`.
 - OpenAPI fica restrito a Development; a imagem Docker roda como usuário sem
@@ -161,6 +161,8 @@ O projeto já vem preparado para isso:
 - **Tela de resultado** com pontuação, classificação colorida, recomendação e botão
   para **aplicar a mesma triagem em outra pessoa**.
 - **Histórico por triagem** com exportação para Excel.
+- **Portabilidade e exclusão**: a tela Sobre permite exportar os dados da conta em JSON
+  e apagá-los definitivamente após confirmação da senha, tanto online quanto offline.
 
 ## Endpoints principais da API
 
@@ -177,6 +179,8 @@ O projeto já vem preparado para isso:
 | GET | `/api/triagens/{id}/historico` | Histórico de uma triagem (paginado: `?pagina=&tamanhoPagina=`, máx. 200/página) |
 | GET | `/api/triagem/usuario/{id}` | Histórico do usuário autenticado (filtro `?triagemModeloId=`, paginado: `?pagina=&tamanhoPagina=`) |
 | PUT | `/api/usuarios/home` | Configura a home |
+| GET | `/api/usuarios/me/export` | Exporta os dados pessoais e clínicos do usuário autenticado |
+| DELETE | `/api/usuarios/me` | Exclui conta e dados após confirmar a senha |
 | GET | `/health/live` | Liveness público, sem consultar o banco |
 | GET | `/health` | Readiness do banco (exige autenticação) |
 
@@ -186,7 +190,8 @@ O projeto já vem preparado para isso:
 > aceitam mais um `usuarioId`, e `GET /api/triagens/{id}` só retorna triagens padrão do
 > sistema ou pertencentes ao próprio usuário do token.
 
-> Projeto acadêmico: os resultados das triagens são orientativos e não substituem avaliação profissional.
+> Protótipo acadêmico ainda não homologado clinicamente: questionários, pesos e cortes
+> são educativos e não devem orientar diagnóstico, tratamento ou decisões de urgência.
 
 ## Testes
 

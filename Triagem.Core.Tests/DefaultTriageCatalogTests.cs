@@ -5,6 +5,12 @@ namespace Triagem.Core.Tests;
 public class DefaultTriageCatalogTests
 {
     [Fact]
+    public void CatalogoDeclaraExplicitamenteQueAindaNaoFoiValidadoClinicamente()
+    {
+        Assert.False(DefaultTriageCatalog.ClinicallyValidated);
+        Assert.Contains("não homologado", DefaultTriageCatalog.ValidationNotice);
+    }
+    [Fact]
     public void Catalogo_TemSeisTriagensComPerguntasValidasEDistintas()
     {
         Assert.Equal(6, DefaultTriageCatalog.Items.Count);

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using SQLite;
 using Triagem.Core.Domain;
 
@@ -9,9 +10,49 @@ public static partial class BancoLocal
 {
     private static async Task SemearAsync(SQLiteAsyncConnection db)
     {
+        await PreservarQuestionariosHistoricosAsync(db);
         await SincronizarTriagensPadraoAsync(db);
         if (await db.Table<UsuarioLocal>().CountAsync() == 0)
             await SemearContaDemoAsync(db);
+    }
+
+    private static async Task PreservarQuestionariosHistoricosAsync(SQLiteAsyncConnection db)
+    {
+        var resultados = await db.Table<ResultadoLocal>()
+            .Where(r => r.DadosProtegidos != null)
+            .ToListAsync();
+        if (resultados.Count == 0) return;
+
+        var perguntas = (await db.Table<PerguntaLocal>().ToListAsync()).ToDictionary(p => p.Id);
+        var modelos = (await db.Table<TriagemModeloLocal>().ToListAsync()).ToDictionary(m => m.Id);
+        var respostas = (await db.Table<RespostaLocal>().ToListAsync()).ToLookup(r => r.ResultadoId);
+
+        foreach (var resultado in resultados)
+        {
+            var json = JsonNode.Parse(LocalDataProtection.Desproteger(resultado.DadosProtegidos)) as JsonObject;
+            if (json is null || json["questionario"] is JsonArray { Count: > 0 }) continue;
+
+            var questionario = new JsonArray();
+            foreach (var resposta in respostas[resultado.Id].OrderBy(r => r.Id))
+            {
+                if (!perguntas.TryGetValue(resposta.PerguntaId, out var pergunta)) continue;
+                var valor = resposta.ValorProtegido is not null
+                    ? LocalDataProtection.Desproteger(resposta.ValorProtegido) == "1"
+                    : resposta.Valor;
+                questionario.Add(new JsonObject
+                {
+                    ["pergunta"] = pergunta.Texto,
+                    ["peso"] = pergunta.Peso,
+                    ["valor"] = valor
+                });
+            }
+
+            json["tituloTriagem"] = modelos.TryGetValue(resultado.TriagemModeloId, out var modelo)
+                ? modelo.Titulo : "Triagem";
+            json["questionario"] = questionario;
+            resultado.DadosProtegidos = LocalDataProtection.Proteger(json.ToJsonString(JsonOptions));
+            await db.UpdateAsync(resultado);
+        }
     }
 
     private static async Task SincronizarTriagensPadraoAsync(SQLiteAsyncConnection db)

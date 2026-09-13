@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Reflection;
 using System.Text.Json;
 using MauiApp3.Models;
 
@@ -40,7 +41,7 @@ public static class ApiService
     /// </summary>
     public static bool ModoLocal =>
 #if MODO_LOCAL
-        true
+        _forcarModoLocalIndividual || true
 #else
         _forcarModoLocalIndividual
 #endif
@@ -56,8 +57,9 @@ public static class ApiService
     // ⚠️ PRODUÇÃO: troque pela URL pública HTTPS da sua API .NET (ex.: Azure/VPS).
     // Num celular real (instalado via Firebase), "localhost" é o próprio telefone —
     // por isso o build de Release precisa apontar para um endereço público de verdade.
-    private const string UrlProducao = "https://SUA-API-DE-PRODUCAO.com";
-    private const string MarcadorPlaceholder = "SUA-API-DE-PRODUCAO";
+    private static readonly string UrlProducao = typeof(ApiService).Assembly
+        .GetCustomAttributes<AssemblyMetadataAttribute>()
+        .FirstOrDefault(a => a.Key == "TriarApiBaseUrl")?.Value ?? "";
 
     // IP do PC na rede local — usado só quando o app roda num celular Android físico
     // (não no emulador) em builds DEBUG, para alcançar a API rodando no PC pela Wi-Fi.
@@ -90,12 +92,11 @@ public static class ApiService
         if (ModoLocal) return;
 
 #if !DEBUG
-        if (BaseUrl.Contains(MarcadorPlaceholder, StringComparison.OrdinalIgnoreCase))
+        if (!Uri.TryCreate(BaseUrl, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
         {
             throw new InvalidOperationException(
-                "ApiService.UrlProducao ainda é o placeholder de exemplo. " +
-                "Configure a URL pública HTTPS real da API antes de gerar um build de Release " +
-                "(veja deploy/firebase/README.md, Passo 0).");
+                "A URL pública HTTPS da API não foi incorporada ao build. " +
+                "Compile com -p:TriarApiBaseUrl=https://sua-api (veja deploy/firebase/README.md).");
         }
 #endif
     }
@@ -482,5 +483,25 @@ public static class ApiService
         resp.EnsureSuccessStatusCode();
         InvalidarCache("triagens_");
         Interlocked.Increment(ref _versaoTriagens);
+    }
+
+    public static async Task<string> ExportarDadosJsonAsync()
+    {
+        if (ModoLocal) return await BancoLocal.ExportarDadosJsonAsync(_usuarioAtualId);
+        return await Http.GetStringAsync($"{BaseUrl}/api/usuarios/me/export");
+    }
+
+    public static async Task<(bool Ok, string? Erro)> ExcluirContaAsync(string senha)
+    {
+        if (ModoLocal) return await BancoLocal.ExcluirContaAsync(_usuarioAtualId, senha);
+
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"{BaseUrl}/api/usuarios/me")
+        {
+            Content = JsonContent.Create(new { senha }, options: JsonOptions)
+        };
+        using var response = await Http.SendAsync(request);
+        return response.IsSuccessStatusCode
+            ? (true, null)
+            : (false, await response.Content.ReadAsStringAsync());
     }
 }

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Triagem.API.Models;
 using Triagem.API.Services;
 using Triagem.Core.Domain;
@@ -16,7 +17,13 @@ public static class DbSeeder
     public static async Task SeedAsync(TriagemDbContext db, FieldEncryptionService encryptor)
     {
         await PrepararSchemaAsync(db);
+        await SeedDataAsync(db, encryptor);
+    }
+
+    public static async Task SeedDataAsync(TriagemDbContext db, FieldEncryptionService encryptor)
+    {
         await MigrarDadosClinicosLegadosAsync(db, encryptor);
+        await PreservarQuestionariosHistoricosAsync(db, encryptor);
 
         // Várias instâncias da API podem subir ao mesmo tempo (load balancer);
         // o applock do SQL Server garante que só uma execute o seed.
@@ -33,6 +40,55 @@ public static class DbSeeder
 
             await tx.CommitAsync();
         });
+    }
+
+    private static async Task PreservarQuestionariosHistoricosAsync(
+        TriagemDbContext db, FieldEncryptionService encryptor)
+    {
+        const int tamanhoLote = 200;
+        var ultimoId = 0;
+
+        while (true)
+        {
+            var resultados = await db.TriagemResultados
+                .Include(r => r.TriagemModelo)!.ThenInclude(t => t!.Perguntas)
+                .Include(r => r.Respostas)
+                .Where(r => r.Id > ultimoId && r.DadosProtegidos != null)
+                .OrderBy(r => r.Id)
+                .Take(tamanhoLote)
+                .ToListAsync();
+            if (resultados.Count == 0) break;
+
+            foreach (var resultado in resultados)
+            {
+                ultimoId = resultado.Id;
+                var json = JsonNode.Parse(encryptor.Decrypt(resultado.DadosProtegidos)) as JsonObject;
+                if (json is null || json["Questionario"] is JsonArray { Count: > 0 }) continue;
+
+                var perguntas = resultado.TriagemModelo?.Perguntas.ToDictionary(p => p.Id) ?? [];
+                var questionario = new JsonArray();
+                foreach (var resposta in resultado.Respostas.OrderBy(r => r.Id))
+                {
+                    if (!perguntas.TryGetValue(resposta.PerguntaId, out var pergunta)) continue;
+                    var valor = resposta.ValorProtegido is not null
+                        ? encryptor.Decrypt(resposta.ValorProtegido) == "1"
+                        : resposta.Valor;
+                    questionario.Add(new JsonObject
+                    {
+                        ["Pergunta"] = pergunta.Texto,
+                        ["Peso"] = pergunta.Peso,
+                        ["Valor"] = valor
+                    });
+                }
+
+                json["TituloTriagem"] = resultado.TriagemModelo?.Titulo ?? "Triagem";
+                json["Questionario"] = questionario;
+                resultado.DadosProtegidos = encryptor.Encrypt(json.ToJsonString());
+            }
+
+            await db.SaveChangesAsync();
+            db.ChangeTracker.Clear();
+        }
     }
 
     private static async Task SincronizarModelosPadraoAsync(TriagemDbContext db)
@@ -145,7 +201,7 @@ public static class DbSeeder
         }
     }
 
-    private static async Task PrepararSchemaAsync(TriagemDbContext db)
+    public static async Task PrepararSchemaAsync(TriagemDbContext db)
     {
         if (!await db.Database.CanConnectAsync())
         {

@@ -64,8 +64,11 @@
                 </VerticalStackLayout>
             </Border>
 
-            <Label Text="⚠️ Este resultado é uma orientação inicial e não substitui uma avaliação profissional."
-                   FontSize="12" TextColor="#6B7280" HorizontalTextAlignment="Center"/>
+            <Border BackgroundColor="#FFF7ED" Stroke="#F59E0B" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="12">
+                <Label Text="Protótipo acadêmico não homologado clinicamente. A pontuação é educativa e não deve orientar diagnóstico, tratamento ou decisões de urgência. Procure um profissional habilitado se houver preocupação."
+                       FontSize="12" FontAttributes="Bold" TextColor="#92400E" HorizontalTextAlignment="Center"
+                       SemanticProperties.Description="Aviso: resultado sem validação clínica"/>
+            </Border>
 
             <!-- AÇÕES -->
             <Button Text="🔁 Aplicar esta triagem em outra pessoa"

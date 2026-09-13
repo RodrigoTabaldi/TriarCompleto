@@ -2,6 +2,7 @@ using Triagem.API.Data;
 using Triagem.API.Dtos;
 using Triagem.API.Models;
 using Triagem.API.Services;
+using System.Text.Json;
 
 namespace Triagem.API.Tests;
 
@@ -287,6 +288,11 @@ public class TriagemServiceTests
         Assert.Equal("", persistido.NomePaciente);
         Assert.NotNull(persistido.DadosProtegidos);
         Assert.DoesNotContain("Maria da Silva", persistido.DadosProtegidos);
+        using var envelope = JsonDocument.Parse(TestHelpers.NovoEncryptor().Decrypt(persistido.DadosProtegidos));
+        var questionario = envelope.RootElement.GetProperty("Questionario");
+        Assert.Equal(criada.Perguntas.Count, questionario.GetArrayLength());
+        Assert.Equal("Pergunta 1?", questionario[0].GetProperty("Pergunta").GetString());
+        Assert.True(questionario[0].GetProperty("Valor").GetBoolean());
         Assert.All(persistido.Respostas, r =>
         {
             Assert.False(r.Valor);
@@ -457,6 +463,19 @@ public class TriagemServiceTests
     }
 
     [Fact]
+    public async Task ListarParaUsuarioAsync_NaoIncluiImagemBase64Pesada()
+    {
+        var (_, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+        var pngUmPixel = "data:image/png;base64," + Convert.ToBase64String(
+            [137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]);
+        var (criada, erro) = await service.CriarAsync(usuarioA, RequestValido() with { Imagem = pngUmPixel });
+
+        Assert.Null(erro);
+        Assert.NotNull(criada!.Imagem);
+        Assert.Null(Assert.Single(await service.ListarParaUsuarioAsync(usuarioA), x => x.Id == criada.Id).Imagem);
+    }
+
+    [Fact]
     public async Task CriarAsync_AcimaDaCotaPorUsuario_RejeitaSemPersistir()
     {
         var (db, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
@@ -484,5 +503,40 @@ public class TriagemServiceTests
             usuarioA, pagina: int.MaxValue, tamanhoPagina: 200);
 
         Assert.Empty(resultado);
+    }
+
+    [Fact]
+    public async Task ExportarDadosAsync_IncluiEnvelopeClinicoDescriptografado()
+    {
+        var (_, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+        var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
+        await service.ResponderAsync(usuarioA, criada!.Id,
+            new ResponderTriagemRequest("Pessoa", 30, "F",
+                criada.Perguntas.Select(p => new RespostaInput(p.Id, true)).ToList()));
+
+        var exportacao = await service.ExportarDadosAsync(usuarioA);
+
+        Assert.NotNull(exportacao);
+        Assert.Equal("Pessoa", Assert.Single(exportacao!.Resultados).Dados.GetProperty("NomePaciente").GetString());
+        Assert.Single(exportacao.TriagensCriadas);
+    }
+
+    [Fact]
+    public async Task ExcluirContaAsync_ExigeSenhaERemoveDadosDoUsuario()
+    {
+        var (db, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+        var usuario = await db.Usuarios.FindAsync(usuarioA);
+        usuario!.SenhaHash = PasswordHasher.Hash("senha-correta");
+        await db.SaveChangesAsync();
+        var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
+        await service.ResponderAsync(usuarioA, criada!.Id,
+            new ResponderTriagemRequest("Pessoa", 30, "F",
+                criada.Perguntas.Select(p => new RespostaInput(p.Id, true)).ToList()));
+
+        Assert.False((await service.ExcluirContaAsync(usuarioA, "errada")).Ok);
+        Assert.True((await service.ExcluirContaAsync(usuarioA, "senha-correta")).Ok);
+        Assert.DoesNotContain(db.Usuarios, u => u.Id == usuarioA);
+        Assert.DoesNotContain(db.TriagemResultados, r => r.UsuarioId == usuarioA);
+        Assert.DoesNotContain(db.TriagemModelos, t => t.CriadorUsuarioId == usuarioA);
     }
 }
