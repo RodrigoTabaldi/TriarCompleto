@@ -452,8 +452,14 @@ public class TriagemServiceTests
 
         db.TriagemResultados.Add(new TriagemResultado
         {
-            TriagemModeloId = criada!.Id, UsuarioId = usuarioA, NomePaciente = "Paciente de A",
-            Idade = 20, Sexo = "F", Pontuacao = 0, PontuacaoMaxima = 5, Classificacao = "Baixo risco"
+            TriagemModeloId = criada!.Id,
+            UsuarioId = usuarioA,
+            NomePaciente = "Paciente de A",
+            Idade = 20,
+            Sexo = "F",
+            Pontuacao = 0,
+            PontuacaoMaxima = 5,
+            Classificacao = "Baixo risco"
         });
         await db.SaveChangesAsync();
 
@@ -483,7 +489,9 @@ public class TriagemServiceTests
             1, Triagem.Core.Domain.TriagemRules.MaximoTriagensPersonalizadasPorUsuario)
             .Select(i => new TriagemModelo
             {
-                Titulo = $"Personalizada {i}", CriadorUsuarioId = usuarioA, Ativa = true
+                Titulo = $"Personalizada {i}",
+                CriadorUsuarioId = usuarioA,
+                Ativa = true
             }));
         await db.SaveChangesAsync();
 

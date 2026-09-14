@@ -39,8 +39,8 @@ internal sealed class TriarWebApplicationFactory : WebApplicationFactory<Program
                 ["DataProtection:Key"] = "chave-de-teste-de-integracao-para-cripto-32-chars",
                 // O seed real usa sp_getapplock e ALTER TABLE via SQL puro — não
                 // suportado pelo provedor InMemory. Cada teste semeia os próprios dados.
-            ["Database:SeedOnStartup"] = "false",
-            ["Database:MigrateOnStartup"] = "false",
+                ["Database:SeedOnStartup"] = "false",
+                ["Database:MigrateOnStartup"] = "false",
             });
         });
 
