@@ -1,0 +1,3 @@
+# O CI e as imagens de produção rodam em Linux. Manter texto em LF evita que
+# dotnet format tenha resultado diferente entre o checkout Windows e o GitHub Actions.
+* text=auto eol=lf
