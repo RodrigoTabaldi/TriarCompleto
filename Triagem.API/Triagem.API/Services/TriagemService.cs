@@ -15,6 +15,13 @@ public partial class TriagemService(
     ILogger<TriagemService> logger)
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
+    private static readonly HashSet<string> EscolaridadesPermitidas = new(StringComparer.Ordinal)
+    {
+        "Ensino fundamental incompleto", "Ensino fundamental completo",
+        "Ensino médio incompleto", "Ensino médio completo",
+        "Ensino superior incompleto", "Ensino superior completo",
+        "Pós-graduação incompleta", "Pós-graduação completa"
+    };
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Usuário {UsuarioId} criou a triagem {TriagemId} ({Titulo})")]
     private static partial void LogTriagemCriada(ILogger logger, int usuarioId, int triagemId, string titulo);
@@ -36,7 +43,8 @@ public partial class TriagemService(
             var modelos = await db.TriagemModelos
                 .AsNoTracking()
                 .Where(t => t.Ativa && (t.CriadorUsuarioId == null || t.CriadorUsuarioId == usuarioId))
-                .OrderBy(t => t.CriadorUsuarioId == null ? 0 : 1).ThenBy(t => t.Id)
+                .OrderBy(t => t.Titulo == "Protocolo de Triagem Fonoaudiológica Integrada" ? 0 : 1)
+                .ThenBy(t => t.CriadorUsuarioId == null ? 0 : 1).ThenBy(t => t.Id)
                 .Select(t => new
                 {
                     t.Id,
@@ -89,7 +97,9 @@ public partial class TriagemService(
                 t.Id, t.Titulo, t.PublicoAlvo, t.Descricao, t.Icone, t.Imagem,
                 t.CriadorUsuarioId == null, t.CriadorUsuarioId,
                 t.Perguntas.OrderBy(p => p.Ordem)
-                    .Select(p => new PerguntaDto(p.Id, p.Texto, p.Peso, p.Ordem)).ToList(),
+                    .Select(p => new PerguntaDto(
+                        p.Id, p.Texto, p.Peso, p.Ordem, p.Categoria,
+                        DesserializarOpcoes(p.OpcoesJson))).ToList(),
                 t.Faixas.OrderBy(f => f.Ordem)
                     .Select(f => new FaixaDto(f.Id, f.Titulo, f.Recomendacao, f.PontuacaoMin, f.PontuacaoMax, f.Cor, f.Ordem)).ToList());
         });
@@ -323,6 +333,10 @@ public partial class TriagemService(
         if (req.NomePaciente.Trim().Length > 150) return (null, "O nome deve ter no máximo 150 caracteres.");
         if (req.Idade is < 0 or > 130) return (null, "Idade inválida.");
         if ((req.Sexo?.Trim().Length ?? 0) > 30) return (null, "O sexo deve ter no máximo 30 caracteres.");
+        if (!EscolaridadesPermitidas.Contains(req.Escolaridade?.Trim() ?? ""))
+            return (null, "Informe uma escolaridade válida.");
+        if ((req.DoencasPrevias?.Trim().Length ?? 0) > 2000)
+            return (null, "As doenças prévias devem ter no máximo 2000 caracteres.");
         if (!await db.Usuarios.AnyAsync(u => u.Id == usuarioId, ct)) return (null, "Usuário não encontrado.");
 
         var perguntasPorId = modelo.Perguntas.ToDictionary(p => p.Id);
@@ -340,16 +354,34 @@ public partial class TriagemService(
             if (!perguntasPorId.TryGetValue(r.PerguntaId, out var pergunta))
                 return (null, $"Pergunta {r.PerguntaId} não pertence a esta triagem.");
 
-            if (r.Valor) pontuacao += pergunta.Peso;
+            var opcoes = DesserializarOpcoes(pergunta.OpcoesJson);
+            var selecionadas = (r.OpcoesSelecionadas ?? [])
+                .Where(o => !string.IsNullOrWhiteSpace(o))
+                .Select(o => o.Trim())
+                .ToList();
+            if (opcoes.Count > 0)
+            {
+                if (selecionadas.Count != selecionadas.Distinct(StringComparer.Ordinal).Count() ||
+                    selecionadas.Any(o => !opcoes.Contains(o, StringComparer.Ordinal)))
+                    return (null, $"A pergunta {r.PerguntaId} contém uma opção inválida ou repetida.");
+                pontuacao += selecionadas.Count * pergunta.Peso;
+            }
+            else if (r.Valor)
+            {
+                pontuacao += pergunta.Peso;
+            }
             respostas.Add(new RespostaDada
             {
                 PerguntaId = r.PerguntaId,
                 Valor = false,
-                ValorProtegido = encryptor.Encrypt(r.Valor ? "1" : "0")
+                ValorProtegido = encryptor.Encrypt(opcoes.Count > 0
+                    ? JsonSerializer.Serialize(selecionadas)
+                    : r.Valor ? "1" : "0")
             });
         }
 
-        var pontuacaoMaxima = modelo.Perguntas.Sum(p => p.Peso);
+        var pontuacaoMaxima = modelo.Perguntas.Sum(p =>
+            p.Peso * Math.Max(1, DesserializarOpcoes(p.OpcoesJson).Count));
         if (pontuacao is < 0 || pontuacao > pontuacaoMaxima)
             return (null, "A pontuação calculada é inválida.");
 
@@ -363,6 +395,8 @@ public partial class TriagemService(
             NomePaciente = req.NomePaciente.Trim(),
             Idade = req.Idade,
             Sexo = req.Sexo?.Trim() ?? "",
+            Escolaridade = req.Escolaridade!.Trim(),
+            DoencasPrevias = string.IsNullOrWhiteSpace(req.DoencasPrevias) ? null : req.DoencasPrevias.Trim(),
             Pontuacao = pontuacao,
             PontuacaoMaxima = pontuacaoMaxima,
             Classificacao = faixa?.Titulo ?? "Sem classificação",
@@ -373,7 +407,9 @@ public partial class TriagemService(
             Questionario = respostasRecebidas.Select(r =>
             {
                 var pergunta = perguntasPorId[r.PerguntaId];
-                return new RespostaSnapshot(pergunta.Texto, pergunta.Peso, r.Valor);
+                return new RespostaSnapshot(
+                    pergunta.Texto, pergunta.Peso, r.Valor,
+                    r.OpcoesSelecionadas ?? []);
             }).ToList()
         };
 
@@ -393,7 +429,8 @@ public partial class TriagemService(
             resultado.Id, modelo.Id, modelo.Titulo,
             dadosSensiveis.NomePaciente, dadosSensiveis.Idade, dadosSensiveis.Sexo,
             dadosSensiveis.Pontuacao, dadosSensiveis.PontuacaoMaxima,
-            dadosSensiveis.Classificacao, dadosSensiveis.Recomendacao, dadosSensiveis.Cor, resultado.Data), null);
+            dadosSensiveis.Classificacao, dadosSensiveis.Recomendacao, dadosSensiveis.Cor, resultado.Data,
+            dadosSensiveis.Escolaridade, dadosSensiveis.DoencasPrevias), null);
     }
 
     private const int TamanhoPaginaPadrao = 100;
@@ -452,7 +489,10 @@ public partial class TriagemService(
                 r.Id, r.TriagemModeloId, r.TituloTriagem,
                 dados.NomePaciente, dados.Idade, dados.Sexo,
                 dados.Pontuacao, dados.PontuacaoMaxima, dados.Classificacao,
-                dados.Cor, r.Data);
+                dados.Cor, r.Data, dados.Escolaridade,
+                string.IsNullOrWhiteSpace(dados.DoencasPrevias)
+                    ? "Sem doença prévia registrada"
+                    : dados.DoencasPrevias!);
         }).ToList();
 
         // Trilha de auditoria mínima: quem acessou dados de pacientes (nome + respostas
@@ -490,6 +530,8 @@ public partial class TriagemService(
         public string NomePaciente { get; set; } = "";
         public int Idade { get; set; }
         public string Sexo { get; set; } = "";
+        public string Escolaridade { get; set; } = "";
+        public string? DoencasPrevias { get; set; }
         public int Pontuacao { get; set; }
         public int PontuacaoMaxima { get; set; }
         public string Classificacao { get; set; } = "";
@@ -500,7 +542,8 @@ public partial class TriagemService(
         public List<RespostaSnapshot> Questionario { get; set; } = [];
     }
 
-    private sealed record RespostaSnapshot(string Pergunta, int Peso, bool Valor);
+    private sealed record RespostaSnapshot(
+        string Pergunta, int Peso, bool Valor, List<string> OpcoesSelecionadas);
 
     // ---------------- Mapeamento (compartilhado por Criar/Atualizar) ----------------
 
@@ -508,6 +551,11 @@ public partial class TriagemService(
         perguntas
             .Select((p, i) => new Pergunta { Texto = p.Texto.Trim(), Peso = p.Peso, Ordem = i + 1 })
             .ToList();
+
+    private static List<string> DesserializarOpcoes(string? json) =>
+        string.IsNullOrWhiteSpace(json)
+            ? []
+            : JsonSerializer.Deserialize<List<string>>(json) ?? [];
 
     private static List<FaixaResultado> MapearFaixas(List<FaixaInput> faixas) =>
         faixas

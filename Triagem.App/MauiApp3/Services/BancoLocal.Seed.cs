@@ -93,8 +93,11 @@ public static partial class BancoLocal
                 .ToList();
             var perguntasMudaram = atuais.Count != item.Questions.Count ||
                 atuais.Where((p, i) =>
-                    p.Texto != item.Questions[i].Text || p.Peso != item.Questions[i].Weight).Any();
-            var faixasEsperadas = FaixasPadrao(modelo.Id, item.Questions.Sum(p => p.Weight));
+                    p.Texto != item.Questions[i].Text ||
+                    p.Peso != item.Questions[i].Weight ||
+                    p.Categoria != (item.Questions[i].Category ?? "") ||
+                    p.OpcoesJson != SerializarOpcoes(item.Questions[i].Options)).Any();
+            var faixasEsperadas = FaixasPadrao(modelo.Id, PontuacaoMaxima(item));
             var faixasAtuais = (await db.Table<FaixaLocal>()
                     .Where(f => f.TriagemModeloId == modelo.Id)
                     .ToListAsync())
@@ -125,7 +128,7 @@ public static partial class BancoLocal
         SQLiteAsyncConnection db, int modeloId, DefaultTriage item)
     {
         await db.InsertAllAsync(CriarPerguntasPadrao(modeloId, item));
-        await db.InsertAllAsync(FaixasPadrao(modeloId, item.Questions.Sum(p => p.Weight)));
+        await db.InsertAllAsync(FaixasPadrao(modeloId, PontuacaoMaxima(item)));
     }
 
     private static List<PerguntaLocal> CriarPerguntasPadrao(int modeloId, DefaultTriage item) =>
@@ -134,8 +137,16 @@ public static partial class BancoLocal
             TriagemModeloId = modeloId,
             Texto = p.Text,
             Peso = p.Weight,
+            Categoria = p.Category ?? "",
+            OpcoesJson = SerializarOpcoes(p.Options),
             Ordem = i + 1
         }).ToList();
+
+    private static int PontuacaoMaxima(DefaultTriage item) =>
+        item.Questions.Sum(p => p.Weight * Math.Max(1, p.Options?.Count ?? 0));
+
+    private static string? SerializarOpcoes(IReadOnlyList<string>? opcoes) =>
+        opcoes is { Count: > 0 } ? JsonSerializer.Serialize(opcoes, JsonOptions) : null;
 
     private static List<FaixaLocal> FaixasPadrao(int modeloId, int pesoTotal)
     {

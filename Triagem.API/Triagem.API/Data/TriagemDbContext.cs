@@ -46,6 +46,8 @@ public class TriagemDbContext(DbContextOptions<TriagemDbContext> options) : DbCo
         {
             e.ToTable("Perguntas");
             e.Property(p => p.Texto).HasMaxLength(500);
+            e.Property(p => p.Categoria).HasMaxLength(120);
+            e.Property(p => p.OpcoesJson).HasMaxLength(1000);
         });
 
         modelBuilder.Entity<FaixaResultado>(e =>

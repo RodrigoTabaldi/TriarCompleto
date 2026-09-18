@@ -87,6 +87,16 @@
                                 </VerticalStackLayout>
                             </Grid>
 
+                            <VerticalStackLayout>
+                                <Label Text="Escolaridade" FontSize="11" TextColor="#6B7280"/>
+                                <Label Text="{Binding Escolaridade}" FontAttributes="Bold" TextColor="#0F172A"/>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout>
+                                <Label Text="Doenças prévias" FontSize="11" TextColor="#6B7280"/>
+                                <Label Text="{Binding DoencasPrevias}" FontAttributes="Bold" TextColor="#0F172A"/>
+                            </VerticalStackLayout>
+
                         </VerticalStackLayout>
                     </Border>
                 </DataTemplate>

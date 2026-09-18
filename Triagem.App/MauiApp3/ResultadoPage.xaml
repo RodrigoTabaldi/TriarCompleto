@@ -61,6 +61,14 @@
                         <Label Grid.Column="2" Grid.Row="1" x:Name="DataTriagem" FontAttributes="Bold" TextColor="#0F172A" HorizontalOptions="Center"/>
                     </Grid>
 
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" RowSpacing="4">
+                        <Label Text="Escolaridade" FontSize="12" TextColor="#6B7280" HorizontalOptions="Center"/>
+                        <Label Grid.Row="1" x:Name="EscolaridadePaciente" FontAttributes="Bold" TextColor="#0F172A" HorizontalOptions="Center" HorizontalTextAlignment="Center"/>
+
+                        <Label Grid.Column="1" Text="Doenças prévias" FontSize="12" TextColor="#6B7280" HorizontalOptions="Center"/>
+                        <Label Grid.Column="1" Grid.Row="1" x:Name="DoencasPreviasPaciente" FontAttributes="Bold" TextColor="#0F172A" HorizontalOptions="Center" HorizontalTextAlignment="Center"/>
+                    </Grid>
+
                 </VerticalStackLayout>
             </Border>
 

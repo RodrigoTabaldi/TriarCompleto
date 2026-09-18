@@ -121,6 +121,8 @@ public class PerguntaDto
     public string Texto { get; set; } = "";
     public int Peso { get; set; }
     public int Ordem { get; set; }
+    public string Categoria { get; set; } = "";
+    public List<string> Opcoes { get; set; } = [];
 }
 
 public class FaixaDto
@@ -178,6 +180,7 @@ public sealed class RespostaTriagemPayload
 {
     public int PerguntaId { get; set; }
     public bool Valor { get; set; }
+    public List<string> OpcoesSelecionadas { get; set; } = [];
 }
 
 public sealed class ResponderTriagemPayload
@@ -185,6 +188,8 @@ public sealed class ResponderTriagemPayload
     public string NomePaciente { get; set; } = "";
     public int Idade { get; set; }
     public string Sexo { get; set; } = "";
+    public string Escolaridade { get; set; } = "";
+    public string? DoencasPrevias { get; set; }
     public List<RespostaTriagemPayload> Respostas { get; set; } = [];
 }
 
@@ -198,6 +203,8 @@ public class ResultadoTriagem
     public string NomePaciente { get; set; } = "";
     public int Idade { get; set; }
     public string Sexo { get; set; } = "";
+    public string Escolaridade { get; set; } = "";
+    public string? DoencasPrevias { get; set; }
     public int Pontuacao { get; set; }
     public int PontuacaoMaxima { get; set; }
     public string Classificacao { get; set; } = "";
@@ -214,6 +221,8 @@ public class HistoricoItem
     public string Nome { get; set; } = "";
     public int Idade { get; set; }
     public string Sexo { get; set; } = "";
+    public string Escolaridade { get; set; } = "";
+    public string DoencasPrevias { get; set; } = "";
     public int Pontuacao { get; set; }
     public int PontuacaoMaxima { get; set; }
     public string Resultado { get; set; } = "";
@@ -291,6 +300,11 @@ public class PerguntaRespondivel : ObservableBase
     public int Numero { get; set; }
     public string Texto { get; set; } = "";
     public int Peso { get; set; }
+    public string Categoria { get; set; } = "";
+    public bool ExibirCategoria { get; set; }
+    public bool MultiplaEscolha => Opcoes.Count > 0;
+    public bool Binaria => !MultiplaEscolha;
+    public List<OpcaoRespondivel> Opcoes { get; set; } = [];
 
     public bool? Resposta
     {
@@ -314,4 +328,11 @@ public class PerguntaRespondivel : ObservableBase
     public bool NaoSelecionado => Resposta == false;
 
     public event Action<bool?, bool?>? RespostaAlterada;
+}
+
+public sealed class OpcaoRespondivel : ObservableBase
+{
+    private bool _selecionada;
+    public string Texto { get; init; } = "";
+    public bool Selecionada { get => _selecionada; set => Set(ref _selecionada, value); }
 }

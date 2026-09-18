@@ -28,6 +28,13 @@ public static partial class BancoLocal
 
     private static SQLiteAsyncConnection? _conexao;
     private static readonly SemaphoreSlim Inicializacao = new(1, 1);
+    private static readonly HashSet<string> EscolaridadesPermitidas = new(StringComparer.Ordinal)
+    {
+        "Ensino fundamental incompleto", "Ensino fundamental completo",
+        "Ensino médio incompleto", "Ensino médio completo",
+        "Ensino superior incompleto", "Ensino superior completo",
+        "Pós-graduação incompleta", "Pós-graduação completa"
+    };
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -54,6 +61,7 @@ public static partial class BancoLocal
             await conexao.CreateTableAsync<TriagemModeloLocal>();
             await GarantirColunaImagemAsync(conexao);
             await conexao.CreateTableAsync<PerguntaLocal>();
+            await GarantirEstruturaPerguntasAsync(conexao);
             await conexao.CreateTableAsync<FaixaLocal>();
             await conexao.CreateTableAsync<HomePrefLocal>();
             await conexao.CreateTableAsync<ResultadoLocal>();
@@ -92,6 +100,16 @@ public static partial class BancoLocal
             "SELECT COUNT(*) FROM pragma_table_info('respostas') WHERE name = 'ValorProtegido'");
         if (respostaProtegida == 0)
             await conexao.ExecuteAsync("ALTER TABLE respostas ADD COLUMN ValorProtegido TEXT NULL");
+    }
+
+    private static async Task GarantirEstruturaPerguntasAsync(SQLiteAsyncConnection conexao)
+    {
+        if (await conexao.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM pragma_table_info('perguntas') WHERE name = 'Categoria'") == 0)
+            await conexao.ExecuteAsync("ALTER TABLE perguntas ADD COLUMN Categoria TEXT NOT NULL DEFAULT ''");
+        if (await conexao.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM pragma_table_info('perguntas') WHERE name = 'OpcoesJson'") == 0)
+            await conexao.ExecuteAsync("ALTER TABLE perguntas ADD COLUMN OpcoesJson TEXT NULL");
     }
 
     private static async Task GarantirIndicesAsync(SQLiteAsyncConnection conexao)
@@ -274,7 +292,11 @@ public static partial class BancoLocal
         var preferencias = (await db.Table<HomePrefLocal>().Where(h => h.UsuarioId == usuarioId).ToListAsync())
             .ToDictionary(h => h.TriagemModeloId);
 
-        return modelos.Select(t => new TriagemResumo
+        return modelos
+            .OrderBy(t => t.Titulo == "Protocolo de Triagem Fonoaudiológica Integrada" ? 0 : 1)
+            .ThenBy(t => t.CriadorUsuarioId is null ? 0 : 1)
+            .ThenBy(t => t.Id)
+            .Select(t => new TriagemResumo
         {
             Id = t.Id,
             Titulo = t.Titulo,
@@ -320,7 +342,11 @@ public static partial class BancoLocal
             Padrao = modelo.CriadorUsuarioId is null,
             CriadorUsuarioId = modelo.CriadorUsuarioId,
             Perguntas = perguntas
-                .Select(p => new PerguntaDto { Id = p.Id, Texto = p.Texto, Peso = p.Peso, Ordem = p.Ordem })
+                .Select(p => new PerguntaDto
+                {
+                    Id = p.Id, Texto = p.Texto, Peso = p.Peso, Ordem = p.Ordem,
+                    Categoria = p.Categoria, Opcoes = DesserializarOpcoes(p.OpcoesJson)
+                })
                 .ToList(),
             Faixas = faixas
                 .Select(f => new FaixaDto
@@ -496,6 +522,8 @@ public static partial class BancoLocal
         if (req.NomePaciente.Trim().Length > 150) return (null, "O nome deve ter no máximo 150 caracteres.");
         if (req.Idade is < 0 or > 130) return (null, "Idade inválida.");
         if ((req.Sexo?.Trim().Length ?? 0) > 30) return (null, "O sexo deve ter no máximo 30 caracteres.");
+        if (!EscolaridadesPermitidas.Contains(req.Escolaridade?.Trim() ?? "")) return (null, "Informe uma escolaridade válida.");
+        if ((req.DoencasPrevias?.Trim().Length ?? 0) > 2000) return (null, "As doenças prévias devem ter no máximo 2000 caracteres.");
 
         var db = await ConexaoAsync();
 
@@ -516,10 +544,21 @@ public static partial class BancoLocal
         {
             if (!perguntasPorId.TryGetValue(r.PerguntaId, out var pergunta))
                 return (null, $"Pergunta {r.PerguntaId} não pertence a esta triagem.");
-            if (r.Valor) pontuacao += pergunta.Peso;
+            var opcoes = DesserializarOpcoes(pergunta.OpcoesJson);
+            var selecionadas = (r.OpcoesSelecionadas ?? [])
+                .Where(o => !string.IsNullOrWhiteSpace(o)).Select(o => o.Trim()).ToList();
+            if (opcoes.Count > 0)
+            {
+                if (selecionadas.Count != selecionadas.Distinct(StringComparer.Ordinal).Count() ||
+                    selecionadas.Any(o => !opcoes.Contains(o, StringComparer.Ordinal)))
+                    return (null, $"A pergunta {r.PerguntaId} contém uma opção inválida ou repetida.");
+                pontuacao += selecionadas.Count * pergunta.Peso;
+            }
+            else if (r.Valor) pontuacao += pergunta.Peso;
         }
 
-        var pontuacaoMaxima = perguntas.Sum(p => p.Peso);
+        var pontuacaoMaxima = perguntas.Sum(p =>
+            p.Peso * Math.Max(1, DesserializarOpcoes(p.OpcoesJson).Count));
         if (pontuacao is < 0 || pontuacao > pontuacaoMaxima)
             return (null, "A pontuação calculada é inválida.");
 
@@ -534,6 +573,8 @@ public static partial class BancoLocal
             NomePaciente = req.NomePaciente.Trim(),
             Idade = req.Idade,
             Sexo = req.Sexo?.Trim() ?? "",
+            Escolaridade = req.Escolaridade!.Trim(),
+            DoencasPrevias = string.IsNullOrWhiteSpace(req.DoencasPrevias) ? null : req.DoencasPrevias.Trim(),
             Pontuacao = pontuacao,
             PontuacaoMaxima = pontuacaoMaxima,
             Classificacao = faixa?.Titulo ?? "Sem classificação",
@@ -544,7 +585,8 @@ public static partial class BancoLocal
             Questionario = respostasRecebidas.Select(r =>
             {
                 var pergunta = perguntasPorId[r.PerguntaId];
-                return new RespostaSnapshotLocal(pergunta.Texto, pergunta.Peso, r.Valor);
+                return new RespostaSnapshotLocal(
+                    pergunta.Texto, pergunta.Peso, r.Valor, r.OpcoesSelecionadas ?? []);
             }).ToList()
         };
 
@@ -560,7 +602,10 @@ public static partial class BancoLocal
         {
             PerguntaId = r.PerguntaId,
             Valor = false,
-            ValorProtegido = LocalDataProtection.Proteger(r.Valor ? "1" : "0")
+            ValorProtegido = LocalDataProtection.Proteger(
+                (r.OpcoesSelecionadas?.Count ?? 0) > 0
+                    ? JsonSerializer.Serialize(r.OpcoesSelecionadas, JsonOptions)
+                    : r.Valor ? "1" : "0")
         }).ToList();
 
         await db.RunInTransactionAsync(conn =>
@@ -579,6 +624,8 @@ public static partial class BancoLocal
             NomePaciente = dadosSensiveis.NomePaciente,
             Idade = dadosSensiveis.Idade,
             Sexo = dadosSensiveis.Sexo,
+            Escolaridade = dadosSensiveis.Escolaridade,
+            DoencasPrevias = dadosSensiveis.DoencasPrevias,
             Pontuacao = dadosSensiveis.Pontuacao,
             PontuacaoMaxima = dadosSensiveis.PontuacaoMaxima,
             Classificacao = dadosSensiveis.Classificacao,
@@ -628,6 +675,10 @@ public static partial class BancoLocal
                 Nome = dados.NomePaciente,
                 Idade = dados.Idade,
                 Sexo = dados.Sexo,
+                Escolaridade = dados.Escolaridade,
+                DoencasPrevias = string.IsNullOrWhiteSpace(dados.DoencasPrevias)
+                    ? "Sem doença prévia registrada"
+                    : dados.DoencasPrevias!,
                 Pontuacao = dados.Pontuacao,
                 PontuacaoMaxima = dados.PontuacaoMaxima,
                 Resultado = dados.Classificacao,
@@ -687,6 +738,8 @@ public static partial class BancoLocal
         public string NomePaciente { get; set; } = "";
         public int Idade { get; set; }
         public string Sexo { get; set; } = "";
+        public string Escolaridade { get; set; } = "";
+        public string? DoencasPrevias { get; set; }
         public int Pontuacao { get; set; }
         public int PontuacaoMaxima { get; set; }
         public string Classificacao { get; set; } = "";
@@ -749,7 +802,13 @@ public static partial class BancoLocal
         return (true, null);
     }
 
-    private sealed record RespostaSnapshotLocal(string Pergunta, int Peso, bool Valor);
+    private sealed record RespostaSnapshotLocal(
+        string Pergunta, int Peso, bool Valor, List<string> OpcoesSelecionadas);
+
+    private static List<string> DesserializarOpcoes(string? json) =>
+        string.IsNullOrWhiteSpace(json)
+            ? []
+            : JsonSerializer.Deserialize<List<string>>(json, JsonOptions) ?? [];
 
     // ---------------- Senha (PBKDF2, igual à API) ----------------
 
@@ -817,6 +876,8 @@ public static partial class BancoLocal
         [PrimaryKey, AutoIncrement] public int Id { get; set; }
         [Indexed] public int TriagemModeloId { get; set; }
         public string Texto { get; set; } = "";
+        public string Categoria { get; set; } = "";
+        public string? OpcoesJson { get; set; }
         public int Peso { get; set; } = 1;
         public int Ordem { get; set; }
     }

@@ -243,7 +243,8 @@ public class TriagemServiceTests
             [
                 new RespostaInput(perguntas[0].Id, true),   // peso 2
                 new RespostaInput(perguntas[1].Id, false)   // peso 3, não conta
-            ]);
+            ],
+            Escolaridade: "Ensino superior completo");
 
         var (resultado, erro) = await service.ResponderAsync(usuarioA, criada.Id, respostas);
 
@@ -263,12 +264,51 @@ public class TriagemServiceTests
 
         var respostas = new ResponderTriagemRequest(
             NomePaciente: "Paciente Teste", Idade: 30, Sexo: "F",
-            Respostas: perguntas.Select(p => new RespostaInput(p.Id, true)).ToList());
+            Respostas: perguntas.Select(p => new RespostaInput(p.Id, true)).ToList(),
+            Escolaridade: "Ensino superior completo");
 
         var (resultado, _) = await service.ResponderAsync(usuarioA, criada.Id, respostas);
 
         Assert.Equal(5, resultado!.Pontuacao);
         Assert.Equal("Alto risco", resultado.Classificacao);
+    }
+
+    [Fact]
+    public async Task ResponderAsync_PerguntaMultipla_SomaUmPesoPorOpcaoMarcada()
+    {
+        var (db, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+        var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
+        var perguntaMultipla = await db.Perguntas.FindAsync(criada!.Perguntas[0].Id);
+        perguntaMultipla!.Peso = 1;
+        perguntaMultipla.OpcoesJson = JsonSerializer.Serialize(new[] { "Líquidos", "Pastosos", "Sólidos", "Saliva" });
+        await db.SaveChangesAsync();
+
+        var respostas = new List<RespostaInput>
+        {
+            new(perguntaMultipla.Id, false, ["Líquidos", "Saliva"]),
+            new(criada.Perguntas[1].Id, false)
+        };
+
+        var (resultado, erro) = await service.ResponderAsync(usuarioA, criada.Id,
+            new ResponderTriagemRequest("Paciente", 30, "F", respostas, "Ensino superior completo"));
+
+        Assert.Null(erro);
+        Assert.Equal(2, resultado!.Pontuacao);
+        Assert.Equal(7, resultado.PontuacaoMaxima);
+    }
+
+    [Fact]
+    public async Task ResponderAsync_SemEscolaridade_RetornaErro()
+    {
+        var (_, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+        var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
+
+        var (resultado, erro) = await service.ResponderAsync(usuarioA, criada!.Id,
+            new ResponderTriagemRequest("Paciente", 30, "F",
+                criada.Perguntas.Select(p => new RespostaInput(p.Id, false)).ToList(), ""));
+
+        Assert.Null(resultado);
+        Assert.Equal("Informe uma escolaridade válida.", erro);
     }
 
     [Fact]
@@ -279,7 +319,8 @@ public class TriagemServiceTests
         var respostas = criada!.Perguntas.Select(p => new RespostaInput(p.Id, true)).ToList();
 
         var (resultado, erro) = await service.ResponderAsync(usuarioA, criada.Id,
-            new ResponderTriagemRequest("Maria da Silva", 42, "F", respostas));
+            new ResponderTriagemRequest("Maria da Silva", 42, "F", respostas,
+                "Ensino superior completo", "Hipertensão controlada"));
 
         Assert.Null(erro);
         Assert.Equal("Maria da Silva", resultado!.NomePaciente);
@@ -288,7 +329,10 @@ public class TriagemServiceTests
         Assert.Equal("", persistido.NomePaciente);
         Assert.NotNull(persistido.DadosProtegidos);
         Assert.DoesNotContain("Maria da Silva", persistido.DadosProtegidos);
+        Assert.DoesNotContain("Hipertensão controlada", persistido.DadosProtegidos);
         using var envelope = JsonDocument.Parse(TestHelpers.NovoEncryptor().Decrypt(persistido.DadosProtegidos));
+        Assert.Equal("Ensino superior completo", envelope.RootElement.GetProperty("Escolaridade").GetString());
+        Assert.Equal("Hipertensão controlada", envelope.RootElement.GetProperty("DoencasPrevias").GetString());
         var questionario = envelope.RootElement.GetProperty("Questionario");
         Assert.Equal(criada.Perguntas.Count, questionario.GetArrayLength());
         Assert.Equal("Pergunta 1?", questionario[0].GetProperty("Pergunta").GetString());
@@ -302,6 +346,23 @@ public class TriagemServiceTests
         var historico = await service.HistoricoAsync(usuarioA, criada.Id);
         Assert.Equal("Maria da Silva", Assert.Single(historico).Nome);
         Assert.Equal(resultado.Pontuacao, historico[0].Pontuacao);
+        Assert.Equal("Hipertensão controlada", historico[0].DoencasPrevias);
+    }
+
+    [Fact]
+    public async Task HistoricoAsync_SemDoencasPrevias_ExibeTextoPadrao()
+    {
+        var (_, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+        var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
+
+        await service.ResponderAsync(usuarioA, criada!.Id,
+            new ResponderTriagemRequest("Paciente", 30, "F",
+                criada.Perguntas.Select(p => new RespostaInput(p.Id, false)).ToList(),
+                "Ensino superior completo"));
+
+        var historico = await service.HistoricoAsync(usuarioA, criada.Id);
+
+        Assert.Equal("Sem doença prévia registrada", Assert.Single(historico).DoencasPrevias);
     }
 
     [Fact]
@@ -336,7 +397,8 @@ public class TriagemServiceTests
 
         var respostas = new ResponderTriagemRequest(
             NomePaciente: "Paciente Teste", Idade: 30, Sexo: "F",
-            Respostas: [new RespostaInput(PerguntaId: 999999, Valor: true)]);
+            Respostas: [new RespostaInput(PerguntaId: 999999, Valor: true)],
+            Escolaridade: "Ensino superior completo");
 
         var (resultado, erro) = await service.ResponderAsync(usuarioA, criada!.Id, respostas);
 
@@ -352,7 +414,8 @@ public class TriagemServiceTests
 
         var respostas = new ResponderTriagemRequest(
             "Paciente", 30, "F",
-            criada!.Perguntas.Select(p => new RespostaInput(p.Id, false)).ToList());
+            criada!.Perguntas.Select(p => new RespostaInput(p.Id, false)).ToList(),
+            "Ensino superior completo");
 
         var (resultado, erro) = await service.ResponderAsync(usuarioB, criada.Id, respostas);
 
@@ -369,7 +432,8 @@ public class TriagemServiceTests
 
         var respostas = new ResponderTriagemRequest(
             "Paciente", 30, "F",
-            [new RespostaInput(pergunta.Id, true), new RespostaInput(pergunta.Id, true)]);
+            [new RespostaInput(pergunta.Id, true), new RespostaInput(pergunta.Id, true)],
+            "Ensino superior completo");
 
         var (resultado, erro) = await service.ResponderAsync(usuarioA, criada.Id, respostas);
 
@@ -385,7 +449,7 @@ public class TriagemServiceTests
         var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
 
         var respostas = new ResponderTriagemRequest(
-            "Paciente", 30, "F", [new RespostaInput(criada!.Perguntas[0].Id, true)]);
+            "Paciente", 30, "F", [new RespostaInput(criada!.Perguntas[0].Id, true)], "Ensino superior completo");
 
         var (resultado, erro) = await service.ResponderAsync(usuarioA, criada.Id, respostas);
 
@@ -401,7 +465,7 @@ public class TriagemServiceTests
         var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
 
         var respostas = new ResponderTriagemRequest(
-            NomePaciente: "Paciente Teste", Idade: 200, Sexo: "F", Respostas: []);
+            NomePaciente: "Paciente Teste", Idade: 200, Sexo: "F", Respostas: [], Escolaridade: "Ensino superior completo");
 
         var (resultado, erro) = await service.ResponderAsync(usuarioA, criada!.Id, respostas);
 
@@ -520,7 +584,7 @@ public class TriagemServiceTests
         var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
         await service.ResponderAsync(usuarioA, criada!.Id,
             new ResponderTriagemRequest("Pessoa", 30, "F",
-                criada.Perguntas.Select(p => new RespostaInput(p.Id, true)).ToList()));
+                criada.Perguntas.Select(p => new RespostaInput(p.Id, true)).ToList(), "Ensino superior completo"));
 
         var exportacao = await service.ExportarDadosAsync(usuarioA);
 
@@ -539,7 +603,7 @@ public class TriagemServiceTests
         var (criada, _) = await service.CriarAsync(usuarioA, RequestValido());
         await service.ResponderAsync(usuarioA, criada!.Id,
             new ResponderTriagemRequest("Pessoa", 30, "F",
-                criada.Perguntas.Select(p => new RespostaInput(p.Id, true)).ToList()));
+                criada.Perguntas.Select(p => new RespostaInput(p.Id, true)).ToList(), "Ensino superior completo"));
 
         Assert.False((await service.ExcluirContaAsync(usuarioA, "errada")).Ok);
         Assert.True((await service.ExcluirContaAsync(usuarioA, "senha-correta")).Ok);

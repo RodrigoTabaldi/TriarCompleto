@@ -17,6 +17,7 @@ public partial class TriagemPage : ContentPage, IQueryAttributable
     public TriagemPage()
     {
         InitializeComponent();
+        AtualizarDataAplicacao();
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -65,21 +66,29 @@ public partial class TriagemPage : ContentPage, IQueryAttributable
 
             foreach (var antiga in _perguntas) antiga.RespostaAlterada -= RespostaAlterada;
             _perguntas = [];
+            string? categoriaAnterior = null;
             foreach (var (p, i) in _triagem.Perguntas.OrderBy(p => p.Ordem).Select((p, i) => (p, i)))
             {
+                var (numero, texto) = SepararNumero(p.Texto, i + 1);
                 var item = new PerguntaRespondivel
                 {
                     PerguntaId = p.Id,
-                    Numero = i + 1,
-                    Texto = p.Texto,
-                    Peso = p.Peso
+                    Numero = numero,
+                    Texto = texto,
+                    Peso = p.Peso,
+                    Categoria = p.Categoria,
+                    ExibirCategoria = !string.IsNullOrWhiteSpace(p.Categoria) &&
+                        !string.Equals(categoriaAnterior, p.Categoria, StringComparison.Ordinal),
+                    Opcoes = p.Opcoes.Select(o => new OpcaoRespondivel { Texto = o }).ToList()
                 };
+                if (!string.IsNullOrWhiteSpace(p.Categoria)) categoriaAnterior = p.Categoria;
                 item.RespostaAlterada += RespostaAlterada;
+                if (item.MultiplaEscolha) item.Resposta = false;
                 _perguntas.Add(item);
             }
 
             ListaPerguntas.ItemsSource = _perguntas;
-            _respondidas = 0;
+            _respondidas = _perguntas.Count(p => p.MultiplaEscolha);
             AtualizarProgresso();
         }
         catch (Exception ex)
@@ -121,15 +130,26 @@ public partial class TriagemPage : ContentPage, IQueryAttributable
             p.Resposta = false;
     }
 
+    private void OpcaoAlterada(object? sender, CheckedChangedEventArgs e)
+    {
+        // O binding já atualiza a opção. A questão múltipla aceita zero ou mais
+        // marcações e conta como respondida desde que é apresentada.
+    }
+
     private void Limpar(object? sender, EventArgs e)
     {
         Nome.Text = "";
+        AtualizarDataAplicacao();
+        Escolaridade.SelectedIndex = -1;
+        DoencasPrevias.Text = "";
         Idade.Text = "";
         Sexo.SelectedIndex = -1;
         _limpando = true;
         foreach (var p in _perguntas) p.Resposta = null;
+        foreach (var opcao in _perguntas.SelectMany(p => p.Opcoes)) opcao.Selecionada = false;
+        foreach (var p in _perguntas.Where(p => p.MultiplaEscolha)) p.Resposta = false;
         _limpando = false;
-        _respondidas = 0;
+        _respondidas = _perguntas.Count(p => p.MultiplaEscolha);
         AtualizarProgresso();
     }
 
@@ -159,7 +179,13 @@ public partial class TriagemPage : ContentPage, IQueryAttributable
                 return;
             }
 
-            var pendentes = _perguntas.Count(p => p.Resposta is null);
+            if (Escolaridade.SelectedItem is null)
+            {
+                await DisplayAlertAsync("Atenção", "Informe a escolaridade da pessoa avaliada.", "OK");
+                return;
+            }
+
+            var pendentes = _perguntas.Count(p => p.Binaria && p.Resposta is null);
             if (pendentes > 0)
             {
                 await DisplayAlertAsync("Atenção",
@@ -174,10 +200,13 @@ public partial class TriagemPage : ContentPage, IQueryAttributable
                 NomePaciente = Nome.Text.Trim(),
                 Idade = idade,
                 Sexo = Sexo.SelectedItem?.ToString() ?? "",
+                Escolaridade = Escolaridade.SelectedItem.ToString() ?? "",
+                DoencasPrevias = string.IsNullOrWhiteSpace(DoencasPrevias.Text) ? null : DoencasPrevias.Text.Trim(),
                 Respostas = _perguntas.Select(p => new RespostaTriagemPayload
                 {
                     PerguntaId = p.PerguntaId,
-                    Valor = p.Resposta == true
+                    Valor = p.Resposta == true,
+                    OpcoesSelecionadas = p.Opcoes.Where(o => o.Selecionada).Select(o => o.Texto).ToList()
                 }).ToList()
             };
 
@@ -204,4 +233,16 @@ public partial class TriagemPage : ContentPage, IQueryAttributable
 
     private async void VoltarHome(object? sender, EventArgs e) =>
         await Navegacao.IrAsync(this, "..");
+
+    private void AtualizarDataAplicacao() =>
+        DataAplicacao.Text = DateTime.Now.ToString(
+            "dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static (int Numero, string Texto) SepararNumero(string texto, int fallback)
+    {
+        var ponto = texto.IndexOf('.');
+        if (ponto > 0 && int.TryParse(texto[..ponto], out var numero))
+            return (numero, texto[(ponto + 1)..].TrimStart());
+        return (fallback, texto);
+    }
 }

@@ -1,6 +1,10 @@
 namespace Triagem.Core.Domain;
 
-public sealed record DefaultQuestion(string Text, int Weight);
+public sealed record DefaultQuestion(
+    string Text,
+    int Weight,
+    string? Category = null,
+    IReadOnlyList<string>? Options = null);
 
 public sealed record DefaultTriage(
     string LegacyTitle,
@@ -17,13 +21,41 @@ public sealed record DefaultTriage(
 /// </summary>
 public static class DefaultTriageCatalog
 {
-    public const int Version = 2;
+    public const int Version = 3;
     public const bool ClinicallyValidated = false;
     public const string ValidationNotice =
         "Protótipo acadêmico ainda não homologado clinicamente. O resultado é educativo e não deve orientar diagnóstico, tratamento ou urgência.";
 
     public static IReadOnlyList<DefaultTriage> Items { get; } =
     [
+        new(
+            "Protocolo de Triagem Fonoaudiológica Integrada",
+            "Protocolo de Triagem Fonoaudiológica Integrada",
+            "Adultos e idosos",
+            "🗣️",
+            "Protocolo orientativo de deglutição, linguagem e cognição, voz, audição e equilíbrio. Não substitui avaliação fonoaudiológica.",
+            [
+                new("1. Apresenta dificuldade para mastigar algum alimento?", 2, "Deglutição"),
+                new("2. Sente o alimento parado na garganta?", 3, "Deglutição"),
+                new("3. Apresenta tosse durante ou após a deglutição?", 3, "Deglutição"),
+                new("4. Sente cansaço durante as refeições?", 2, "Deglutição"),
+                new("5. Precisa beber líquidos para ajudar o alimento a descer?", 1, "Deglutição"),
+                new("6. A saliva escorre pela boca?", 3, "Deglutição"),
+                new("7. Engasga com:", 1, "Deglutição", ["Líquidos", "Pastosos", "Sólidos", "Saliva"]),
+                new("8. Apresenta dificuldade para memorizar coisas do dia a dia?", 2, "Linguagem e Cognição"),
+                new("9. Atende comandos básicos: 'pegue o copo', 'guarde seu sapato'?", 3, "Linguagem e Cognição"),
+                new("10. Consegue manter uma conversa por aproximadamente 5 minutos?", 2, "Linguagem e Cognição"),
+                new("11. Lembra o nome dos objetos do dia a dia?", 2, "Linguagem e Cognição"),
+                new("12. Sabe onde está (local e data)?", 3, "Linguagem e Cognição"),
+                new("13. Apresenta voz rouca?", 1, "Voz"),
+                new("14. Toma bastante água ao longo do dia?", 1, "Voz"),
+                new("15. Fica cansado ao falar?", 1, "Voz"),
+                new("16. Tem pigarro com frequência?", 2, "Voz"),
+                new("17. Queixa-se de tontura ou zumbido frequentemente?", 1, "Audição e Equilíbrio"),
+                new("18. Queixa-se de tontura ou zumbido frequentemente?", 1, "Audição e Equilíbrio"),
+                new("19. Pede para repetirem o que foi falado?", 1, "Audição e Equilíbrio"),
+                new("20. Consegue perceber sons altos?", 1, "Audição e Equilíbrio")
+            ]),
         new(
             "Triagem em Saúde Mental",
             "Triagem de Linguagem e Cognição",

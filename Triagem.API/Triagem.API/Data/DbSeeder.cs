@@ -114,11 +114,14 @@ public static class DbSeeder
             modelo.Ativa = true;
 
             var perguntasAtuais = modelo.Perguntas.OrderBy(p => p.Ordem).ToList();
-            var faixasEsperadas = CriarFaixas(item.Questions.Sum(p => p.Weight));
+            var faixasEsperadas = CriarFaixas(PontuacaoMaxima(item));
             var faixasAtuais = modelo.Faixas.OrderBy(f => f.Ordem).ToList();
             var perguntasMudaram = perguntasAtuais.Count != item.Questions.Count ||
                 perguntasAtuais.Where((p, i) =>
-                    p.Texto != item.Questions[i].Text || p.Peso != item.Questions[i].Weight).Any();
+                    p.Texto != item.Questions[i].Text ||
+                    p.Peso != item.Questions[i].Weight ||
+                    p.Categoria != (item.Questions[i].Category ?? "") ||
+                    p.OpcoesJson != SerializarOpcoes(item.Questions[i].Options)).Any();
             var faixasMudaram = faixasAtuais.Count != faixasEsperadas.Count ||
                 faixasAtuais.Where((f, i) =>
                     f.Titulo != faixasEsperadas[i].Titulo ||
@@ -259,7 +262,7 @@ public static class DbSeeder
 
     private static TriagemModelo CriarModeloPadrao(DefaultTriage item)
     {
-        var pesoTotal = item.Questions.Sum(p => p.Weight);
+        var pesoTotal = PontuacaoMaxima(item);
 
         return new TriagemModelo
         {
@@ -274,8 +277,21 @@ public static class DbSeeder
 
     private static List<Pergunta> CriarPerguntas(DefaultTriage item) =>
         item.Questions
-            .Select((p, i) => new Pergunta { Texto = p.Text, Peso = p.Weight, Ordem = i + 1 })
+            .Select((p, i) => new Pergunta
+            {
+                Texto = p.Text,
+                Peso = p.Weight,
+                Categoria = p.Category ?? "",
+                OpcoesJson = SerializarOpcoes(p.Options),
+                Ordem = i + 1
+            })
             .ToList();
+
+    private static int PontuacaoMaxima(DefaultTriage item) =>
+        item.Questions.Sum(p => p.Weight * Math.Max(1, p.Options?.Count ?? 0));
+
+    private static string? SerializarOpcoes(IReadOnlyList<string>? opcoes) =>
+        opcoes is { Count: > 0 } ? JsonSerializer.Serialize(opcoes) : null;
 
     private static List<FaixaResultado> CriarFaixas(int pesoTotal)
     {

@@ -9,7 +9,9 @@ public record UsuarioResponse(int Id, string Nome, string Email);
 public record AuthResponse(int Id, string Nome, string Email, string Token, DateTime ExpiraEm);
 
 // ---------- Triagem (modelos/templates) ----------
-public record PerguntaDto(int Id, string Texto, int Peso, int Ordem);
+public record PerguntaDto(
+    int Id, string Texto, int Peso, int Ordem,
+    string Categoria = "", List<string>? Opcoes = null);
 public record FaixaDto(int Id, string Titulo, string Recomendacao, int PontuacaoMin, int PontuacaoMax, string Cor, int Ordem);
 
 public record TriagemModeloResumo(
@@ -43,20 +45,22 @@ public record ExportacaoDadosResponse(
     List<ExportacaoTriagem> TriagensCriadas, List<ExportacaoResultado> Resultados);
 
 // ---------- Execução de triagem ----------
-public record RespostaInput(int PerguntaId, bool Valor);
+public record RespostaInput(int PerguntaId, bool Valor, List<string>? OpcoesSelecionadas = null);
 public record ResponderTriagemRequest(
     string NomePaciente, int Idade, string Sexo,
-    List<RespostaInput> Respostas);
+    List<RespostaInput> Respostas,
+    string Escolaridade = "", string? DoencasPrevias = null);
 
 public record ResultadoResponse(
     int Id, int TriagemModeloId, string TituloTriagem,
     string NomePaciente, int Idade, string Sexo,
     int Pontuacao, int PontuacaoMaxima,
-    string Classificacao, string Recomendacao, string Cor, DateTime Data);
+    string Classificacao, string Recomendacao, string Cor, DateTime Data,
+    string Escolaridade = "", string? DoencasPrevias = null);
 
 // ---------- Histórico (formato legado usado pelo app) ----------
 public record HistoricoItem(
     int Id, int TriagemModeloId, string TituloTriagem,
     string Nome, int Idade, string Sexo,
     int Pontuacao, int PontuacaoMaxima, string Resultado,
-    string Cor, DateTime Data);
+    string Cor, DateTime Data, string Escolaridade = "", string DoencasPrevias = "");

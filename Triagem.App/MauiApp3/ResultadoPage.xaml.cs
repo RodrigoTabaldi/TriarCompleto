@@ -30,6 +30,8 @@ public partial class ResultadoPage : ContentPage
         NomePaciente.Text = r.NomePaciente;
         IdadePaciente.Text = $"{r.Idade} anos";
         DataTriagem.Text = r.Data.ToLocalTime().ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+        EscolaridadePaciente.Text = r.Escolaridade;
+        DoencasPreviasPaciente.Text = string.IsNullOrWhiteSpace(r.DoencasPrevias) ? "Não informado" : r.DoencasPrevias;
 
         if (Color.TryParse(r.Cor, out var cor))
         {

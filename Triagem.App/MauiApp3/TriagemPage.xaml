@@ -7,14 +7,14 @@
     BackgroundColor="#F5F7F6"
     Shell.NavBarIsVisible="False">
 
+    <Grid MaximumWidthRequest="860" HorizontalOptions="Center">
     <CollectionView x:Name="ListaPerguntas" SelectionMode="None" Margin="20,0"
-                    MaximumWidthRequest="820" HorizontalOptions="Fill">
+                    HorizontalOptions="Fill">
         <CollectionView.ItemsLayout>
             <LinearItemsLayout Orientation="Vertical" ItemSpacing="12"/>
         </CollectionView.ItemsLayout>
         <CollectionView.Header>
         <VerticalStackLayout Padding="0,20,0,18" Spacing="18"
-                             MaximumWidthRequest="820"
                              HorizontalOptions="Fill">
 
             <!-- VOLTAR -->
@@ -61,6 +61,37 @@
                                TextColor="Black" PlaceholderColor="#9CA3AF" BackgroundColor="Transparent"/>
                     </Border>
 
+                    <Label Text="Data da aplicação" TextColor="#374151"/>
+                    <Border BackgroundColor="#F8FAFC" Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10,0">
+                        <Entry x:Name="DataAplicacao" IsReadOnly="True"
+                               TextColor="#374151" BackgroundColor="Transparent"/>
+                    </Border>
+
+                    <Label Text="Escolaridade" TextColor="#374151"/>
+                    <Border Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10,0">
+                        <Picker x:Name="Escolaridade" Title="Selecione" TextColor="Black" BackgroundColor="Transparent">
+                            <Picker.ItemsSource>
+                                <x:Array Type="{x:Type x:String}">
+                                    <x:String>Ensino fundamental incompleto</x:String>
+                                    <x:String>Ensino fundamental completo</x:String>
+                                    <x:String>Ensino médio incompleto</x:String>
+                                    <x:String>Ensino médio completo</x:String>
+                                    <x:String>Ensino superior incompleto</x:String>
+                                    <x:String>Ensino superior completo</x:String>
+                                    <x:String>Pós-graduação incompleta</x:String>
+                                    <x:String>Pós-graduação completa</x:String>
+                                </x:Array>
+                            </Picker.ItemsSource>
+                        </Picker>
+                    </Border>
+
+                    <Label Text="Doenças prévias (opcional)" TextColor="#374151"/>
+                    <Border Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10,6">
+                        <Editor x:Name="DoencasPrevias" Placeholder="Descreva, se houver"
+                                AutoSize="TextChanges" MinimumHeightRequest="72"
+                                TextColor="Black" PlaceholderColor="#9CA3AF" BackgroundColor="Transparent"/>
+                    </Border>
+
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                         <VerticalStackLayout Spacing="6">
                             <Label Text="Idade" TextColor="#374151"/>
@@ -99,6 +130,11 @@
                         <Border BackgroundColor="White" Stroke="#EDF0F3" StrokeThickness="1" StrokeShape="RoundRectangle 15" Padding="18">
                             <VerticalStackLayout Spacing="12">
 
+                                <Label Text="{Binding Categoria}"
+                                       IsVisible="{Binding ExibirCategoria}"
+                                       FontSize="18" FontAttributes="Bold" TextColor="#047857"
+                                       Margin="0,0,0,4"/>
+
                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                                     <Border BackgroundColor="#10B981" StrokeThickness="0" StrokeShape="RoundRectangle 100"
                                             HeightRequest="32" WidthRequest="32" VerticalOptions="Start">
@@ -109,7 +145,8 @@
                                            TextColor="#0F172A" LineBreakMode="WordWrap" VerticalOptions="Center"/>
                                 </Grid>
 
-                                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="12"
+                                      IsVisible="{Binding Binaria}">
                                     <Button Text="Sim"
                                             Clicked="ResponderSim"
                                             CornerRadius="10" HeightRequest="44"
@@ -139,6 +176,25 @@
                                     </Button>
                                 </Grid>
 
+                                <VerticalStackLayout Spacing="8"
+                                                     IsVisible="{Binding MultiplaEscolha}"
+                                                     BindableLayout.ItemsSource="{Binding Opcoes}">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="models:OpcaoRespondivel">
+                                            <Border Stroke="#CBD5E1" StrokeThickness="1"
+                                                    StrokeShape="RoundRectangle 10" Padding="12,6">
+                                                <HorizontalStackLayout Spacing="10">
+                                                    <CheckBox IsChecked="{Binding Selecionada, Mode=TwoWay}"
+                                                              CheckedChanged="OpcaoAlterada"
+                                                              Color="#10B981"/>
+                                                    <Label Text="{Binding Texto}" TextColor="#0F172A"
+                                                           FontSize="15" VerticalOptions="Center"/>
+                                                </HorizontalStackLayout>
+                                            </Border>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </VerticalStackLayout>
+
                             </VerticalStackLayout>
                         </Border>
                     </DataTemplate>
@@ -166,4 +222,5 @@
         </VerticalStackLayout>
         </CollectionView.Footer>
     </CollectionView>
+    </Grid>
 </ContentPage>
