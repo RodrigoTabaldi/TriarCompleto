@@ -297,18 +297,18 @@ public static partial class BancoLocal
             .ThenBy(t => t.CriadorUsuarioId is null ? 0 : 1)
             .ThenBy(t => t.Id)
             .Select(t => new TriagemResumo
-        {
-            Id = t.Id,
-            Titulo = t.Titulo,
-            PublicoAlvo = t.PublicoAlvo,
-            Descricao = t.Descricao,
-            Icone = t.Icone,
-            Imagem = t.Imagem,
-            Padrao = t.CriadorUsuarioId is null,
-            MinhaAutoria = t.CriadorUsuarioId == usuarioId,
-            VisivelNaHome = !preferencias.TryGetValue(t.Id, out var pref) || pref.Visivel,
-            TotalPerguntas = perguntasPorModelo.TryGetValue(t.Id, out var total) ? total : 0
-        }).ToList();
+            {
+                Id = t.Id,
+                Titulo = t.Titulo,
+                PublicoAlvo = t.PublicoAlvo,
+                Descricao = t.Descricao,
+                Icone = t.Icone,
+                Imagem = t.Imagem,
+                Padrao = t.CriadorUsuarioId is null,
+                MinhaAutoria = t.CriadorUsuarioId == usuarioId,
+                VisivelNaHome = !preferencias.TryGetValue(t.Id, out var pref) || pref.Visivel,
+                TotalPerguntas = perguntasPorModelo.TryGetValue(t.Id, out var total) ? total : 0
+            }).ToList();
     }
 
     /// <summary>
@@ -344,8 +344,12 @@ public static partial class BancoLocal
             Perguntas = perguntas
                 .Select(p => new PerguntaDto
                 {
-                    Id = p.Id, Texto = p.Texto, Peso = p.Peso, Ordem = p.Ordem,
-                    Categoria = p.Categoria, Opcoes = DesserializarOpcoes(p.OpcoesJson)
+                    Id = p.Id,
+                    Texto = p.Texto,
+                    Peso = p.Peso,
+                    Ordem = p.Ordem,
+                    Categoria = p.Categoria,
+                    Opcoes = DesserializarOpcoes(p.OpcoesJson)
                 })
                 .ToList(),
             Faixas = faixas
