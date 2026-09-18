@@ -28,7 +28,7 @@ public partial class TriagemPage : ContentPage, IQueryAttributable
             query.Remove("novaPessoa");
             Limpar(null, EventArgs.Empty);
             if (_perguntas.Count > 0)
-                ListaPerguntas.ScrollTo(0, position: ScrollToPosition.Start, animate: false);
+                _ = ScrollTriagem.ScrollToAsync(0, 0, animated: false);
         }
     }
 
@@ -87,7 +87,7 @@ public partial class TriagemPage : ContentPage, IQueryAttributable
                 _perguntas.Add(item);
             }
 
-            ListaPerguntas.ItemsSource = _perguntas;
+            BindableLayout.SetItemsSource(ListaPerguntas, _perguntas);
             _respondidas = _perguntas.Count(p => p.MultiplaEscolha);
             AtualizarProgresso();
         }
@@ -151,6 +151,20 @@ public partial class TriagemPage : ContentPage, IQueryAttributable
         _limpando = false;
         _respondidas = _perguntas.Count(p => p.MultiplaEscolha);
         AtualizarProgresso();
+    }
+
+    private async void NovaPessoa(object? sender, EventArgs e)
+    {
+        var confirmar = await DisplayAlertAsync(
+            "Aplicar em outra pessoa",
+            "Os dados e as respostas atuais serão apagados. Deseja continuar?",
+            "Continuar",
+            "Cancelar");
+        if (!confirmar) return;
+
+        Limpar(null, EventArgs.Empty);
+        if (_perguntas.Count > 0)
+            await ScrollTriagem.ScrollToAsync(0, 0, animated: false);
     }
 
     private async void Finalizar(object? sender, EventArgs e)

@@ -8,12 +8,9 @@
     Shell.NavBarIsVisible="False">
 
     <Grid MaximumWidthRequest="860" HorizontalOptions="Center">
-    <CollectionView x:Name="ListaPerguntas" SelectionMode="None" Margin="20,0"
-                    HorizontalOptions="Fill">
-        <CollectionView.ItemsLayout>
-            <LinearItemsLayout Orientation="Vertical" ItemSpacing="12"/>
-        </CollectionView.ItemsLayout>
-        <CollectionView.Header>
+    <ScrollView x:Name="ScrollTriagem">
+    <VerticalStackLayout Spacing="12" Margin="20,0"
+                         Padding="0,20,0,20" HorizontalOptions="Fill">
         <VerticalStackLayout Padding="0,20,0,18" Spacing="18"
                              HorizontalOptions="Fill">
 
@@ -124,9 +121,9 @@
             <Label Text="Perguntas da triagem" FontSize="18" FontAttributes="Bold" TextColor="#0F172A"/>
 
         </VerticalStackLayout>
-        </CollectionView.Header>
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="models:PerguntaRespondivel">
+        <VerticalStackLayout x:Name="ListaPerguntas" Spacing="12">
+        <BindableLayout.ItemTemplate>
+            <DataTemplate x:DataType="models:PerguntaRespondivel">
                         <Border BackgroundColor="White" Stroke="#EDF0F3" StrokeThickness="1" StrokeShape="RoundRectangle 15" Padding="18">
                             <VerticalStackLayout Spacing="12">
 
@@ -197,30 +194,32 @@
 
                             </VerticalStackLayout>
                         </Border>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-        <CollectionView.Footer>
-        <VerticalStackLayout Padding="0,18,0,20" Spacing="18">
-
-            <!-- AÇÕES -->
-            <Button Text="🗑 Limpar respostas"
-                    Clicked="Limpar"
-                    BackgroundColor="White"
-                    BorderColor="#10B981" BorderWidth="1.5"
-                    TextColor="#10B981"
-                    CornerRadius="12" HeightRequest="48"/>
-
-            <Button Text="Finalizar ✓"
-                    Clicked="Finalizar"
-                    BackgroundColor="#10B981"
-                    TextColor="White"
-                    FontAttributes="Bold"
-                    FontSize="16"
-                    CornerRadius="12" HeightRequest="52"/>
-
-            <BoxView HeightRequest="20" Color="Transparent"/>
+        </DataTemplate>
+        </BindableLayout.ItemTemplate>
         </VerticalStackLayout>
-        </CollectionView.Footer>
-    </CollectionView>
+        <Button Text="Finalizar ✓"
+                Clicked="Finalizar"
+                BackgroundColor="#10B981"
+                TextColor="White"
+                FontAttributes="Bold"
+                FontSize="16"
+                CornerRadius="12" HeightRequest="52"/>
+
+        <Button Text="Limpar respostas"
+                Clicked="Limpar"
+                BackgroundColor="White"
+                BorderColor="#10B981" BorderWidth="1.5"
+                TextColor="#047857"
+                CornerRadius="12" HeightRequest="48"/>
+
+        <Button Text="Aplicar esta triagem em outra pessoa"
+                Clicked="NovaPessoa"
+                BackgroundColor="White"
+                BorderColor="#CBD5E1" BorderWidth="1"
+                TextColor="#374151"
+                CornerRadius="12" HeightRequest="48"
+                FontSize="13"/>
+    </VerticalStackLayout>
+    </ScrollView>
     </Grid>
 </ContentPage>

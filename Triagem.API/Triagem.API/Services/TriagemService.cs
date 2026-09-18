@@ -86,6 +86,7 @@ public partial class TriagemService(
         {
             var t = await db.TriagemModelos
                 .AsNoTracking()
+                .AsSplitQuery()
                 .Include(x => x.Perguntas)
                 .Include(x => x.Faixas)
                 .FirstOrDefaultAsync(x => x.Id == id && x.Ativa &&
@@ -177,6 +178,7 @@ public partial class TriagemService(
         if (erro is not null) return (false, erro);
 
         var modelo = await db.TriagemModelos
+            .AsSplitQuery()
             .Include(t => t.Perguntas)
             .Include(t => t.Faixas)
             .FirstOrDefaultAsync(t => t.Id == id && t.Ativa, ct);
@@ -204,6 +206,7 @@ public partial class TriagemService(
     public async Task<(bool Ok, string? Erro)> DesativarAsync(int usuarioId, int id, CancellationToken ct = default)
     {
         var modelo = await db.TriagemModelos
+            .AsSplitQuery()
             .Include(t => t.Perguntas)
             .Include(t => t.Faixas)
             .FirstOrDefaultAsync(t => t.Id == id, ct);
@@ -270,6 +273,7 @@ public partial class TriagemService(
         if (usuario is null) return null;
 
         var modelos = await db.TriagemModelos.AsNoTracking()
+            .AsSplitQuery()
             .Include(t => t.Perguntas)
             .Include(t => t.Faixas)
             .Where(t => t.CriadorUsuarioId == usuarioId)
@@ -323,6 +327,7 @@ public partial class TriagemService(
     public async Task<(ResultadoResponse? Resultado, string? Erro)> ResponderAsync(int usuarioId, int triagemModeloId, ResponderTriagemRequest req, CancellationToken ct = default)
     {
         var modelo = await db.TriagemModelos
+            .AsSplitQuery()
             .Include(t => t.Perguntas)
             .Include(t => t.Faixas)
             .FirstOrDefaultAsync(t => t.Id == triagemModeloId && t.Ativa &&

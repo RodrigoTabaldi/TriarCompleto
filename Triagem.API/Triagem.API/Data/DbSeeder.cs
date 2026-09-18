@@ -51,6 +51,7 @@ public static class DbSeeder
         while (true)
         {
             var resultados = await db.TriagemResultados
+                .AsSplitQuery()
                 .Include(r => r.TriagemModelo)!.ThenInclude(t => t!.Perguntas)
                 .Include(r => r.Respostas)
                 .Where(r => r.Id > ultimoId && r.DadosProtegidos != null)
@@ -96,6 +97,7 @@ public static class DbSeeder
         foreach (var item in DefaultTriageCatalog.Items)
         {
             var modelo = await db.TriagemModelos
+                .AsSplitQuery()
                 .Include(t => t.Perguntas)
                 .Include(t => t.Faixas)
                 .FirstOrDefaultAsync(t => t.CriadorUsuarioId == null &&
