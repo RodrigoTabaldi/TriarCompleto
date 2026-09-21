@@ -40,10 +40,13 @@ public class DefaultTriageCatalogTests
             protocolo.Questions.Select(p => p.Category!).Distinct().ToArray());
         Assert.Contains(protocolo.Questions, p => p.Text.StartsWith("18.", StringComparison.Ordinal));
 
-        var multipla = protocolo.Questions.Single(p => p.Text.StartsWith("7.", StringComparison.Ordinal));
+        var multipla = protocolo.Questions.Single(p => p.Text.StartsWith("8.", StringComparison.Ordinal));
         Assert.Equal(1, multipla.Weight);
         Assert.Equal(["Líquidos", "Pastosos", "Sólidos", "Saliva"], multipla.Options);
-        Assert.Equal(39, protocolo.Questions.Sum(p =>
+        Assert.Equal(
+            [2, 3, 3, 2, 1, 2, 3, 1, 2, 3, 2, 2, 3, 1, 1, 1, 2, 1, 1, 1],
+            protocolo.Questions.Select(p => p.Weight).ToArray());
+        Assert.Equal(40, protocolo.Questions.Sum(p =>
             p.Weight * Math.Max(1, p.Options?.Count ?? 0)));
     }
 

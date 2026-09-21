@@ -28,3 +28,6 @@ firebase-debug.log
 # Pacotes gerados (APK/AAB de demonstração)
 *.apk
 *.aab
+
+# Artefatos de distribuicao gerados localmente
+artifacts/
