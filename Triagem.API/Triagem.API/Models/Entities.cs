@@ -37,6 +37,8 @@ public class TriagemModelo
 
 public class Pergunta
 {
+    public string Categoria { get; set; } = "";
+    public string OpcoesJson { get; set; } = "[]";
     public int Id { get; set; }
     public int TriagemModeloId { get; set; }
     public TriagemModelo? TriagemModelo { get; set; }
@@ -80,6 +82,8 @@ public class UsuarioTriagemHome
 /// <summary>Uma aplicação (execução) de uma triagem em uma pessoa.</summary>
 public class TriagemResultado
 {
+    public string Escolaridade { get; set; } = "";
+    public string DoencasPrevias { get; set; } = "";
     public int Id { get; set; }
     public int TriagemModeloId { get; set; }
     public TriagemModelo? TriagemModelo { get; set; }
@@ -102,6 +106,7 @@ public class TriagemResultado
 
 public class RespostaDada
 {
+    public string OpcoesSelecionadasJson { get; set; } = "[]";
     public int Id { get; set; }
     public int TriagemResultadoId { get; set; }
     public TriagemResultado? TriagemResultado { get; set; }

@@ -10,17 +10,25 @@ using Triagem.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---------- Banco de dados (SQL Server) ----------
+// ---------- Banco de dados (PostgreSQL ou SQLite individual) ----------
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
     throw new InvalidOperationException("ConnectionStrings:DefaultConnection não configurada.");
 
+var databaseProvider = builder.Configuration["Database:Provider"] ?? "PostgreSQL";
 builder.Services.AddDbContext<TriagemDbContext>(options =>
-    options.UseSqlServer(connectionString, sql =>
-    {
-        sql.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorNumbersToAdd: null);
-        sql.CommandTimeout(30);
-    }));
+{
+    if (databaseProvider.Equals("SQLite", StringComparison.OrdinalIgnoreCase))
+        options.UseSqlite(connectionString);
+    else if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
+        options.UseNpgsql(connectionString, npgsql =>
+        {
+            npgsql.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorCodesToAdd: null);
+            npgsql.CommandTimeout(30);
+        });
+    else
+        throw new InvalidOperationException("Database:Provider deve ser PostgreSQL ou SQLite.");
+});
 
 // ---------- Serviços ----------
 builder.Services.AddControllers();
@@ -138,7 +146,7 @@ builder.Services.AddCors(options =>
 
 // ---------- Health checks ----------
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<TriagemDbContext>("sqlserver");
+    .AddDbContextCheck<TriagemDbContext>("database");
 
 // aceita X-Forwarded-For apenas de proxies confiáveis (o nginx/rede docker),
 // para que o rate limit por IP não seja burlável via spoof do header.
@@ -181,7 +189,7 @@ app.MapGet("/", () => Results.Ok(new
     docs = "/openapi/v1.json"
 }));
 
-// ---------- Migração/seed com retry (aguarda o SQL Server subir) ----------
+// ---------- Inicialização/seed com retry (aguarda o banco subir) ----------
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<TriagemDbContext>();
@@ -191,7 +199,8 @@ using (var scope = app.Services.CreateScope())
     {
         try
         {
-            await DbSeeder.SeedAsync(db);
+            if (await DbSeeder.SeedAsync(db))
+                await scope.ServiceProvider.GetRequiredService<CacheService>().BumpVersionAsync();
             logger.LogInformation("Banco de dados pronto.");
             break;
         }

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using Triagem.API.Data;
 using Triagem.API.Dtos;
 using Triagem.API.Models;
@@ -59,7 +60,7 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
                 t.Id, t.Titulo, t.PublicoAlvo, t.Descricao, t.Icone,
                 t.CriadorUsuarioId == null, t.CriadorUsuarioId,
                 t.Perguntas.OrderBy(p => p.Ordem)
-                    .Select(p => new PerguntaDto(p.Id, p.Texto, p.Peso, p.Ordem)).ToList(),
+                    .Select(p => new PerguntaDto(p.Id, p.Texto, p.Peso, p.Ordem, p.Categoria, JsonSerializer.Deserialize<List<string>>(p.OpcoesJson))).ToList(),
                 t.Faixas.OrderBy(f => f.Ordem)
                     .Select(f => new FaixaDto(f.Id, f.Titulo, f.Recomendacao, f.PontuacaoMin, f.PontuacaoMax, f.Cor, f.Ordem)).ToList());
         });
@@ -197,11 +198,16 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
             .FirstOrDefaultAsync(t => t.Id == triagemModeloId && t.Ativa);
 
         if (modelo is null) return (null, "Triagem não encontrada.");
+        if (modelo.CriadorUsuarioId is { } criador && criador != usuarioId)
+            return (null, "Triagem não encontrada.");
         if (string.IsNullOrWhiteSpace(req.NomePaciente)) return (null, "Informe o nome da pessoa avaliada.");
         if (req.Idade is < 0 or > 130) return (null, "Idade inválida.");
         if (!await db.Usuarios.AnyAsync(u => u.Id == usuarioId)) return (null, "Usuário não encontrado.");
 
         var perguntasPorId = modelo.Perguntas.ToDictionary(p => p.Id);
+        if (req.Respostas is null || req.Respostas.Count != perguntasPorId.Count ||
+            req.Respostas.Select(r => r.PerguntaId).Distinct().Count() != perguntasPorId.Count)
+            return (null, "Responda cada pergunta exatamente uma vez.");
         var pontuacao = 0;
         var respostas = new List<RespostaDada>();
 
@@ -210,11 +216,16 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
             if (!perguntasPorId.TryGetValue(r.PerguntaId, out var pergunta))
                 return (null, $"Pergunta {r.PerguntaId} não pertence a esta triagem.");
 
-            if (r.Valor) pontuacao += pergunta.Peso;
-            respostas.Add(new RespostaDada { PerguntaId = r.PerguntaId, Valor = r.Valor });
+            var opcoes = JsonSerializer.Deserialize<List<string>>(pergunta.OpcoesJson) ?? [];
+            var selecionadas = r.OpcoesSelecionadas ?? [];
+            if (selecionadas.Distinct().Count() != selecionadas.Count || selecionadas.Any(o => !opcoes.Contains(o)))
+                return (null, "Opção de resposta inválida.");
+            var valor = opcoes.Count > 0 ? selecionadas.Count > 0 : r.Valor;
+            pontuacao += opcoes.Count > 0 ? selecionadas.Count * pergunta.Peso : valor ? pergunta.Peso : 0;
+            respostas.Add(new RespostaDada { PerguntaId = r.PerguntaId, Valor = valor, OpcoesSelecionadasJson = JsonSerializer.Serialize(selecionadas) });
         }
 
-        var pontuacaoMaxima = modelo.Perguntas.Sum(p => p.Peso);
+        var pontuacaoMaxima = modelo.Perguntas.Sum(p => p.Peso * Math.Max(1, (JsonSerializer.Deserialize<List<string>>(p.OpcoesJson) ?? []).Count));
 
         var faixa = modelo.Faixas
             .OrderBy(f => f.Ordem)
@@ -226,6 +237,8 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
             TriagemModeloId = modelo.Id,
             UsuarioId = usuarioId,
             NomePaciente = req.NomePaciente.Trim(),
+            Escolaridade = req.Escolaridade?.Trim() ?? "",
+            DoencasPrevias = req.DoencasPrevias?.Trim() ?? "",
             Idade = req.Idade,
             Sexo = req.Sexo?.Trim() ?? "",
             Pontuacao = pontuacao,
@@ -243,7 +256,7 @@ public class TriagemService(TriagemDbContext db, CacheService cache, ILogger<Tri
             resultado.Id, modelo.Id, modelo.Titulo,
             resultado.NomePaciente, resultado.Idade, resultado.Sexo,
             resultado.Pontuacao, resultado.PontuacaoMaxima,
-            resultado.Classificacao, resultado.Recomendacao, resultado.Cor, resultado.Data), null);
+            resultado.Classificacao, resultado.Recomendacao, resultado.Cor, resultado.Data, resultado.Escolaridade, resultado.DoencasPrevias), null);
     }
 
     public async Task<List<HistoricoItem>> HistoricoAsync(int usuarioId, int? triagemModeloId = null)

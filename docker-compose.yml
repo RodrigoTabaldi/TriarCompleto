@@ -3,26 +3,24 @@
 #   App MAUI ──► nginx (load balancer, porta 5036) ──► api1 / api2 (ASP.NET Core)
 #                                                          │        │
 #                                                          ▼        ▼
-#                                                   SQL Server    Redis
-#                                                     2022       (cache)
+#                                                   PostgreSQL    Redis
+#                                                     17        (cache)
 #
 # Subir tudo:  docker compose up -d --build
 # A API fica disponível em http://localhost:5036 (mesma porta que o app usa).
 
 services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: triar-sqlserver
+  postgres:
+    image: postgres:17-alpine
+    container_name: triar-postgres
     environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "${SA_PASSWORD:?defina SA_PASSWORD no arquivo .env}"
-      MSSQL_PID: "Express"
-    ports:
-      - "1433:1433"
+      POSTGRES_DB: TriarDb
+      POSTGRES_USER: triar
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no arquivo .env}"
     volumes:
-      - triar-sql-data:/var/opt/mssql
+      - triar-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U triar -d TriarDb"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -33,7 +31,7 @@ services:
     container_name: triar-redis
     command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -46,11 +44,12 @@ services:
     container_name: triar-api-1
     environment:
       ASPNETCORE_ENVIRONMENT: "Production"
-      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=TriarDb;User Id=sa;Password=${SA_PASSWORD:?defina SA_PASSWORD no arquivo .env};TrustServerCertificate=True;Encrypt=True"
+      Database__Provider: "PostgreSQL"
+      ConnectionStrings__DefaultConnection: "Host=postgres;Database=TriarDb;Username=triar;Password=${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no arquivo .env}"
       ConnectionStrings__Redis: "redis:6379"
       Jwt__Key: "${JWT_KEY:?defina JWT_KEY (>=32 caracteres) no arquivo .env}"
     depends_on:
-      sqlserver:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -67,7 +66,7 @@ services:
     <<: *api
     container_name: triar-api-2
     depends_on:
-      sqlserver:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -75,7 +74,7 @@ services:
         condition: service_healthy
 
   nginx:
-    image: nginx:1.27-alpine
+    image: nginx:stable-alpine
     container_name: triar-loadbalancer
     ports:
       - "5036:5036"
@@ -86,5 +85,13 @@ services:
       - api2
     restart: unless-stopped
 
+  web:
+    build: ./Triagem.Web
+    ports:
+      - "8080:80"
+    depends_on:
+      - nginx
+    restart: unless-stopped
+
 volumes:
-  triar-sql-data:
+  triar-postgres-data:

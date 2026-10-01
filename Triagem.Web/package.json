@@ -1,0 +1,28 @@
+{
+    "name":  "triar-web",
+    "version":  "1.0.0",
+    "private":  true,
+    "type":  "module",
+    "scripts":  {
+                    "dev":  "vite --host 0.0.0.0",
+                    "build":  "tsc -b \u0026\u0026 vite build \u0026\u0026 node scripts/build-offline.mjs",
+                    "preview":  "vite preview --host 0.0.0.0",
+                    "test:e2e":  "playwright test"
+                },
+    "dependencies":  {
+                         "react":  "^19.2.0",
+                         "react-dom":  "^19.2.0",
+                         "react-router-dom":  "^7.9.0",
+                         "sql.js":  "^1.14.2",
+                         "write-excel-file":  "^4.1.1"
+                     },
+    "devDependencies":  {
+                            "@playwright/test":  "^1.63.0",
+                            "@types/react":  "^19.2.0",
+                            "@types/react-dom":  "^19.2.0",
+                            "@types/sql.js":  "^1.4.11",
+                            "@vitejs/plugin-react":  "^5.0.0",
+                            "typescript":  "~5.9.3",
+                            "vite":  "^7.1.0"
+                        }
+}

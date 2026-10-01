@@ -23,3 +23,12 @@ publish/
 google-services.json
 firebase-debug.log
 .firebase/
+node_modules/
+dist/
+*.tsbuildinfo
+*.db
+*.db-shm
+*.db-wal
+artifacts/web-verification/
+test-results/
+playwright-report/

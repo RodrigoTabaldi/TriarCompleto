@@ -26,7 +26,7 @@ public static class ApiService
     // ⚠️ PRODUÇÃO: troque pela URL pública HTTPS da sua API .NET (ex.: Azure/VPS).
     // Num celular real (instalado via Firebase), "localhost" é o próprio telefone —
     // por isso o build de Release precisa apontar para um endereço público de verdade.
-    private const string UrlProducao = "https://SUA-API-DE-PRODUCAO.com";
+    private const string UrlProducao = "http://192.168.100.37:5036";
 
     /// <summary>
     /// Endpoint da API. Em DEBUG usa o ambiente local; em RELEASE usa a URL de produção.

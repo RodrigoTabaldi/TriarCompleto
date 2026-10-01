@@ -1,0 +1,885 @@
+[
+  {
+    "id": 1,
+    "titulo": "Protocolo de Triagem Fonoaudiol\u00F3gica Integrada",
+    "publicoAlvo": "Adultos e idosos",
+    "descricao": "Protocolo orientativo de degluti\u00E7\u00E3o, linguagem e cogni\u00E7\u00E3o, voz, audi\u00E7\u00E3o e equil\u00EDbrio. N\u00E3o substitui avalia\u00E7\u00E3o fonoaudiol\u00F3gica.",
+    "icone": "\uD83D\uDDE3\uFE0F",
+    "padrao": true,
+    "criadorUsuarioId": null,
+    "perguntas": [
+      {
+        "id": 101,
+        "texto": "1. Apresenta dificuldade para mastigar algum alimento?",
+        "peso": 2,
+        "ordem": 1,
+        "categoria": "Degluti\u00E7\u00E3o",
+        "opcoes": []
+      },
+      {
+        "id": 102,
+        "texto": "2. Sente o alimento parado na garganta?",
+        "peso": 3,
+        "ordem": 2,
+        "categoria": "Degluti\u00E7\u00E3o",
+        "opcoes": []
+      },
+      {
+        "id": 103,
+        "texto": "3. Apresenta tosse durante ou ap\u00F3s a degluti\u00E7\u00E3o?",
+        "peso": 3,
+        "ordem": 3,
+        "categoria": "Degluti\u00E7\u00E3o",
+        "opcoes": []
+      },
+      {
+        "id": 104,
+        "texto": "4. Sente cansa\u00E7o durante as refei\u00E7\u00F5es?",
+        "peso": 2,
+        "ordem": 4,
+        "categoria": "Degluti\u00E7\u00E3o",
+        "opcoes": []
+      },
+      {
+        "id": 105,
+        "texto": "5. Precisa beber l\u00EDquidos para ajudar o alimento a descer?",
+        "peso": 1,
+        "ordem": 5,
+        "categoria": "Degluti\u00E7\u00E3o",
+        "opcoes": []
+      },
+      {
+        "id": 106,
+        "texto": "6. A saliva escorre pela boca?",
+        "peso": 2,
+        "ordem": 6,
+        "categoria": "Degluti\u00E7\u00E3o",
+        "opcoes": []
+      },
+      {
+        "id": 107,
+        "texto": "7. Apresenta dificuldade para memorizar coisas do dia a dia?",
+        "peso": 3,
+        "ordem": 7,
+        "categoria": "Linguagem e Cogni\u00E7\u00E3o",
+        "opcoes": []
+      },
+      {
+        "id": 108,
+        "texto": "8. Engasga com:",
+        "peso": 1,
+        "ordem": 8,
+        "categoria": "Degluti\u00E7\u00E3o",
+        "opcoes": [
+          "L\u00EDquidos",
+          "Pastosos",
+          "S\u00F3lidos",
+          "Saliva"
+        ]
+      },
+      {
+        "id": 109,
+        "texto": "9. Atende comandos b\u00E1sicos: \u0027pegue o copo\u0027, \u0027guarde seu sapato\u0027?",
+        "peso": 2,
+        "ordem": 9,
+        "categoria": "Linguagem e Cogni\u00E7\u00E3o",
+        "opcoes": []
+      },
+      {
+        "id": 110,
+        "texto": "10. Consegue manter uma conversa por aproximadamente 5 minutos?",
+        "peso": 3,
+        "ordem": 10,
+        "categoria": "Linguagem e Cogni\u00E7\u00E3o",
+        "opcoes": []
+      },
+      {
+        "id": 111,
+        "texto": "11. Lembra o nome dos objetos do dia a dia?",
+        "peso": 2,
+        "ordem": 11,
+        "categoria": "Linguagem e Cogni\u00E7\u00E3o",
+        "opcoes": []
+      },
+      {
+        "id": 112,
+        "texto": "12. Sabe onde est\u00E1 (local e data)?",
+        "peso": 2,
+        "ordem": 12,
+        "categoria": "Linguagem e Cogni\u00E7\u00E3o",
+        "opcoes": []
+      },
+      {
+        "id": 113,
+        "texto": "13. Apresenta voz rouca?",
+        "peso": 3,
+        "ordem": 13,
+        "categoria": "Voz",
+        "opcoes": []
+      },
+      {
+        "id": 114,
+        "texto": "14. Toma bastante \u00E1gua ao longo do dia?",
+        "peso": 1,
+        "ordem": 14,
+        "categoria": "Voz",
+        "opcoes": []
+      },
+      {
+        "id": 115,
+        "texto": "15. Fica cansado ao falar?",
+        "peso": 1,
+        "ordem": 15,
+        "categoria": "Voz",
+        "opcoes": []
+      },
+      {
+        "id": 116,
+        "texto": "16. Tem pigarro com frequ\u00EAncia?",
+        "peso": 1,
+        "ordem": 16,
+        "categoria": "Voz",
+        "opcoes": []
+      },
+      {
+        "id": 117,
+        "texto": "17. Queixa-se de tontura ou zumbido frequentemente?",
+        "peso": 2,
+        "ordem": 17,
+        "categoria": "Audi\u00E7\u00E3o e Equil\u00EDbrio",
+        "opcoes": []
+      },
+      {
+        "id": 118,
+        "texto": "18. Queixa-se de tontura ou zumbido frequentemente?",
+        "peso": 1,
+        "ordem": 18,
+        "categoria": "Audi\u00E7\u00E3o e Equil\u00EDbrio",
+        "opcoes": []
+      },
+      {
+        "id": 119,
+        "texto": "19. Pede para repetirem o que foi falado?",
+        "peso": 1,
+        "ordem": 19,
+        "categoria": "Audi\u00E7\u00E3o e Equil\u00EDbrio",
+        "opcoes": []
+      },
+      {
+        "id": 120,
+        "texto": "20. Consegue perceber sons altos?",
+        "peso": 1,
+        "ordem": 20,
+        "categoria": "Audi\u00E7\u00E3o e Equil\u00EDbrio",
+        "opcoes": []
+      }
+    ],
+    "faixas": [
+      {
+        "titulo": "Poucos sinais relatados",
+        "recomendacao": "Foram relatados poucos sinais neste rastreio. Observe a evolu\u00E7\u00E3o e mantenha o acompanhamento de rotina.",
+        "pontuacaoMin": 0,
+        "pontuacaoMax": 13,
+        "cor": "#10B981"
+      },
+      {
+        "titulo": "Sinais que merecem avalia\u00E7\u00E3o",
+        "recomendacao": "H\u00E1 sinais que merecem aten\u00E7\u00E3o. Considere agendar uma avalia\u00E7\u00E3o com profissional habilitado.",
+        "pontuacaoMin": 14,
+        "pontuacaoMax": 26,
+        "cor": "#F59E0B"
+      },
+      {
+        "titulo": "V\u00E1rios sinais relatados",
+        "recomendacao": "Foram relatados v\u00E1rios sinais. Procure avalia\u00E7\u00E3o profissional; este resultado n\u00E3o \u00E9 um diagn\u00F3stico.",
+        "pontuacaoMin": 27,
+        "pontuacaoMax": 40,
+        "cor": "#EF4444"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "titulo": "Triagem de Linguagem e Cogni\u00E7\u00E3o",
+    "publicoAlvo": "Adultos e idosos",
+    "descricao": "Rastreio orientativo de altera\u00E7\u00F5es percebidas na linguagem, comunica\u00E7\u00E3o funcional e cogni\u00E7\u00E3o. N\u00E3o substitui avalia\u00E7\u00E3o fonoaudiol\u00F3gica.",
+    "icone": "\uD83E\uDDE0",
+    "padrao": true,
+    "criadorUsuarioId": null,
+    "perguntas": [
+      {
+        "id": 201,
+        "texto": "Tem dificuldade frequente para encontrar palavras durante uma conversa?",
+        "peso": 2,
+        "ordem": 1,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 202,
+        "texto": "Percebe que troca palavras ou usa palavras inadequadas sem notar?",
+        "peso": 2,
+        "ordem": 2,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 203,
+        "texto": "Tem dificuldade para compreender frases, instru\u00E7\u00F5es ou conversas?",
+        "peso": 3,
+        "ordem": 3,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 204,
+        "texto": "Perde o fio da conversa ou tem dificuldade para organizar o que deseja dizer?",
+        "peso": 2,
+        "ordem": 4,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 205,
+        "texto": "Notou mudan\u00E7a recente na leitura ou na compreens\u00E3o de textos?",
+        "peso": 2,
+        "ordem": 5,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 206,
+        "texto": "Notou mudan\u00E7a recente na escrita de palavras ou frases?",
+        "peso": 2,
+        "ordem": 6,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 207,
+        "texto": "Esquece informa\u00E7\u00F5es recentes a ponto de prejudicar sua comunica\u00E7\u00E3o di\u00E1ria?",
+        "peso": 2,
+        "ordem": 7,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 208,
+        "texto": "Tem dificuldade para reconhecer ou nomear pessoas e objetos conhecidos?",
+        "peso": 3,
+        "ordem": 8,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 209,
+        "texto": "Familiares perceberam mudan\u00E7a recente na sua fala ou compreens\u00E3o?",
+        "peso": 3,
+        "ordem": 9,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 210,
+        "texto": "Essas dificuldades interferem em atividades sociais, profissionais ou dom\u00E9sticas?",
+        "peso": 2,
+        "ordem": 10,
+        "categoria": "",
+        "opcoes": []
+      }
+    ],
+    "faixas": [
+      {
+        "titulo": "Poucos sinais relatados",
+        "recomendacao": "Foram relatados poucos sinais neste rastreio. Observe a evolu\u00E7\u00E3o e mantenha o acompanhamento de rotina.",
+        "pontuacaoMin": 0,
+        "pontuacaoMax": 7,
+        "cor": "#10B981"
+      },
+      {
+        "titulo": "Sinais que merecem avalia\u00E7\u00E3o",
+        "recomendacao": "H\u00E1 sinais que merecem aten\u00E7\u00E3o. Considere agendar uma avalia\u00E7\u00E3o com profissional habilitado.",
+        "pontuacaoMin": 8,
+        "pontuacaoMax": 15,
+        "cor": "#F59E0B"
+      },
+      {
+        "titulo": "V\u00E1rios sinais relatados",
+        "recomendacao": "Foram relatados v\u00E1rios sinais. Procure avalia\u00E7\u00E3o profissional; este resultado n\u00E3o \u00E9 um diagn\u00F3stico.",
+        "pontuacaoMin": 16,
+        "pontuacaoMax": 23,
+        "cor": "#EF4444"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "titulo": "Triagem Fonoaudiol\u00F3gica Infantil",
+    "publicoAlvo": "Crian\u00E7as de 0 a 12 anos",
+    "descricao": "Rastreio orientativo de fala, linguagem, audi\u00E7\u00E3o, alimenta\u00E7\u00E3o e comunica\u00E7\u00E3o na inf\u00E2ncia. N\u00E3o substitui avalia\u00E7\u00E3o fonoaudiol\u00F3gica.",
+    "icone": "\uD83E\uDDD2",
+    "padrao": true,
+    "criadorUsuarioId": null,
+    "perguntas": [
+      {
+        "id": 301,
+        "texto": "A crian\u00E7a fala ou se comunica menos do que o esperado para sua idade?",
+        "peso": 3,
+        "ordem": 1,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 302,
+        "texto": "Tem dificuldade para compreender ordens ou perguntas adequadas \u00E0 idade?",
+        "peso": 3,
+        "ordem": 2,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 303,
+        "texto": "Pessoas fora da fam\u00EDlia t\u00EAm dificuldade frequente para entender sua fala?",
+        "peso": 2,
+        "ordem": 3,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 304,
+        "texto": "Troca, omite ou distorce sons da fala de forma persistente?",
+        "peso": 2,
+        "ordem": 4,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 305,
+        "texto": "Apresenta repeti\u00E7\u00F5es, bloqueios ou esfor\u00E7o para falar?",
+        "peso": 2,
+        "ordem": 5,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 306,
+        "texto": "Parece n\u00E3o responder quando \u00E9 chamada ou pede repeti\u00E7\u00E3o com frequ\u00EAncia?",
+        "peso": 3,
+        "ordem": 6,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 307,
+        "texto": "Teve otites recorrentes ou suspeita de redu\u00E7\u00E3o auditiva?",
+        "peso": 2,
+        "ordem": 7,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 308,
+        "texto": "Tem dificuldade persistente para mastigar, engolir ou aceitar diferentes alimentos?",
+        "peso": 2,
+        "ordem": 8,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 309,
+        "texto": "Tem dificuldade para interagir, manter turnos de conversa ou brincar comunicativamente?",
+        "peso": 2,
+        "ordem": 9,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 310,
+        "texto": "As dificuldades de comunica\u00E7\u00E3o prejudicam a aprendizagem ou a conviv\u00EAncia?",
+        "peso": 2,
+        "ordem": 10,
+        "categoria": "",
+        "opcoes": []
+      }
+    ],
+    "faixas": [
+      {
+        "titulo": "Poucos sinais relatados",
+        "recomendacao": "Foram relatados poucos sinais neste rastreio. Observe a evolu\u00E7\u00E3o e mantenha o acompanhamento de rotina.",
+        "pontuacaoMin": 0,
+        "pontuacaoMax": 7,
+        "cor": "#10B981"
+      },
+      {
+        "titulo": "Sinais que merecem avalia\u00E7\u00E3o",
+        "recomendacao": "H\u00E1 sinais que merecem aten\u00E7\u00E3o. Considere agendar uma avalia\u00E7\u00E3o com profissional habilitado.",
+        "pontuacaoMin": 8,
+        "pontuacaoMax": 15,
+        "cor": "#F59E0B"
+      },
+      {
+        "titulo": "V\u00E1rios sinais relatados",
+        "recomendacao": "Foram relatados v\u00E1rios sinais. Procure avalia\u00E7\u00E3o profissional; este resultado n\u00E3o \u00E9 um diagn\u00F3stico.",
+        "pontuacaoMin": 16,
+        "pontuacaoMax": 23,
+        "cor": "#EF4444"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "titulo": "Triagem de Motricidade Orofacial",
+    "publicoAlvo": "Todas as idades",
+    "descricao": "Rastreio orientativo de respira\u00E7\u00E3o, mastiga\u00E7\u00E3o, degluti\u00E7\u00E3o e fun\u00E7\u00F5es orofaciais. N\u00E3o substitui avalia\u00E7\u00E3o fonoaudiol\u00F3gica.",
+    "icone": "\uD83D\uDC44",
+    "padrao": true,
+    "criadorUsuarioId": null,
+    "perguntas": [
+      {
+        "id": 401,
+        "texto": "Respira pela boca durante boa parte do dia ou enquanto dorme?",
+        "peso": 2,
+        "ordem": 1,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 402,
+        "texto": "Ronca com frequ\u00EAncia ou acorda com a boca seca?",
+        "peso": 2,
+        "ordem": 2,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 403,
+        "texto": "Tem dificuldade ou cansa\u00E7o para mastigar alimentos?",
+        "peso": 2,
+        "ordem": 3,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 404,
+        "texto": "Mastiga preferencialmente de um \u00FAnico lado?",
+        "peso": 1,
+        "ordem": 4,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 405,
+        "texto": "Engasga, tosse ou sente alimento parado ao engolir?",
+        "peso": 3,
+        "ordem": 5,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 406,
+        "texto": "Derrama alimento ou saliva pela boca sem perceber?",
+        "peso": 2,
+        "ordem": 6,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 407,
+        "texto": "Percebe a l\u00EDngua empurrando os dentes ao falar ou engolir?",
+        "peso": 1,
+        "ordem": 7,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 408,
+        "texto": "Sente dor, estalo ou limita\u00E7\u00E3o ao abrir a boca?",
+        "peso": 2,
+        "ordem": 8,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 409,
+        "texto": "Apresenta dificuldade persistente para articular algum som da fala?",
+        "peso": 2,
+        "ordem": 9,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 410,
+        "texto": "Alguma dessas altera\u00E7\u00F5es prejudica alimenta\u00E7\u00E3o, sono, fala ou qualidade de vida?",
+        "peso": 2,
+        "ordem": 10,
+        "categoria": "",
+        "opcoes": []
+      }
+    ],
+    "faixas": [
+      {
+        "titulo": "Poucos sinais relatados",
+        "recomendacao": "Foram relatados poucos sinais neste rastreio. Observe a evolu\u00E7\u00E3o e mantenha o acompanhamento de rotina.",
+        "pontuacaoMin": 0,
+        "pontuacaoMax": 6,
+        "cor": "#10B981"
+      },
+      {
+        "titulo": "Sinais que merecem avalia\u00E7\u00E3o",
+        "recomendacao": "H\u00E1 sinais que merecem aten\u00E7\u00E3o. Considere agendar uma avalia\u00E7\u00E3o com profissional habilitado.",
+        "pontuacaoMin": 7,
+        "pontuacaoMax": 12,
+        "cor": "#F59E0B"
+      },
+      {
+        "titulo": "V\u00E1rios sinais relatados",
+        "recomendacao": "Foram relatados v\u00E1rios sinais. Procure avalia\u00E7\u00E3o profissional; este resultado n\u00E3o \u00E9 um diagn\u00F3stico.",
+        "pontuacaoMin": 13,
+        "pontuacaoMax": 19,
+        "cor": "#EF4444"
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "titulo": "Triagem Auditiva do Idoso",
+    "publicoAlvo": "Pessoas com 60 anos ou mais",
+    "descricao": "Rastreio orientativo de dificuldades auditivas e impacto funcional na comunica\u00E7\u00E3o da pessoa idosa. N\u00E3o substitui avalia\u00E7\u00E3o audiol\u00F3gica.",
+    "icone": "\uD83D\uDC42",
+    "padrao": true,
+    "criadorUsuarioId": null,
+    "perguntas": [
+      {
+        "id": 501,
+        "texto": "Pede para as pessoas repetirem o que disseram com frequ\u00EAncia?",
+        "peso": 2,
+        "ordem": 1,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 502,
+        "texto": "Aumenta o volume da televis\u00E3o ou do telefone mais do que outras pessoas?",
+        "peso": 2,
+        "ordem": 2,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 503,
+        "texto": "Tem dificuldade para acompanhar conversas em grupo?",
+        "peso": 2,
+        "ordem": 3,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 504,
+        "texto": "Tem dificuldade para entender fala em locais com ru\u00EDdo?",
+        "peso": 3,
+        "ordem": 4,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 505,
+        "texto": "Tem dificuldade para ouvir ao telefone?",
+        "peso": 2,
+        "ordem": 5,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 506,
+        "texto": "Percebe zumbido frequente em um ou nos dois ouvidos?",
+        "peso": 1,
+        "ordem": 6,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 507,
+        "texto": "Deixa de participar de conversas ou encontros por dificuldade para ouvir?",
+        "peso": 3,
+        "ordem": 7,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 508,
+        "texto": "Familiares dizem que parece n\u00E3o ouvir ou responder adequadamente?",
+        "peso": 2,
+        "ordem": 8,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 509,
+        "texto": "Percebe piora recente ou diferen\u00E7a de audi\u00E7\u00E3o entre os ouvidos?",
+        "peso": 3,
+        "ordem": 9,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 510,
+        "texto": "A dificuldade auditiva reduz sua autonomia ou seguran\u00E7a no dia a dia?",
+        "peso": 3,
+        "ordem": 10,
+        "categoria": "",
+        "opcoes": []
+      }
+    ],
+    "faixas": [
+      {
+        "titulo": "Poucos sinais relatados",
+        "recomendacao": "Foram relatados poucos sinais neste rastreio. Observe a evolu\u00E7\u00E3o e mantenha o acompanhamento de rotina.",
+        "pontuacaoMin": 0,
+        "pontuacaoMax": 7,
+        "cor": "#10B981"
+      },
+      {
+        "titulo": "Sinais que merecem avalia\u00E7\u00E3o",
+        "recomendacao": "H\u00E1 sinais que merecem aten\u00E7\u00E3o. Considere agendar uma avalia\u00E7\u00E3o com profissional habilitado.",
+        "pontuacaoMin": 8,
+        "pontuacaoMax": 15,
+        "cor": "#F59E0B"
+      },
+      {
+        "titulo": "V\u00E1rios sinais relatados",
+        "recomendacao": "Foram relatados v\u00E1rios sinais. Procure avalia\u00E7\u00E3o profissional; este resultado n\u00E3o \u00E9 um diagn\u00F3stico.",
+        "pontuacaoMin": 16,
+        "pontuacaoMax": 23,
+        "cor": "#EF4444"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "titulo": "Triagem de Voz",
+    "publicoAlvo": "Profissionais da voz e adultos",
+    "descricao": "Rastreio orientativo de altera\u00E7\u00F5es vocais, esfor\u00E7o e impacto do uso da voz. N\u00E3o substitui avalia\u00E7\u00E3o fonoaudiol\u00F3gica ou otorrinolaringol\u00F3gica.",
+    "icone": "\uD83D\uDDE3\uFE0F",
+    "padrao": true,
+    "criadorUsuarioId": null,
+    "perguntas": [
+      {
+        "id": 601,
+        "texto": "Apresenta rouquid\u00E3o ou mudan\u00E7a de voz por mais de duas semanas?",
+        "peso": 3,
+        "ordem": 1,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 602,
+        "texto": "Sente cansa\u00E7o vocal ap\u00F3s falar por pouco tempo?",
+        "peso": 2,
+        "ordem": 2,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 603,
+        "texto": "Precisa fazer esfor\u00E7o para a voz sair?",
+        "peso": 2,
+        "ordem": 3,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 604,
+        "texto": "Sente dor, ardor ou desconforto ao falar?",
+        "peso": 2,
+        "ordem": 4,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 605,
+        "texto": "A voz falha ou desaparece durante o dia?",
+        "peso": 2,
+        "ordem": 5,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 606,
+        "texto": "Percebe perda de alcance, pot\u00EAncia ou controle da voz?",
+        "peso": 2,
+        "ordem": 6,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 607,
+        "texto": "Pigarreia ou tosse repetidamente durante o uso da voz?",
+        "peso": 1,
+        "ordem": 7,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 608,
+        "texto": "Tem dificuldade para ser ouvido em ambientes comuns?",
+        "peso": 2,
+        "ordem": 8,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 609,
+        "texto": "Usa a voz profissionalmente e os sintomas prejudicam seu trabalho?",
+        "peso": 2,
+        "ordem": 9,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 610,
+        "texto": "A altera\u00E7\u00E3o vocal surgiu de forma s\u00FAbita ou vem piorando?",
+        "peso": 3,
+        "ordem": 10,
+        "categoria": "",
+        "opcoes": []
+      }
+    ],
+    "faixas": [
+      {
+        "titulo": "Poucos sinais relatados",
+        "recomendacao": "Foram relatados poucos sinais neste rastreio. Observe a evolu\u00E7\u00E3o e mantenha o acompanhamento de rotina.",
+        "pontuacaoMin": 0,
+        "pontuacaoMax": 7,
+        "cor": "#10B981"
+      },
+      {
+        "titulo": "Sinais que merecem avalia\u00E7\u00E3o",
+        "recomendacao": "H\u00E1 sinais que merecem aten\u00E7\u00E3o. Considere agendar uma avalia\u00E7\u00E3o com profissional habilitado.",
+        "pontuacaoMin": 8,
+        "pontuacaoMax": 14,
+        "cor": "#F59E0B"
+      },
+      {
+        "titulo": "V\u00E1rios sinais relatados",
+        "recomendacao": "Foram relatados v\u00E1rios sinais. Procure avalia\u00E7\u00E3o profissional; este resultado n\u00E3o \u00E9 um diagn\u00F3stico.",
+        "pontuacaoMin": 15,
+        "pontuacaoMax": 21,
+        "cor": "#EF4444"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "titulo": "Triagem Auditiva",
+    "publicoAlvo": "Todas as idades",
+    "descricao": "Rastreio orientativo de sinais de dificuldade auditiva e necessidade de avalia\u00E7\u00E3o audiol\u00F3gica. N\u00E3o substitui diagn\u00F3stico profissional.",
+    "icone": "\uD83C\uDFA7",
+    "padrao": true,
+    "criadorUsuarioId": null,
+    "perguntas": [
+      {
+        "id": 701,
+        "texto": "Tem dificuldade para ouvir fala em volume habitual?",
+        "peso": 2,
+        "ordem": 1,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 702,
+        "texto": "Pede repeti\u00E7\u00E3o ou entende palavras diferentes das que foram ditas?",
+        "peso": 2,
+        "ordem": 2,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 703,
+        "texto": "Tem dificuldade para compreender fala em ambientes ruidosos?",
+        "peso": 3,
+        "ordem": 3,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 704,
+        "texto": "Aumenta frequentemente o volume de televis\u00E3o, celular ou fones?",
+        "peso": 2,
+        "ordem": 4,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 705,
+        "texto": "Percebe zumbido frequente em um ou nos dois ouvidos?",
+        "peso": 1,
+        "ordem": 5,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 706,
+        "texto": "Percebe diferen\u00E7a de audi\u00E7\u00E3o entre os ouvidos?",
+        "peso": 3,
+        "ordem": 6,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 707,
+        "texto": "Teve infec\u00E7\u00F5es de ouvido recorrentes, dor ou secre\u00E7\u00E3o?",
+        "peso": 2,
+        "ordem": 7,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 708,
+        "texto": "Foi exposto com frequ\u00EAncia a ru\u00EDdo intenso ou som alto?",
+        "peso": 2,
+        "ordem": 8,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 709,
+        "texto": "A dificuldade para ouvir prejudica estudo, trabalho ou conviv\u00EAncia?",
+        "peso": 2,
+        "ordem": 9,
+        "categoria": "",
+        "opcoes": []
+      },
+      {
+        "id": 710,
+        "texto": "Houve perda auditiva s\u00FAbita ou piora importante recente?",
+        "peso": 3,
+        "ordem": 10,
+        "categoria": "",
+        "opcoes": []
+      }
+    ],
+    "faixas": [
+      {
+        "titulo": "Poucos sinais relatados",
+        "recomendacao": "Foram relatados poucos sinais neste rastreio. Observe a evolu\u00E7\u00E3o e mantenha o acompanhamento de rotina.",
+        "pontuacaoMin": 0,
+        "pontuacaoMax": 7,
+        "cor": "#10B981"
+      },
+      {
+        "titulo": "Sinais que merecem avalia\u00E7\u00E3o",
+        "recomendacao": "H\u00E1 sinais que merecem aten\u00E7\u00E3o. Considere agendar uma avalia\u00E7\u00E3o com profissional habilitado.",
+        "pontuacaoMin": 8,
+        "pontuacaoMax": 14,
+        "cor": "#F59E0B"
+      },
+      {
+        "titulo": "V\u00E1rios sinais relatados",
+        "recomendacao": "Foram relatados v\u00E1rios sinais. Procure avalia\u00E7\u00E3o profissional; este resultado n\u00E3o \u00E9 um diagn\u00F3stico.",
+        "pontuacaoMin": 15,
+        "pontuacaoMax": 22,
+        "cor": "#EF4444"
+      }
+    ]
+  }
+]
