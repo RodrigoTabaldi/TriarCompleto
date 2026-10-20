@@ -1,0 +1,36 @@
+services:
+  api:
+    build: ./Triagem.API/Triagem.API
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Database__Provider: SQLite
+      ConnectionStrings__DefaultConnection: Data Source=/data/triar.db
+      ConnectionStrings__Redis: ""
+      Jwt__Key: "${JWT_KEY:?defina JWT_KEY no arquivo .env}"
+    volumes:
+      - triar-individual-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  nginx:
+    image: nginx:stable-alpine
+    ports:
+      - "127.0.0.1:5036:5036"
+    volumes:
+      - ./deploy/nginx/individual.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+  web:
+    build: ./Triagem.Web
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - nginx
+    restart: unless-stopped
+volumes:
+  triar-individual-data:

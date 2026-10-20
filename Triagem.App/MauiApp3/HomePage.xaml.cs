@@ -9,6 +9,7 @@ public partial class HomePage : ContentPage
 {
     private readonly ObservableCollection<TriagemResumo> _triagensDesktop = [];
     private readonly ObservableCollection<TriagemResumo> _triagensMobile = [];
+    private readonly ObservableCollection<TriagemResumo> _especificasMobile = [];
     private List<TriagemResumo> _todas = [];
     private bool _modoEdicao;
     private bool _mostrarPrincipais = true;
@@ -18,7 +19,8 @@ public partial class HomePage : ContentPage
         InitializeComponent();
 
         ListaTriagensDesktop.ItemsSource = _triagensDesktop;
-        ListaTriagensMobile.ItemsSource = _triagensMobile;
+        BindableLayout.SetItemsSource(ListaTriagensMobile, _triagensMobile);
+        SeletorEspecificasMobile.ItemsSource = _especificasMobile;
         SizeChanged += AjustarLayout;
 
         if (App.UsuarioLogado is { } u)
@@ -42,7 +44,7 @@ public partial class HomePage : ContentPage
 
     private void AjustarLayout(object? sender, EventArgs e)
     {
-        var desktop = Width >= 900;
+        var desktop = DeviceInfo.Platform == DevicePlatform.WinUI && Width >= 900;
         DesktopRoot.IsVisible = desktop;
         MobileRoot.IsVisible = !desktop;
 
@@ -107,8 +109,31 @@ public partial class HomePage : ContentPage
             _triagensDesktop.Add(t);
 
         _triagensMobile.Clear();
-        foreach (var t in (_modoEdicao ? visiveis : visiveis.Take(4)))
-            _triagensMobile.Add(t);
+        SeletorEspecificasMobile.IsVisible = !_mostrarPrincipais;
+        if (_mostrarPrincipais)
+        {
+            foreach (var t in visiveis)
+                _triagensMobile.Add(t);
+        }
+        else
+        {
+            var selecionadaId = (SeletorEspecificasMobile.SelectedItem as TriagemResumo)?.Id;
+            _especificasMobile.Clear();
+            foreach (var t in visiveis)
+                _especificasMobile.Add(t);
+            SeletorEspecificasMobile.SelectedItem = _especificasMobile.FirstOrDefault(t => t.Id == selecionadaId)
+                ?? _especificasMobile.FirstOrDefault();
+        }
+        MensagemMobileVazia.IsVisible = _triagensMobile.Count == 0;
+    }
+
+    private void SelecionarEspecificaMobile(object? sender, EventArgs e)
+    {
+        if (_mostrarPrincipais) return;
+        _triagensMobile.Clear();
+        if (SeletorEspecificasMobile.SelectedItem is TriagemResumo selecionada)
+            _triagensMobile.Add(selecionada);
+        MensagemMobileVazia.IsVisible = _triagensMobile.Count == 0;
     }
 
     private static bool EhPrincipal(TriagemResumo triagem) => triagem.Padrao &&

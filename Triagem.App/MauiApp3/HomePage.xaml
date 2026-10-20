@@ -261,164 +261,117 @@
               BackgroundColor="White"
               RowDefinitions="*,Auto">
 
-            <CollectionView x:Name="ListaTriagensMobile"
-                            SelectionMode="None"
-                            Margin="16,0"
-                            VerticalScrollBarVisibility="Never">
-                <CollectionView.EmptyView>
-                    <Label Text="Nenhuma triagem disponível nesta categoria." TextColor="#465674" Margin="0,20"/>
-                </CollectionView.EmptyView>
-                <CollectionView.ItemsLayout>
-                    <LinearItemsLayout Orientation="Vertical" ItemSpacing="16"/>
-                </CollectionView.ItemsLayout>
-
-                <CollectionView.Header>
-                    <VerticalStackLayout Spacing="0" Padding="0,18,0,18">
+            <VerticalStackLayout Grid.Row="0" Padding="16,0" Spacing="8">
+                    <VerticalStackLayout Spacing="0" Padding="0,8,0,8">
                         <Grid ColumnDefinitions="*,Auto">
                             <Image Source="logo.png"
-                                   HeightRequest="64"
+                                   HeightRequest="38"
                                    HorizontalOptions="Start"/>
                             <Border Grid.Column="1"
                                     BackgroundColor="#009B72"
                                     StrokeThickness="0"
                                     StrokeShape="RoundRectangle 100"
-                                    HeightRequest="46"
-                                    WidthRequest="46"
+                                    HeightRequest="38"
+                                    WidthRequest="38"
                                     VerticalOptions="Center">
                                 <Label x:Name="InicialUsuarioMobile"
                                        Text="JS"
                                        TextColor="White"
-                                       FontSize="20"
+                                       FontSize="16"
                                        FontAttributes="Bold"
                                        HorizontalOptions="Center"
                                        VerticalOptions="Center"/>
                             </Border>
                         </Grid>
 
-                        <Label x:Name="SaudacaoUsuarioMobile" Text="Olá, João Silva" FontSize="23" FontAttributes="Bold" TextColor="#07142E" Margin="0,18,0,0"/>
-                        <Label Text="Como você está hoje?" FontSize="16" TextColor="#465674" Margin="0,4,0,0"/>
+                        <Label x:Name="SaudacaoUsuarioMobile" Text="Olá, João Silva" FontSize="18" FontAttributes="Bold" TextColor="#07142E" Margin="0,6,0,0"/>
 
-                        <Label Text="Triagens" FontSize="26" FontAttributes="Bold" TextColor="#07142E" Margin="0,28,0,0"/>
-                        <Label Text="Escolha uma triagem para iniciar" FontSize="16" TextColor="#465674" Margin="0,4,0,0"/>
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8" Margin="0,16,0,0">
+                        <Label Text="Triagens" FontSize="20" FontAttributes="Bold" TextColor="#07142E" Margin="0,8,0,0"/>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8" Margin="0,8,0,0">
                             <Button x:Name="BotaoPrincipaisMobile" Text="Triagens principais" Clicked="MostrarTriagensPrincipais"
-                                    BackgroundColor="#009B72" TextColor="White" CornerRadius="10" FontSize="13" HeightRequest="48" Padding="6,0"/>
+                                    BackgroundColor="#009B72" TextColor="White" CornerRadius="10" FontSize="12" HeightRequest="40" Padding="4,0"/>
                             <Button Grid.Column="1" x:Name="BotaoEspecificasMobile" Text="Triagens específicas" Clicked="MostrarTriagensEspecificas"
-                                    BackgroundColor="White" TextColor="#009B72" BorderColor="#009B72" BorderWidth="1" CornerRadius="10" FontSize="13" HeightRequest="48" Padding="6,0"/>
+                                    BackgroundColor="White" TextColor="#009B72" BorderColor="#009B72" BorderWidth="1" CornerRadius="10" FontSize="12" HeightRequest="40" Padding="4,0"/>
                         </Grid>
+                        <Picker x:Name="SeletorEspecificasMobile" Title="Escolha uma triagem específica"
+                                IsVisible="False" ItemDisplayBinding="{Binding Titulo}"
+                                SelectedIndexChanged="SelecionarEspecificaMobile" Margin="0,6,0,0"/>
                     </VerticalStackLayout>
-                </CollectionView.Header>
+                <VerticalStackLayout x:Name="ListaTriagensMobile" Spacing="8">
 
-                <CollectionView.ItemTemplate>
+                <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="models:TriagemResumo">
                         <Border BackgroundColor="White"
                                 Stroke="#EDF0F3"
                                 StrokeThickness="1"
                                 StrokeShape="RoundRectangle 14"
-                                Padding="16"
+                                Padding="10"
                                 Shadow="0,3,14,#00000016">
-                            <VerticalStackLayout Spacing="12">
-                                <Image Source="{Binding ImagemHome}" HeightRequest="120" Aspect="AspectFit" HorizontalOptions="Fill"/>
-
-                                <VerticalStackLayout Spacing="10">
-                                    <Label Text="{Binding Titulo}" FontSize="19" FontAttributes="Bold" TextColor="#05070D" LineBreakMode="WordWrap"/>
-                                    <VerticalStackLayout Spacing="0">
-                                        <Label Text="Público alvo:" FontSize="13" TextColor="#40506A"/>
-                                        <Label Text="{Binding PublicoAlvo}" FontSize="14" TextColor="#40506A"/>
-                                    </VerticalStackLayout>
-                                    <Button Text="Entrar" Clicked="AbrirTriagem" Style="{StaticResource PrimaryButton}" HeightRequest="48"/>
-                                    <Button Text="Ver histórico" Clicked="AbrirHistorico" Style="{StaticResource OutlineButton}" HeightRequest="48"/>
-
-                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" IsVisible="{Binding ModoEdicao}">
+                            <Grid ColumnDefinitions="56,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8">
+                                <Image Source="{Binding ImagemHome}" WidthRequest="56" HeightRequest="56" Aspect="AspectFit"/>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <Label Text="{Binding Titulo}" FontSize="16" FontAttributes="Bold" TextColor="#05070D" LineBreakMode="WordWrap"/>
+                                    <Label Text="{Binding PublicoAlvo}" FontSize="12" TextColor="#40506A" LineBreakMode="WordWrap"/>
+                                </VerticalStackLayout>
+                                <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,*" ColumnSpacing="8">
+                                    <Button Text="Entrar" Clicked="AbrirTriagem" Style="{StaticResource PrimaryButton}" HeightRequest="40" FontSize="13"/>
+                                    <Button Grid.Column="1" Text="Histórico" Clicked="AbrirHistorico" Style="{StaticResource OutlineButton}" HeightRequest="40" FontSize="13"/>
+                                </Grid>
+                                    <Grid Grid.Row="2" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" IsVisible="{Binding ModoEdicao}">
                                         <Label Text="Exibir na home" VerticalOptions="Center" TextColor="#374151"/>
                                         <Switch Grid.Column="1" IsToggled="{Binding VisivelNaHome, Mode=TwoWay}" OnColor="#009B72"/>
                                         <Button Grid.Column="2" Text="✎" Clicked="EditarTriagem" BackgroundColor="#E6F6F1" CornerRadius="8" WidthRequest="40" HeightRequest="40" IsVisible="{Binding MinhaAutoria}" SemanticProperties.Description="Editar triagem e sua imagem"/>
                                         <Button Grid.Column="3" Text="🗑" Clicked="ExcluirTriagem" BackgroundColor="#FEE2E2" TextColor="#EF4444" CornerRadius="8" WidthRequest="40" HeightRequest="40" IsVisible="{Binding MinhaAutoria}" SemanticProperties.Description="Excluir triagem"/>
                                     </Grid>
-                                </VerticalStackLayout>
-                            </VerticalStackLayout>
+                            </Grid>
                         </Border>
                     </DataTemplate>
-                </CollectionView.ItemTemplate>
-
-                <CollectionView.Footer>
-                    <VerticalStackLayout Spacing="22" Padding="0,28,0,22">
-                        <Button x:Name="BotaoSalvarHomeMobile"
-                                Text="Salvar configuração da home"
-                                Clicked="SalvarConfiguracaoHome"
-                                IsVisible="False"
-                                Style="{StaticResource PrimaryButton}"/>
-
-                        <Border BackgroundColor="#EEF8F5" StrokeThickness="0" StrokeShape="RoundRectangle 13" Padding="16">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="IrSobre"/>
-                            </Border.GestureRecognizers>
-                            <Grid ColumnDefinitions="40,*,Auto" ColumnSpacing="12">
-                                <Border BackgroundColor="#009B72" StrokeThickness="0" StrokeShape="RoundRectangle 100" HeightRequest="40" WidthRequest="40">
-                                    <Label Text="i" TextColor="White" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
-                                </Border>
-                                <VerticalStackLayout Grid.Column="1" Spacing="8">
-                                    <Label Text="Sobre o projeto" FontSize="18" FontAttributes="Bold" TextColor="#07142E"/>
-                                    <Label Text="Saiba mais sobre o Triar, seus objetivos e como as triagens funcionam." FontSize="14" TextColor="#40506A" LineBreakMode="WordWrap"/>
-                                </VerticalStackLayout>
-                                <Label Grid.Column="2" Text="›" FontSize="28" TextColor="#009B72" VerticalOptions="Center"/>
-                            </Grid>
-                        </Border>
-
-                        <Border BackgroundColor="White" Stroke="#009B72" StrokeThickness="1" StrokeShape="RoundRectangle 13" Padding="16">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="IrCriarTriagem"/>
-                            </Border.GestureRecognizers>
-                            <Grid ColumnDefinitions="40,*,Auto" ColumnSpacing="12">
-                                <Label Text="⊕" FontSize="30" TextColor="#009B72" VerticalOptions="Center" HorizontalOptions="Center"/>
-                                <VerticalStackLayout Grid.Column="1" Spacing="6">
-                                    <Label Text="Criar sua triagem" FontSize="18" FontAttributes="Bold" TextColor="#07142E"/>
-                                    <Label Text="Monte uma triagem personalizada de acordo com sua necessidade." FontSize="14" TextColor="#40506A" LineBreakMode="WordWrap"/>
-                                </VerticalStackLayout>
-                                <Label Grid.Column="2" Text="›" FontSize="28" TextColor="#009B72" VerticalOptions="Center"/>
-                            </Grid>
-                        </Border>
-                    </VerticalStackLayout>
-                </CollectionView.Footer>
-            </CollectionView>
+                </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+                <Label x:Name="MensagemMobileVazia" Text="Nenhuma triagem disponível nesta categoria."
+                       IsVisible="False" TextColor="#465674" Margin="0,16"/>
+                <Button x:Name="BotaoSalvarHomeMobile" Text="Salvar configuração da home"
+                        Clicked="SalvarConfiguracaoHome" IsVisible="False"
+                        Style="{StaticResource PrimaryButton}"/>
+            </VerticalStackLayout>
 
             <Border Grid.Row="1"
                     BackgroundColor="White"
                     Stroke="#EEF1F4"
                     StrokeThickness="0,1,0,0"
-                    Padding="18,12,18,8">
+                    Padding="8,5,8,5">
                 <Grid ColumnDefinitions="*,*,*,*,*">
                     <VerticalStackLayout Spacing="2" HorizontalOptions="Center">
-                        <Label Text="⌂" FontSize="28" TextColor="#009B72" HorizontalTextAlignment="Center"/>
-                        <Label Text="Início" FontSize="13" TextColor="#009B72" HorizontalTextAlignment="Center"/>
+                        <Label Text="⌂" FontSize="22" TextColor="#009B72" HorizontalTextAlignment="Center"/>
+                        <Label Text="Início" FontSize="10" TextColor="#009B72" HorizontalTextAlignment="Center"/>
                     </VerticalStackLayout>
                     <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Center">
                         <VerticalStackLayout.GestureRecognizers>
                             <TapGestureRecognizer Tapped="IrCreditos"/>
                         </VerticalStackLayout.GestureRecognizers>
-                        <Label Text="⌬" FontSize="26" TextColor="#40506A" HorizontalTextAlignment="Center"/>
-                        <Label Text="Créditos" FontSize="13" TextColor="#40506A" HorizontalTextAlignment="Center"/>
+                        <Label Text="⌬" FontSize="20" TextColor="#40506A" HorizontalTextAlignment="Center"/>
+                        <Label Text="Créditos" FontSize="10" TextColor="#40506A" HorizontalTextAlignment="Center"/>
                     </VerticalStackLayout>
                     <VerticalStackLayout Grid.Column="2" Spacing="2" HorizontalOptions="Center">
                         <VerticalStackLayout.GestureRecognizers>
                             <TapGestureRecognizer Tapped="IrContato"/>
                         </VerticalStackLayout.GestureRecognizers>
-                        <Label Text="✉" FontSize="26" TextColor="#40506A" HorizontalTextAlignment="Center"/>
-                        <Label Text="Contato" FontSize="13" TextColor="#40506A" HorizontalTextAlignment="Center"/>
+                        <Label Text="✉" FontSize="20" TextColor="#40506A" HorizontalTextAlignment="Center"/>
+                        <Label Text="Contato" FontSize="10" TextColor="#40506A" HorizontalTextAlignment="Center"/>
                     </VerticalStackLayout>
                     <VerticalStackLayout Grid.Column="3" Spacing="2" HorizontalOptions="Center">
                         <VerticalStackLayout.GestureRecognizers>
                             <TapGestureRecognizer Tapped="IrSobre"/>
                         </VerticalStackLayout.GestureRecognizers>
-                        <Label Text="ⓘ" FontSize="26" TextColor="#40506A" HorizontalTextAlignment="Center"/>
-                        <Label Text="Sobre o projeto" FontSize="13" TextColor="#40506A" HorizontalTextAlignment="Center"/>
+                        <Label Text="ⓘ" FontSize="20" TextColor="#40506A" HorizontalTextAlignment="Center"/>
+                        <Label Text="Sobre" FontSize="10" TextColor="#40506A" HorizontalTextAlignment="Center"/>
                     </VerticalStackLayout>
                     <VerticalStackLayout Grid.Column="4" Spacing="2" HorizontalOptions="Center">
                         <VerticalStackLayout.GestureRecognizers>
                             <TapGestureRecognizer Tapped="IrCriarTriagem"/>
                         </VerticalStackLayout.GestureRecognizers>
-                        <Label Text="⊞" FontSize="26" TextColor="#40506A" HorizontalTextAlignment="Center"/>
-                        <Label Text="Criar triagem" FontSize="13" TextColor="#40506A" HorizontalTextAlignment="Center"/>
+                        <Label Text="⊞" FontSize="20" TextColor="#40506A" HorizontalTextAlignment="Center"/>
+                        <Label Text="Criar" FontSize="10" TextColor="#40506A" HorizontalTextAlignment="Center"/>
                     </VerticalStackLayout>
                 </Grid>
             </Border>

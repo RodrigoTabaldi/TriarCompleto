@@ -18,36 +18,31 @@
             HeightRequest="400"/>
 
         <!-- CONTEÚDO -->
-        <ScrollView>
+        <Grid Padding="12">
             <VerticalStackLayout 
                 VerticalOptions="Center"
-                Padding="20"
-                Spacing="20">
+                HorizontalOptions="Center"
+                MaximumWidthRequest="500"
+                Spacing="10">
 
                 <!-- CARD -->
                 <Border 
                     BackgroundColor="White"
                     StrokeThickness="0"
                     StrokeShape="RoundRectangle 20"
-                    Padding="25"
-                    HorizontalOptions="Center"
-                    MaximumWidthRequest="500"
-                    WidthRequest="{OnPlatform Android=380, iOS=380, WinUI=500}"
+                    Padding="16"
+                    HorizontalOptions="Fill"
                     Shadow="0,4,20,#00000020">
 
-                    <VerticalStackLayout Spacing="20">
+                    <VerticalStackLayout Spacing="10">
 
                         <!-- LOGO -->
-                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
-                            <Image Source="logo.png" HeightRequest="120"/>
-                            <Label></Label>
-                                
-                        </HorizontalStackLayout>
+                        <Image Source="logo.png" HeightRequest="64" HorizontalOptions="Center"/>
 
                         <!-- TEXTO -->
                         <Label 
                             Text="Bem-vindo(a) de volta!"
-                            FontSize="20"
+                            FontSize="19"
                             HorizontalOptions="Center"
                             TextColor="#111827"/>
 
@@ -58,7 +53,7 @@
                             TextColor="#6B7280"/>
 
                         <!-- EMAIL -->
-                        <VerticalStackLayout Spacing="5">
+                        <VerticalStackLayout Spacing="2">
                             <Label Text="Email" TextColor="#374151"/>
                             <Entry 
                                 x:Name="Email"
@@ -68,7 +63,7 @@
                         </VerticalStackLayout>
 
                         <!-- SENHA -->
-                        <VerticalStackLayout Spacing="5">
+                        <VerticalStackLayout Spacing="2">
                             <Label Text="Senha" TextColor="#374151"/>
                             <Entry 
                                 x:Name="Senha"
@@ -85,7 +80,7 @@
                             BackgroundColor="#10B981"
                             TextColor="White"
                             CornerRadius="10"
-                            HeightRequest="50"/>
+                            HeightRequest="46"/>
 
                         <!-- DIVISOR -->
                         <Label 
@@ -102,14 +97,14 @@
                             BorderWidth="2"
                             TextColor="#10B981"
                             CornerRadius="10"
-                            HeightRequest="50"/>
+                            HeightRequest="46"/>
 
                     </VerticalStackLayout>
 
                 </Border>
 
             </VerticalStackLayout>
-        </ScrollView>
+        </Grid>
 
     </Grid>
 

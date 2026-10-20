@@ -28,3 +28,13 @@ firebase-debug.log
 # Pacotes gerados (APK/AAB de demonstração)
 *.apk
 *.aab
+
+# Frontend e dados locais
+node_modules/
+dist/
+*.tsbuildinfo
+*.db
+*.db-shm
+*.db-wal
+test-results/
+playwright-report/
