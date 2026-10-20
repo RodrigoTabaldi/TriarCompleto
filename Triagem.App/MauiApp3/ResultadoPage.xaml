@@ -7,21 +7,21 @@
     Shell.NavBarIsVisible="False">
 
     <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="18"
+        <VerticalStackLayout Padding="16,20,16,28" Spacing="16"
                              MaximumWidthRequest="700"
                              HorizontalOptions="Fill">
 
-            <Image Source="logo.png" HeightRequest="70" HorizontalOptions="Center" Margin="0,10,0,0"/>
+            <Image Source="logo.png" HeightRequest="60" HorizontalOptions="Center" Margin="0,4,0,0"/>
 
             <Label Text="Resultado da triagem"
-                   FontSize="24" FontAttributes="Bold"
-                   TextColor="#0F172A" HorizontalOptions="Center"/>
+                   FontSize="23" FontAttributes="Bold"
+                   TextColor="#0F172A" HorizontalOptions="Center" HorizontalTextAlignment="Center"/>
 
             <Label x:Name="TituloTriagem"
-                   FontSize="15" TextColor="#6B7280" HorizontalOptions="Center"/>
+                   FontSize="15" TextColor="#6B7280" HorizontalOptions="Center" HorizontalTextAlignment="Center" LineBreakMode="WordWrap"/>
 
             <!-- CARD DO RESULTADO -->
-            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 20" Padding="25" Shadow="0,6,24,#00000025">
+            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 20" Padding="18" Shadow="0,6,24,#00000025">
                 <VerticalStackLayout Spacing="16">
 
                     <!-- círculo com pontuação -->
@@ -41,7 +41,7 @@
 
                     <Label x:Name="Classificacao" Text="—"
                            FontSize="24" FontAttributes="Bold"
-                           TextColor="#10B981" HorizontalOptions="Center"/>
+                           TextColor="#10B981" HorizontalOptions="Center" HorizontalTextAlignment="Center" LineBreakMode="WordWrap"/>
 
                     <Label x:Name="Recomendacao"
                            FontSize="15" TextColor="#374151"
@@ -50,19 +50,24 @@
                     <BoxView HeightRequest="1" Color="#E5E7EB"/>
 
                     <!-- dados da pessoa avaliada -->
-                    <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" RowSpacing="4">
-                        <Label Text="Paciente" FontSize="12" TextColor="#6B7280" HorizontalOptions="Center"/>
-                        <Label Grid.Row="1" x:Name="NomePaciente" FontAttributes="Bold" TextColor="#0F172A" HorizontalOptions="Center"/>
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="12">
+                        <Label Grid.ColumnSpan="2" Text="Paciente" FontSize="12" TextColor="#6B7280"/>
+                        <Label Grid.Row="1" Grid.ColumnSpan="2" x:Name="NomePaciente" FontAttributes="Bold" TextColor="#0F172A" LineBreakMode="WordWrap"/>
 
-                        <Label Grid.Column="1" Text="Idade" FontSize="12" TextColor="#6B7280" HorizontalOptions="Center"/>
-                        <Label Grid.Column="1" Grid.Row="1" x:Name="IdadePaciente" FontAttributes="Bold" TextColor="#0F172A" HorizontalOptions="Center"/>
+                        <Label Grid.Row="2" Text="Idade" FontSize="12" TextColor="#6B7280" Margin="0,8,0,0"/>
+                        <Label Grid.Row="3" x:Name="IdadePaciente" FontAttributes="Bold" TextColor="#0F172A"/>
 
-                        <Label Grid.Column="2" Text="Data" FontSize="12" TextColor="#6B7280" HorizontalOptions="Center"/>
-                        <Label Grid.Column="2" Grid.Row="1" x:Name="DataTriagem" FontAttributes="Bold" TextColor="#0F172A" HorizontalOptions="Center"/>
+                        <Label Grid.Column="1" Grid.Row="2" Text="Data" FontSize="12" TextColor="#6B7280" Margin="0,8,0,0"/>
+                        <Label Grid.Column="1" Grid.Row="3" x:Name="DataTriagem" FontAttributes="Bold" TextColor="#0F172A"/>
                     </Grid>
 
                 </VerticalStackLayout>
             </Border>
+
+            <VerticalStackLayout x:Name="DetalhesRespostas" IsVisible="False" Spacing="10">
+                <Label Text="Perguntas e respostas" FontSize="19" FontAttributes="Bold" TextColor="#0F172A" />
+                <VerticalStackLayout x:Name="ListaRespostas" Spacing="8" />
+            </VerticalStackLayout>
 
             <Label Text="⚠️ Este resultado é uma orientação inicial e não substitui uma avaliação profissional."
                    FontSize="12" TextColor="#6B7280" HorizontalTextAlignment="Center"/>
@@ -73,20 +78,13 @@
                     BackgroundColor="#10B981"
                     TextColor="White"
                     FontAttributes="Bold"
-                    CornerRadius="12" HeightRequest="52"/>
-
-            <Button Text="Ver histórico desta triagem"
-                    Clicked="VerHistorico"
-                    BackgroundColor="White"
-                    BorderColor="#10B981" BorderWidth="1.5"
-                    TextColor="#10B981"
-                    CornerRadius="12" HeightRequest="48"/>
+                    CornerRadius="12" HeightRequest="52" FontSize="15" Padding="12,0"/>
 
             <Button Text="Voltar para a home"
                     Clicked="VoltarHome"
                     BackgroundColor="Transparent"
                     TextColor="#374151"
-                    CornerRadius="12" HeightRequest="44"/>
+                    CornerRadius="12" HeightRequest="48" FontSize="15"/>
 
             <BoxView HeightRequest="20" Color="Transparent"/>
         </VerticalStackLayout>

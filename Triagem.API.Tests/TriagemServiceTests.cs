@@ -271,6 +271,36 @@ public class TriagemServiceTests
     }
 
     [Fact]
+    public async Task ResponderAsync_EscolhaUnica_ValidaOpcaoEPreservaRespostaProtegida()
+    {
+        var (db, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();
+        var modelo = new TriagemModelo
+        {
+            Titulo = "Classificação do risco vocal", PublicoAlvo = "Professores", Ativa = true,
+            Perguntas = [new Pergunta { Texto = "Horas de sono?", Peso = 1, Ordem = 22,
+                OpcoesJson = "[\"2–4 horas por dia\",\"7–10 horas por dia\"]", SelecaoUnica = true }],
+            Faixas = [new FaixaResultado { Titulo = "Resultado", PontuacaoMin = 0, PontuacaoMax = 1, Ordem = 1 }]
+        };
+        db.TriagemModelos.Add(modelo);
+        await db.SaveChangesAsync();
+
+        var invalida = new ResponderTriagemRequest("Paciente", 30, "F",
+            [new RespostaInput(modelo.Perguntas[0].Id, false, ["Outra opção"])]);
+        var (resultadoInvalido, erro) = await service.ResponderAsync(usuarioA, modelo.Id, invalida);
+        Assert.Null(resultadoInvalido);
+        Assert.NotNull(erro);
+
+        var valida = new ResponderTriagemRequest("Paciente", 30, "F",
+            [new RespostaInput(modelo.Perguntas[0].Id, false, ["2–4 horas por dia"])]);
+        var (resultado, erroValido) = await service.ResponderAsync(usuarioA, modelo.Id, valida);
+        Assert.Null(erroValido);
+        Assert.Equal(1, resultado!.Pontuacao);
+        var resposta = db.RespostasDadas.Single();
+        Assert.NotNull(resposta.ValorProtegido);
+        Assert.DoesNotContain("2–4 horas por dia", resposta.ValorProtegido);
+    }
+
+    [Fact]
     public async Task ResponderAsync_ProtegeDadosClinicosEPreservaRespostaEHistorico()
     {
         var (db, service, usuarioA, _) = await NovoCenarioComDoisUsuariosAsync();

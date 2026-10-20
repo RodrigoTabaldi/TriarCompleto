@@ -84,7 +84,8 @@ public partial class TriagemService(
                 t.Id, t.Titulo, t.PublicoAlvo, t.Descricao, t.Icone, t.Imagem,
                 t.CriadorUsuarioId == null, t.CriadorUsuarioId,
                 t.Perguntas.OrderBy(p => p.Ordem)
-                    .Select(p => new PerguntaDto(p.Id, p.Texto, p.Peso, p.Ordem)).ToList(),
+                    .Select(p => new PerguntaDto(p.Id, p.Texto, p.Peso, p.Ordem,
+                        p.Categoria, JsonSerializer.Deserialize<List<string>>(p.OpcoesJson) ?? [], p.SelecaoUnica)).ToList(),
                 t.Faixas.OrderBy(f => f.Ordem)
                     .Select(f => new FaixaDto(f.Id, f.Titulo, f.Recomendacao, f.PontuacaoMin, f.PontuacaoMax, f.Cor, f.Ordem)).ToList());
         });
@@ -245,6 +246,8 @@ public partial class TriagemService(
         if (req.NomePaciente.Trim().Length > 150) return (null, "O nome deve ter no máximo 150 caracteres.");
         if (req.Idade is < 0 or > 130) return (null, "Idade inválida.");
         if ((req.Sexo?.Trim().Length ?? 0) > 30) return (null, "O sexo deve ter no máximo 30 caracteres.");
+        if ((req.Escolaridade?.Trim().Length ?? 0) > 80) return (null, "A escolaridade deve ter no máximo 80 caracteres.");
+        if ((req.DoencasPrevias?.Trim().Length ?? 0) > 1000) return (null, "As doenças prévias devem ter no máximo 1000 caracteres.");
         if (!await db.Usuarios.AnyAsync(u => u.Id == usuarioId, ct)) return (null, "Usuário não encontrado.");
 
         var perguntasPorId = modelo.Perguntas.ToDictionary(p => p.Id);
@@ -262,12 +265,29 @@ public partial class TriagemService(
             if (!perguntasPorId.TryGetValue(r.PerguntaId, out var pergunta))
                 return (null, $"Pergunta {r.PerguntaId} não pertence a esta triagem.");
 
-            if (r.Valor) pontuacao += pergunta.Peso;
+            if (pergunta.SelecaoUnica)
+            {
+                var opcoes = JsonSerializer.Deserialize<List<string>>(pergunta.OpcoesJson) ?? [];
+                if (r.OpcoesSelecionadas is not { Count: 1 } || !opcoes.Contains(r.OpcoesSelecionadas[0]))
+                    return (null, "Selecione uma opção válida para cada pergunta de escolha única.");
+                pontuacao += modelo.Titulo == DefaultTriageCatalog.TituloRiscoVocal
+                    ? VocalTriageRules.Score(pergunta.Ordem, pergunta.Peso, false, r.OpcoesSelecionadas[0])
+                    : pergunta.Peso;
+            }
+            else
+            {
+                if (r.OpcoesSelecionadas is { Count: > 0 })
+                    return (null, "Esta pergunta aceita apenas Sim ou Não.");
+                pontuacao += modelo.Titulo == DefaultTriageCatalog.TituloRiscoVocal
+                    ? VocalTriageRules.Score(pergunta.Ordem, pergunta.Peso, r.Valor, null)
+                    : r.Valor ? pergunta.Peso : 0;
+            }
             respostas.Add(new RespostaDada
             {
                 PerguntaId = r.PerguntaId,
                 Valor = false,
-                ValorProtegido = encryptor.Encrypt(r.Valor ? "1" : "0")
+                ValorProtegido = encryptor.Encrypt(pergunta.SelecaoUnica
+                    ? JsonSerializer.Serialize(r.OpcoesSelecionadas) : r.Valor ? "1" : "0")
             });
         }
 
@@ -285,6 +305,8 @@ public partial class TriagemService(
             NomePaciente = req.NomePaciente.Trim(),
             Idade = req.Idade,
             Sexo = req.Sexo?.Trim() ?? "",
+            Escolaridade = req.Escolaridade?.Trim(),
+            DoencasPrevias = req.DoencasPrevias?.Trim(),
             Pontuacao = pontuacao,
             PontuacaoMaxima = pontuacaoMaxima,
             Classificacao = faixa?.Titulo ?? "Sem classificação",
@@ -393,6 +415,8 @@ public partial class TriagemService(
         public string NomePaciente { get; set; } = "";
         public int Idade { get; set; }
         public string Sexo { get; set; } = "";
+        public string? Escolaridade { get; set; }
+        public string? DoencasPrevias { get; set; }
         public int Pontuacao { get; set; }
         public int PontuacaoMaxima { get; set; }
         public string Classificacao { get; set; } = "";

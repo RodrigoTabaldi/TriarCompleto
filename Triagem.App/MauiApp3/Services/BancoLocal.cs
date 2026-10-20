@@ -54,6 +54,7 @@ public static partial class BancoLocal
             await conexao.CreateTableAsync<TriagemModeloLocal>();
             await GarantirColunaImagemAsync(conexao);
             await conexao.CreateTableAsync<PerguntaLocal>();
+            await GarantirColunasPerguntasAsync(conexao);
             await conexao.CreateTableAsync<FaixaLocal>();
             await conexao.CreateTableAsync<HomePrefLocal>();
             await conexao.CreateTableAsync<ResultadoLocal>();
@@ -79,6 +80,16 @@ public static partial class BancoLocal
             "SELECT COUNT(*) FROM pragma_table_info('triagem_modelos') WHERE name = 'Imagem'");
         if (existe == 0)
             await conexao.ExecuteAsync("ALTER TABLE triagem_modelos ADD COLUMN Imagem TEXT NULL");
+    }
+
+    private static async Task GarantirColunasPerguntasAsync(SQLiteAsyncConnection conexao)
+    {
+        if (await conexao.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM pragma_table_info('perguntas') WHERE name = 'Categoria'") == 0)
+            await conexao.ExecuteAsync("ALTER TABLE perguntas ADD COLUMN Categoria TEXT NOT NULL DEFAULT ''");
+        if (await conexao.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM pragma_table_info('perguntas') WHERE name = 'OpcoesJson'") == 0)
+            await conexao.ExecuteAsync("ALTER TABLE perguntas ADD COLUMN OpcoesJson TEXT NOT NULL DEFAULT '[]'");
+        if (await conexao.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM pragma_table_info('perguntas') WHERE name = 'SelecaoUnica'") == 0)
+            await conexao.ExecuteAsync("ALTER TABLE perguntas ADD COLUMN SelecaoUnica INTEGER NOT NULL DEFAULT 0");
     }
 
     private static async Task GarantirColunasProtegidasAsync(SQLiteAsyncConnection conexao)
@@ -312,7 +323,9 @@ public static partial class BancoLocal
             Padrao = modelo.CriadorUsuarioId is null,
             CriadorUsuarioId = modelo.CriadorUsuarioId,
             Perguntas = perguntas
-                .Select(p => new PerguntaDto { Id = p.Id, Texto = p.Texto, Peso = p.Peso, Ordem = p.Ordem })
+                .Select(p => new PerguntaDto { Id = p.Id, Texto = p.Texto, Peso = p.Peso, Ordem = p.Ordem,
+                    Categoria = p.Categoria, Opcoes = JsonSerializer.Deserialize<List<string>>(p.OpcoesJson) ?? [],
+                    SelecaoUnica = p.SelecaoUnica })
                 .ToList(),
             Faixas = faixas
                 .Select(f => new FaixaDto
@@ -476,6 +489,8 @@ public static partial class BancoLocal
         if (req.NomePaciente.Trim().Length > 150) return (null, "O nome deve ter no máximo 150 caracteres.");
         if (req.Idade is < 0 or > 130) return (null, "Idade inválida.");
         if ((req.Sexo?.Trim().Length ?? 0) > 30) return (null, "O sexo deve ter no máximo 30 caracteres.");
+        if ((req.Escolaridade?.Trim().Length ?? 0) > 80) return (null, "A escolaridade deve ter no máximo 80 caracteres.");
+        if ((req.DoencasPrevias?.Trim().Length ?? 0) > 1000) return (null, "As doenças prévias devem ter no máximo 1000 caracteres.");
 
         var db = await ConexaoAsync();
 
@@ -496,7 +511,23 @@ public static partial class BancoLocal
         {
             if (!perguntasPorId.TryGetValue(r.PerguntaId, out var pergunta))
                 return (null, $"Pergunta {r.PerguntaId} não pertence a esta triagem.");
-            if (r.Valor) pontuacao += pergunta.Peso;
+            if (pergunta.SelecaoUnica)
+            {
+                var opcoes = JsonSerializer.Deserialize<List<string>>(pergunta.OpcoesJson) ?? [];
+                if (r.OpcoesSelecionadas is not { Count: 1 } || !opcoes.Contains(r.OpcoesSelecionadas[0]))
+                    return (null, "Selecione uma opção válida para cada pergunta de escolha única.");
+                pontuacao += modelo.Titulo == DefaultTriageCatalog.TituloRiscoVocal
+                    ? VocalTriageRules.Score(pergunta.Ordem, pergunta.Peso, false, r.OpcoesSelecionadas[0])
+                    : pergunta.Peso;
+            }
+            else
+            {
+                if (r.OpcoesSelecionadas is { Count: > 0 })
+                    return (null, "Esta pergunta aceita apenas Sim ou Não.");
+                pontuacao += modelo.Titulo == DefaultTriageCatalog.TituloRiscoVocal
+                    ? VocalTriageRules.Score(pergunta.Ordem, pergunta.Peso, r.Valor, null)
+                    : r.Valor ? pergunta.Peso : 0;
+            }
         }
 
         var pontuacaoMaxima = perguntas.Sum(p => p.Peso);
@@ -514,6 +545,8 @@ public static partial class BancoLocal
             NomePaciente = req.NomePaciente.Trim(),
             Idade = req.Idade,
             Sexo = req.Sexo?.Trim() ?? "",
+            Escolaridade = req.Escolaridade?.Trim(),
+            DoencasPrevias = req.DoencasPrevias?.Trim(),
             Pontuacao = pontuacao,
             PontuacaoMaxima = pontuacaoMaxima,
             Classificacao = faixa?.Titulo ?? "Sem classificação",
@@ -533,7 +566,8 @@ public static partial class BancoLocal
         {
             PerguntaId = r.PerguntaId,
             Valor = false,
-            ValorProtegido = LocalDataProtection.Proteger(r.Valor ? "1" : "0")
+            ValorProtegido = LocalDataProtection.Proteger(perguntasPorId[r.PerguntaId].SelecaoUnica
+                ? JsonSerializer.Serialize(r.OpcoesSelecionadas) : r.Valor ? "1" : "0")
         }).ToList();
 
         await db.RunInTransactionAsync(conn =>
@@ -654,6 +688,8 @@ public static partial class BancoLocal
         public string NomePaciente { get; set; } = "";
         public int Idade { get; set; }
         public string Sexo { get; set; } = "";
+        public string? Escolaridade { get; set; }
+        public string? DoencasPrevias { get; set; }
         public int Pontuacao { get; set; }
         public int PontuacaoMaxima { get; set; }
         public string Classificacao { get; set; } = "";
@@ -729,6 +765,9 @@ public static partial class BancoLocal
         public string Texto { get; set; } = "";
         public int Peso { get; set; } = 1;
         public int Ordem { get; set; }
+        public string Categoria { get; set; } = "";
+        public string OpcoesJson { get; set; } = "[]";
+        public bool SelecaoUnica { get; set; }
     }
 
     [Table("faixas")]

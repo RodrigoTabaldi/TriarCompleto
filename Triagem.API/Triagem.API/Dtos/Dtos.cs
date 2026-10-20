@@ -9,7 +9,8 @@ public record UsuarioResponse(int Id, string Nome, string Email);
 public record AuthResponse(int Id, string Nome, string Email, string Token, DateTime ExpiraEm);
 
 // ---------- Triagem (modelos/templates) ----------
-public record PerguntaDto(int Id, string Texto, int Peso, int Ordem);
+public record PerguntaDto(int Id, string Texto, int Peso, int Ordem,
+    string Categoria, List<string> Opcoes, bool SelecaoUnica);
 public record FaixaDto(int Id, string Titulo, string Recomendacao, int PontuacaoMin, int PontuacaoMax, string Cor, int Ordem);
 
 public record TriagemModeloResumo(
@@ -33,10 +34,11 @@ public record HomeItemInput(int TriagemModeloId, bool Visivel, int Ordem);
 public record ConfigurarHomeRequest(List<HomeItemInput> Itens);
 
 // ---------- Execução de triagem ----------
-public record RespostaInput(int PerguntaId, bool Valor);
+public record RespostaInput(int PerguntaId, bool Valor, List<string>? OpcoesSelecionadas = null);
 public record ResponderTriagemRequest(
     string NomePaciente, int Idade, string Sexo,
-    List<RespostaInput> Respostas);
+    List<RespostaInput> Respostas,
+    string? Escolaridade = null, string? DoencasPrevias = null);
 
 public record ResultadoResponse(
     int Id, int TriagemModeloId, string TituloTriagem,

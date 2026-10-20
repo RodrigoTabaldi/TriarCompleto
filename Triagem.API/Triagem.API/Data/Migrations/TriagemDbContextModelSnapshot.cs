@@ -17,7 +17,7 @@ namespace Triagem.API.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.0")
+                .HasAnnotation("ProductVersion", "10.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -72,11 +72,22 @@ namespace Triagem.API.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Categoria")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OpcoesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("Ordem")
                         .HasColumnType("int");
 
                     b.Property<int>("Peso")
                         .HasColumnType("int");
+
+                    b.Property<bool>("SelecaoUnica")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Texto")
                         .IsRequired()

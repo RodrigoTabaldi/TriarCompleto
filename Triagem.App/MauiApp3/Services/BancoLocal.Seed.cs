@@ -1,5 +1,6 @@
 using System.Text.Json;
 using SQLite;
+using Triagem.Core.Domain;
 
 namespace MauiApp3.Services;
 
@@ -15,9 +16,75 @@ public static partial class BancoLocal
         if (await db.Table<TriagemModeloLocal>().CountAsync() == 0)
             await SemearTriagensPadraoAsync(db);
 
+        await SemearTriagensPrincipaisAsync(db);
+
         if (await db.Table<UsuarioLocal>().CountAsync() == 0)
             await SemearContaDemoAsync(db);
     }
+
+    private static async Task SemearTriagensPrincipaisAsync(SQLiteAsyncConnection db)
+    {
+        foreach (var item in DefaultTriageCatalog.TriagensPrincipais)
+        {
+            var titulo = item.Title == DefaultTriageCatalog.TituloRiscoVocal
+                ? DefaultTriageCatalog.TituloRiscoVocal : DefaultTriageCatalog.TituloPrincipalFono;
+            var existente = await db.Table<TriagemModeloLocal>().Where(t => t.Titulo == titulo).FirstOrDefaultAsync();
+            if (existente is not null)
+            {
+                if (titulo == DefaultTriageCatalog.TituloRiscoVocal)
+                    await AtualizarRiscoVocalAsync(db, existente.Id, item);
+                continue;
+            }
+
+            var modelo = new TriagemModeloLocal
+            {
+                Titulo = titulo, PublicoAlvo = item.Audience, Icone = item.Icon,
+                Descricao = item.Description, CriadorUsuarioId = null, Ativa = true
+            };
+            await db.InsertAsync(modelo);
+            await db.InsertAllAsync(item.Questions.Select((q, i) => new PerguntaLocal
+            {
+                TriagemModeloId = modelo.Id, Ordem = i + 1, Peso = q.Weight,
+                Texto = q.Options is { Count: > 0 } && !q.SingleChoice
+                    ? $"Engasga com algum dos seguintes: {string.Join(", ", q.Options)}?" : q.Text,
+                Categoria = q.Category ?? "",
+                OpcoesJson = q.SingleChoice ? JsonSerializer.Serialize(q.Options) : "[]",
+                SelecaoUnica = q.SingleChoice
+            }).ToList());
+            await db.InsertAllAsync(titulo == DefaultTriageCatalog.TituloRiscoVocal
+                ? FaixasRiscoVocal(modelo.Id) : FaixasPadrao(modelo.Id, item.Questions.Sum(q => q.Weight)));
+        }
+    }
+
+    private static async Task AtualizarRiscoVocalAsync(SQLiteAsyncConnection db, int modeloId, DefaultTriage item)
+    {
+        var perguntas = await db.Table<PerguntaLocal>().Where(p => p.TriagemModeloId == modeloId).ToListAsync();
+        if (perguntas.Count == item.Questions.Count)
+        {
+            foreach (var pergunta in perguntas)
+            {
+                var origem = item.Questions[pergunta.Ordem - 1];
+                pergunta.Texto = origem.Text;
+                pergunta.Peso = origem.Weight;
+                pergunta.Categoria = origem.Category ?? "";
+                pergunta.OpcoesJson = origem.SingleChoice ? JsonSerializer.Serialize(origem.Options) : "[]";
+                pergunta.SelecaoUnica = origem.SingleChoice;
+            }
+            await db.UpdateAllAsync(perguntas);
+        }
+
+        var faixas = await db.Table<FaixaLocal>().Where(f => f.TriagemModeloId == modeloId).ToListAsync();
+        foreach (var faixa in faixas)
+            await db.DeleteAsync(faixa);
+        await db.InsertAllAsync(FaixasRiscoVocal(modeloId));
+    }
+
+    private static List<FaixaLocal> FaixasRiscoVocal(int modeloId) =>
+        VocalTriageRules.Ranges.Select((f, i) => new FaixaLocal
+        {
+            TriagemModeloId = modeloId, Titulo = f.Title, PontuacaoMin = f.Min,
+            PontuacaoMax = f.Max, Cor = f.Color, Ordem = i + 1
+        }).ToList();
 
     // ---------------- Triagens padrão ----------------
 

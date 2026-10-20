@@ -46,6 +46,9 @@ public class Pergunta
     /// <summary>Peso somado à pontuação quando a resposta é "Sim".</summary>
     public int Peso { get; set; } = 1;
     public int Ordem { get; set; }
+    public string Categoria { get; set; } = "";
+    public string OpcoesJson { get; set; } = "[]";
+    public bool SelecaoUnica { get; set; }
 }
 
 /// <summary>

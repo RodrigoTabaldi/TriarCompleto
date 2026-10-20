@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using MauiApp3.Models;
 using MauiApp3.Services;
+using Triagem.Core.Domain;
 
 namespace MauiApp3;
 
@@ -10,6 +11,7 @@ public partial class HomePage : ContentPage
     private readonly ObservableCollection<TriagemResumo> _triagensMobile = [];
     private List<TriagemResumo> _todas = [];
     private bool _modoEdicao;
+    private bool _mostrarPrincipais = true;
 
     public HomePage()
     {
@@ -34,6 +36,7 @@ public partial class HomePage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        _mostrarPrincipais = true;
         await CarregarAsync();
     }
 
@@ -87,7 +90,17 @@ public partial class HomePage : ContentPage
 
     private void AplicarFiltro()
     {
-        var visiveis = _todas.Where(t => _modoEdicao || t.VisivelNaHome).ToList();
+        var visiveis = _todas.Where(t => (_modoEdicao || t.VisivelNaHome) &&
+            (EhPrincipal(t) == _mostrarPrincipais)).ToList();
+
+        BotaoPrincipaisDesktop.BackgroundColor = BotaoPrincipaisMobile.BackgroundColor =
+            _mostrarPrincipais ? Color.FromArgb("#009B72") : Colors.White;
+        BotaoPrincipaisDesktop.TextColor = BotaoPrincipaisMobile.TextColor =
+            _mostrarPrincipais ? Colors.White : Color.FromArgb("#009B72");
+        BotaoEspecificasDesktop.BackgroundColor = BotaoEspecificasMobile.BackgroundColor =
+            _mostrarPrincipais ? Colors.White : Color.FromArgb("#009B72");
+        BotaoEspecificasDesktop.TextColor = BotaoEspecificasMobile.TextColor =
+            _mostrarPrincipais ? Color.FromArgb("#009B72") : Colors.White;
 
         _triagensDesktop.Clear();
         foreach (var t in visiveis)
@@ -96,6 +109,22 @@ public partial class HomePage : ContentPage
         _triagensMobile.Clear();
         foreach (var t in (_modoEdicao ? visiveis : visiveis.Take(4)))
             _triagensMobile.Add(t);
+    }
+
+    private static bool EhPrincipal(TriagemResumo triagem) => triagem.Padrao &&
+        (triagem.Titulo.Equals(DefaultTriageCatalog.TituloPrincipalFono, StringComparison.OrdinalIgnoreCase) ||
+         triagem.Titulo.Equals(DefaultTriageCatalog.TituloRiscoVocal, StringComparison.OrdinalIgnoreCase));
+
+    private void MostrarTriagensPrincipais(object? sender, EventArgs e)
+    {
+        _mostrarPrincipais = true;
+        AplicarFiltro();
+    }
+
+    private void MostrarTriagensEspecificas(object? sender, EventArgs e)
+    {
+        _mostrarPrincipais = false;
+        AplicarFiltro();
     }
 
     private async void Atualizar(object? sender, EventArgs e) => await CarregarAsync();

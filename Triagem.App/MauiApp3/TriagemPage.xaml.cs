@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using MauiApp3.Models;
 using MauiApp3.Services;
+using Triagem.Core.Domain;
 
 namespace MauiApp3;
 
@@ -22,6 +23,7 @@ public partial class TriagemPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        DataAtendimento.Text = $"Data do atendimento: {DateTime.Now:dd/MM/yyyy}";
 
         if (_triagem is null)
             await CarregarAsync();
@@ -57,7 +59,10 @@ public partial class TriagemPage : ContentPage
                     PerguntaId = p.Id,
                     Numero = i + 1,
                     Texto = p.Texto,
-                    Peso = p.Peso
+                    Peso = p.Peso,
+                    Categoria = p.Categoria,
+                    Opcoes = p.Opcoes,
+                    SelecaoUnica = p.SelecaoUnica
                 };
                 item.RespostaAlterada += AtualizarProgresso;
                 _perguntas.Add(item);
@@ -75,7 +80,7 @@ public partial class TriagemPage : ContentPage
     private void AtualizarProgresso()
     {
         var total = _perguntas.Count;
-        var respondidas = _perguntas.Count(p => p.Resposta is not null);
+        var respondidas = _perguntas.Count(p => p.Respondida);
         var progresso = total == 0 ? 0 : (double)respondidas / total;
 
         ProgressoTexto.Text = $"Pergunta {respondidas} de {total}";
@@ -100,7 +105,9 @@ public partial class TriagemPage : ContentPage
         Nome.Text = "";
         Idade.Text = "";
         Sexo.SelectedIndex = -1;
-        foreach (var p in _perguntas) p.Resposta = null;
+        Escolaridade.SelectedIndex = -1;
+        DoencasPrevias.Text = "";
+        foreach (var p in _perguntas) { p.Resposta = null; p.OpcaoSelecionada = null; }
     }
 
     private async void Finalizar(object? sender, EventArgs e)
@@ -129,7 +136,7 @@ public partial class TriagemPage : ContentPage
                 return;
             }
 
-            var pendentes = _perguntas.Count(p => p.Resposta is null);
+            var pendentes = _perguntas.Count(p => !p.Respondida);
             if (pendentes > 0)
             {
                 await DisplayAlertAsync("Atenção",
@@ -144,10 +151,14 @@ public partial class TriagemPage : ContentPage
                 NomePaciente = Nome.Text.Trim(),
                 Idade = idade,
                 Sexo = Sexo.SelectedItem?.ToString() ?? "",
+                Escolaridade = Escolaridade.SelectedItem?.ToString(),
+                DoencasPrevias = DoencasPrevias.Text?.Trim(),
                 Respostas = _perguntas.Select(p => new RespostaTriagemPayload
                 {
                     PerguntaId = p.PerguntaId,
-                    Valor = p.Resposta == true
+                    Valor = p.Resposta == true,
+                    OpcoesSelecionadas = p.SelecaoUnica && p.OpcaoSelecionada is not null
+                        ? [p.OpcaoSelecionada] : []
                 }).ToList()
             };
 
@@ -159,6 +170,16 @@ public partial class TriagemPage : ContentPage
                 return;
             }
 
+            if (_triagem.Titulo == DefaultTriageCatalog.TituloRiscoVocal)
+            {
+                resultado.Respostas = _perguntas.Select(p => new RespostaResultado
+                {
+                    Numero = p.Numero,
+                    Pergunta = p.Texto,
+                    Resposta = p.SelecaoUnica ? p.OpcaoSelecionada! : p.Resposta == true ? "Sim" : "Não",
+                    Pontos = VocalTriageRules.Score(p.Numero, p.Peso, p.Resposta == true, p.OpcaoSelecionada)
+                }).ToList();
+            }
             ResultadoPage.UltimoResultado = resultado;
             await Shell.Current.GoToAsync($"{nameof(ResultadoPage)}?triagemId={_triagem.Id}");
         }

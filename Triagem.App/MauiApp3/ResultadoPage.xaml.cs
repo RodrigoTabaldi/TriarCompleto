@@ -31,6 +31,28 @@ public partial class ResultadoPage : ContentPage
         IdadePaciente.Text = $"{r.Idade} anos";
         DataTriagem.Text = r.Data.ToLocalTime().ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
 
+        DetalhesRespostas.IsVisible = r.Respostas.Count > 0;
+        ListaRespostas.Children.Clear();
+        foreach (var resposta in r.Respostas.OrderBy(x => x.Numero))
+        {
+            ListaRespostas.Children.Add(new Border
+            {
+                BackgroundColor = Colors.White,
+                StrokeThickness = 0,
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = new CornerRadius(12) },
+                Padding = new Thickness(14),
+                Content = new VerticalStackLayout
+                {
+                    Spacing = 5,
+                    Children =
+                    {
+                        new Label { Text = $"{resposta.Numero}. {resposta.Pergunta}", FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#0F172A") },
+                        new Label { Text = resposta.Resposta, TextColor = Color.FromArgb("#374151") }
+                    }
+                }
+            });
+        }
+
         if (Color.TryParse(r.Cor, out var cor))
         {
             CirculoPontuacao.BackgroundColor = cor;
@@ -45,13 +67,6 @@ public partial class ResultadoPage : ContentPage
         // remove a TriagemPage anterior da pilha e abre uma nova em branco
         await Shell.Current.GoToAsync($"../..");
         await Shell.Current.GoToAsync($"{nameof(TriagemPage)}?triagemId={id}");
-    }
-
-    private async void VerHistorico(object? sender, EventArgs e)
-    {
-        if (UltimoResultado is not { } r) return;
-        await Shell.Current.GoToAsync(
-            $"{nameof(HistoricoPage)}?triagemId={r.TriagemModeloId}&titulo={Uri.EscapeDataString(r.TituloTriagem)}");
     }
 
     private async void VoltarHome(object? sender, EventArgs e) =>

@@ -8,7 +8,7 @@
     Shell.NavBarIsVisible="False">
 
     <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="18"
+        <VerticalStackLayout Padding="16,20,16,28" Spacing="16"
                              MaximumWidthRequest="820"
                              HorizontalOptions="Fill">
 
@@ -21,19 +21,19 @@
                 </HorizontalStackLayout.GestureRecognizers>
             </HorizontalStackLayout>
 
-            <Image Source="logo.png" HeightRequest="70" HorizontalOptions="Center"/>
+            <Image Source="logo.png" HeightRequest="60" HorizontalOptions="Center"/>
 
             <!-- CABEÇALHO DA TRIAGEM -->
-            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="18" Shadow="0,3,14,#0000001A">
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="15">
+            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="16" Shadow="0,3,14,#0000001A">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                     <Border BackgroundColor="#E6F6F1" StrokeThickness="0" StrokeShape="RoundRectangle 100"
-                            HeightRequest="64" WidthRequest="64">
-                        <Label x:Name="IconeTriagem" Text="🩺" FontSize="30"
+                            HeightRequest="50" WidthRequest="50">
+                        <Label x:Name="IconeTriagem" Text="🩺" FontSize="25"
                                HorizontalOptions="Center" VerticalOptions="Center"/>
                     </Border>
 
                     <VerticalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
-                        <Label x:Name="TituloTriagem" FontSize="20" FontAttributes="Bold" TextColor="#0F172A"/>
+                        <Label x:Name="TituloTriagem" FontSize="18" FontAttributes="Bold" TextColor="#0F172A" LineBreakMode="WordWrap"/>
                         <Label x:Name="ProgressoTexto" Text="Pergunta 0 de 0" FontSize="13" TextColor="#6B7280"/>
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                             <ProgressBar x:Name="BarraProgresso" Progress="0" ProgressColor="#10B981"/>
@@ -45,7 +45,7 @@
             </Border>
 
             <!-- DADOS INICIAIS -->
-            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="18" Shadow="0,2,10,#00000015">
+            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="16" Shadow="0,2,10,#00000015">
                 <VerticalStackLayout Spacing="12">
                     <Label Text="Dados iniciais" FontSize="18" FontAttributes="Bold" TextColor="#0F172A"/>
 
@@ -80,6 +80,27 @@
                             </Border>
                         </VerticalStackLayout>
                     </Grid>
+                    <Label Text="Escolaridade (opcional)" TextColor="#374151"/>
+                    <Border Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10,0">
+                        <Picker x:Name="Escolaridade" Title="Selecione, se desejar" TextColor="Black" BackgroundColor="Transparent">
+                            <Picker.Items>
+                                <x:String>Sem escolaridade</x:String>
+                                <x:String>Ensino fundamental incompleto</x:String>
+                                <x:String>Ensino fundamental completo</x:String>
+                                <x:String>Ensino médio incompleto</x:String>
+                                <x:String>Ensino médio completo</x:String>
+                                <x:String>Ensino superior incompleto</x:String>
+                                <x:String>Ensino superior completo</x:String>
+                                <x:String>Pós-graduação</x:String>
+                            </Picker.Items>
+                        </Picker>
+                    </Border>
+                    <Label Text="Doenças prévias (opcional)" TextColor="#374151"/>
+                    <Border Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="10">
+                        <Editor x:Name="DoencasPrevias" Placeholder="Descreva, se houver" AutoSize="TextChanges"
+                                TextColor="Black" PlaceholderColor="#9CA3AF" BackgroundColor="Transparent"/>
+                    </Border>
+                    <Label x:Name="DataAtendimento" TextColor="#465674"/>
                 </VerticalStackLayout>
             </Border>
 
@@ -89,7 +110,7 @@
             <VerticalStackLayout x:Name="ListaPerguntas" Spacing="12">
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="models:PerguntaRespondivel">
-                        <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="18" Shadow="0,2,10,#00000012">
+                        <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="16" Shadow="0,2,10,#00000012">
                             <VerticalStackLayout Spacing="12">
 
                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
@@ -102,7 +123,11 @@
                                            TextColor="#0F172A" LineBreakMode="WordWrap" VerticalOptions="Center"/>
                                 </Grid>
 
-                                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                <Picker Title="Selecione uma opção" ItemsSource="{Binding Opcoes}"
+                                        SelectedItem="{Binding OpcaoSelecionada, Mode=TwoWay}"
+                                        IsVisible="{Binding OpcoesVisiveis}" TextColor="#0F172A"/>
+
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="12" IsVisible="{Binding SimNaoVisivel}">
                                     <Button Text="Sim"
                                             Clicked="ResponderSim"
                                             CornerRadius="10" HeightRequest="44"

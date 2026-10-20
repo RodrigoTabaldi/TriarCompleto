@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Text.Json;
 using Triagem.API.Models;
 using Triagem.API.Services;
+using Triagem.Core.Domain;
 
 namespace Triagem.API.Data;
 
@@ -33,6 +34,34 @@ public static class DbSeeder
                 db.TriagemModelos.AddRange(CriarModelosPadrao());
                 await db.SaveChangesAsync();
             }
+
+            foreach (var item in DefaultTriageCatalog.TriagensPrincipais)
+            {
+                var titulo = item.Title == DefaultTriageCatalog.TituloRiscoVocal
+                    ? DefaultTriageCatalog.TituloRiscoVocal : DefaultTriageCatalog.TituloPrincipalFono;
+                if (!await db.TriagemModelos.AnyAsync(t => t.Titulo == titulo))
+                    db.TriagemModelos.Add(ModeloPrincipal(item, titulo));
+                else if (titulo == DefaultTriageCatalog.TituloRiscoVocal)
+                {
+                    var modelo = await db.TriagemModelos.Include(t => t.Perguntas)
+                        .Include(t => t.Faixas).SingleAsync(t => t.Titulo == titulo);
+                    if (modelo.Perguntas.Count == item.Questions.Count)
+                    {
+                        foreach (var pergunta in modelo.Perguntas)
+                        {
+                            var origem = item.Questions[pergunta.Ordem - 1];
+                            pergunta.Texto = origem.Text;
+                            pergunta.Peso = origem.Weight;
+                            pergunta.Categoria = origem.Category ?? "";
+                            pergunta.OpcoesJson = origem.SingleChoice ? JsonSerializer.Serialize(origem.Options) : "[]";
+                            pergunta.SelecaoUnica = origem.SingleChoice;
+                        }
+                    }
+                    db.FaixasResultado.RemoveRange(modelo.Faixas);
+                    modelo.Faixas = FaixasRiscoVocal();
+                }
+            }
+            await db.SaveChangesAsync();
 
             await tx.CommitAsync();
         });
@@ -287,4 +316,33 @@ public static class DbSeeder
             ]
         };
     }
+
+    private static TriagemModelo ModeloPrincipal(DefaultTriage item, string titulo)
+    {
+        var perguntas = item.Questions.Select(q => (Texto: TextoPergunta(q), Peso: q.Weight)).ToArray();
+        var modelo = Modelo(titulo, item.Audience, item.Icon, item.Description, perguntas);
+        for (var i = 0; i < modelo.Perguntas.Count; i++)
+        {
+            var origem = item.Questions[i];
+            var destino = modelo.Perguntas[i];
+            destino.Categoria = origem.Category ?? "";
+            destino.OpcoesJson = origem.SingleChoice ? JsonSerializer.Serialize(origem.Options) : "[]";
+            destino.SelecaoUnica = origem.SingleChoice;
+        }
+        if (titulo == DefaultTriageCatalog.TituloRiscoVocal)
+            modelo.Faixas = FaixasRiscoVocal();
+        return modelo;
+    }
+
+    private static List<FaixaResultado> FaixasRiscoVocal() =>
+        VocalTriageRules.Ranges.Select((f, i) => new FaixaResultado
+        {
+            Titulo = f.Title, PontuacaoMin = f.Min, PontuacaoMax = f.Max,
+            Cor = f.Color, Ordem = i + 1
+        }).ToList();
+
+    private static string TextoPergunta(DefaultQuestion pergunta) =>
+        pergunta.Options is { Count: > 0 } && !pergunta.SingleChoice
+            ? $"Engasga com algum dos seguintes: {string.Join(", ", pergunta.Options)}?"
+            : pergunta.Text;
 }

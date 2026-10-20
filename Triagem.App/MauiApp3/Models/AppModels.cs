@@ -102,6 +102,9 @@ public class PerguntaDto
     public string Texto { get; set; } = "";
     public int Peso { get; set; }
     public int Ordem { get; set; }
+    public string Categoria { get; set; } = "";
+    public List<string> Opcoes { get; set; } = [];
+    public bool SelecaoUnica { get; set; }
 }
 
 public class FaixaDto
@@ -159,6 +162,7 @@ public sealed class RespostaTriagemPayload
 {
     public int PerguntaId { get; set; }
     public bool Valor { get; set; }
+    public List<string>? OpcoesSelecionadas { get; set; }
 }
 
 public sealed class ResponderTriagemPayload
@@ -166,6 +170,8 @@ public sealed class ResponderTriagemPayload
     public string NomePaciente { get; set; } = "";
     public int Idade { get; set; }
     public string Sexo { get; set; } = "";
+    public string? Escolaridade { get; set; }
+    public string? DoencasPrevias { get; set; }
     public List<RespostaTriagemPayload> Respostas { get; set; } = [];
 }
 
@@ -185,6 +191,15 @@ public class ResultadoTriagem
     public string Recomendacao { get; set; } = "";
     public string Cor { get; set; } = "#10B981";
     public DateTime Data { get; set; }
+    public List<RespostaResultado> Respostas { get; set; } = [];
+}
+
+public sealed class RespostaResultado
+{
+    public int Numero { get; set; }
+    public string Pergunta { get; set; } = "";
+    public string Resposta { get; set; } = "";
+    public int Pontos { get; set; }
 }
 
 public class HistoricoItem
@@ -262,11 +277,23 @@ public class HomeConfigItem : ObservableBase
 public class PerguntaRespondivel : ObservableBase
 {
     private bool? _resposta;
+    private string? _opcaoSelecionada;
 
     public int PerguntaId { get; set; }
     public int Numero { get; set; }
     public string Texto { get; set; } = "";
     public int Peso { get; set; }
+    public string Categoria { get; set; } = "";
+    public List<string> Opcoes { get; set; } = [];
+    public bool SelecaoUnica { get; set; }
+    public bool SimNaoVisivel => !SelecaoUnica;
+    public bool OpcoesVisiveis => SelecaoUnica;
+    public string? OpcaoSelecionada
+    {
+        get => _opcaoSelecionada;
+        set { if (Set(ref _opcaoSelecionada, value)) RespostaAlterada?.Invoke(); }
+    }
+    public bool Respondida => SelecaoUnica ? OpcaoSelecionada is not null : Resposta is not null;
 
     public bool? Resposta
     {
