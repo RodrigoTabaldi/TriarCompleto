@@ -15,6 +15,4 @@
     <path d="M138,152 L228,218 L318,152" fill="none" stroke="url(#g1)" stroke-width="38"/>
     <path d="M168,214 L228,258 L288,214" fill="none" stroke="url(#g2)" stroke-width="34"/>
     <circle cx="228" cy="300" r="20" fill="#123B3A"/>
-    <!-- Wordmark -->
-    <text x="228" y="392" font-family="Segoe UI, Arial, sans-serif" font-size="72" font-weight="700" fill="#0F172A" text-anchor="middle">triar</text>
 </svg>
