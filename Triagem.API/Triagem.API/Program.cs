@@ -294,6 +294,7 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
     Predicate = c => c.Tags.Contains("db")
 }).RequireAuthorization();
 
+// Resposta pública simples para identificar o serviço sem consultar o banco.
 app.MapGet("/", () => Results.Ok(new
 {
     servico = "Triar API",
