@@ -80,6 +80,24 @@ public static class DbSeeder
                     modelo.Faixas = FaixasRiscoVocal();
                 }
             }
+
+            var especificas = DefaultTriageCatalog.TriagensEspecificas.ToList();
+            var titulosLegados = especificas.Where(t => t.LegacyTitle != t.Title)
+                .Select(t => t.LegacyTitle).ToHashSet(StringComparer.Ordinal);
+            var modelosPadrao = await db.TriagemModelos
+                .Where(t => t.CriadorUsuarioId == null).ToListAsync();
+
+            foreach (var legado in modelosPadrao.Where(t => t.Ativa && titulosLegados.Contains(t.Titulo)))
+                legado.Ativa = false;
+
+            foreach (var item in especificas)
+            {
+                var existente = modelosPadrao.FirstOrDefault(t => t.Titulo == item.Title);
+                if (existente is null)
+                    db.TriagemModelos.Add(ModeloPrincipal(item, item.Title));
+                else
+                    existente.Ativa = true;
+            }
             await db.SaveChangesAsync();
 
             await tx.CommitAsync();

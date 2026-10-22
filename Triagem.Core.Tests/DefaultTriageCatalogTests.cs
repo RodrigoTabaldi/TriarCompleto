@@ -5,6 +5,19 @@ namespace Triagem.Core.Tests;
 public class DefaultTriageCatalogTests
 {
     [Fact]
+    public void TriagensEspecificas_ContemSomenteModelosFonoaudiologicos()
+    {
+        var titulos = DefaultTriageCatalog.TriagensEspecificas.Select(item => item.Title).ToArray();
+
+        Assert.Equal(
+            ["Triagem de Linguagem e Cognição", "Triagem Fonoaudiológica Infantil",
+             "Triagem de Motricidade Orofacial", "Triagem Auditiva do Idoso",
+             "Triagem de Voz", "Triagem Auditiva"],
+            titulos);
+        Assert.All(DefaultTriageCatalog.TriagensEspecificas, item => Assert.NotEmpty(item.Questions));
+    }
+
+    [Fact]
     public void TriagensPrincipais_ContemExatamenteOsDoisModelosSolicitados()
     {
         var principais = DefaultTriageCatalog.TriagensPrincipais.ToList();

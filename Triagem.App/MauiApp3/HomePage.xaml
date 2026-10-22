@@ -261,7 +261,7 @@
         <!-- ================= MOBILE ================= -->
         <Grid x:Name="MobileRoot"
               BackgroundColor="White"
-              RowDefinitions="*,Auto">
+              RowDefinitions="*,78">
 
             <ScrollView Grid.Row="0">
             <VerticalStackLayout Padding="20,16,20,28" Spacing="18">
@@ -296,15 +296,14 @@
 
                         <Label Text="Triagens disponíveis" FontSize="22" FontAttributes="Bold" TextColor="#07142E" Margin="0,28,0,0"/>
                         <Label Text="Escolha uma triagem para iniciar" FontSize="14" TextColor="#465674" Margin="0,2,0,0"/>
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8" Margin="0,14,0,0">
-                            <Button x:Name="BotaoPrincipaisMobile" Text="Triagens principais" Clicked="MostrarTriagensPrincipais"
-                                    BackgroundColor="#009B72" TextColor="White" CornerRadius="10" FontSize="12" HeightRequest="40" Padding="4,0"/>
-                            <Button Grid.Column="1" x:Name="BotaoEspecificasMobile" Text="Triagens específicas" Clicked="MostrarTriagensEspecificas"
-                                    BackgroundColor="White" TextColor="#009B72" BorderColor="#009B72" BorderWidth="1" CornerRadius="10" FontSize="12" HeightRequest="40" Padding="4,0"/>
-                        </Grid>
-                        <Picker x:Name="SeletorEspecificasMobile" Title="Escolha uma triagem específica"
-                                IsVisible="False" ItemDisplayBinding="{Binding Titulo}"
-                                SelectedIndexChanged="SelecionarEspecificaMobile" Margin="0,6,0,0"/>
+                        <Border BackgroundColor="#F0F3F8" Stroke="#E1E6EF" StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="4" Margin="0,14,0,0">
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="4">
+                                <Button x:Name="BotaoPrincipaisMobile" Text="Triagens principais" Clicked="MostrarTriagensPrincipais"
+                                        BackgroundColor="#009B72" TextColor="White" CornerRadius="9" FontSize="12" HeightRequest="40" Padding="4,0"/>
+                                <Button Grid.Column="1" x:Name="BotaoEspecificasMobile" Text="Triagens específicas" Clicked="MostrarTriagensEspecificas"
+                                        BackgroundColor="Transparent" TextColor="#40506A" BorderWidth="0" CornerRadius="9" FontSize="12" HeightRequest="40" Padding="4,0"/>
+                            </Grid>
+                        </Border>
                     </VerticalStackLayout>
                 <VerticalStackLayout x:Name="ListaTriagensMobile" Spacing="12">
 
@@ -314,18 +313,18 @@
                                 Stroke="#EDF0F3"
                                 StrokeThickness="1"
                                 StrokeShape="RoundRectangle 16"
-                                 Padding="14"
+                                 Padding="12"
                                 Shadow="0,3,12,#00000012">
-                            <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="14" RowSpacing="12">
-                                <Image Source="{Binding ImagemHome}" WidthRequest="110" HeightRequest="118" Aspect="AspectFit" VerticalOptions="Center"/>
-                                <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
-                                    <Label Text="{Binding Titulo}" FontSize="17" FontAttributes="Bold" TextColor="#07142E" LineBreakMode="WordWrap"/>
+                            <Grid ColumnDefinitions="100,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                                <Image Source="{Binding ImagemHome}" WidthRequest="100" HeightRequest="100" Aspect="AspectFit" VerticalOptions="Center" Grid.RowSpan="2"/>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                    <Label Text="{Binding Titulo}" FontSize="16" FontAttributes="Bold" TextColor="#07142E" LineBreakMode="WordWrap"/>
                                     <Label Text="Público alvo:" FontSize="12" TextColor="#40506A" Margin="0,4,0,0"/>
                                     <Label Text="{Binding PublicoAlvo}" FontSize="12" TextColor="#40506A" LineBreakMode="WordWrap"/>
                                 </VerticalStackLayout>
-                                <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,*" ColumnSpacing="10">
-                                    <Button Text="Entrar" Clicked="AbrirTriagem" Style="{StaticResource PrimaryButton}" HeightRequest="44" FontSize="14"/>
-                                    <Button Grid.Column="1" Text="Ver histórico" Clicked="AbrirHistorico" Style="{StaticResource OutlineButton}" HeightRequest="44" FontSize="13"/>
+                                <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,*" ColumnSpacing="8">
+                                    <Button Text="Entrar" Clicked="AbrirTriagem" Style="{StaticResource PrimaryButton}" HeightRequest="40" FontSize="12" Padding="2,0"/>
+                                    <Button Grid.Column="1" Text="Ver histórico" Clicked="AbrirHistorico" Style="{StaticResource OutlineButton}" HeightRequest="40" FontSize="11" Padding="2,0"/>
                                 </Grid>
                                     <Grid Grid.Row="2" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" IsVisible="{Binding ModoEdicao}">
                                         <Label Text="Exibir na home" VerticalOptions="Center" TextColor="#374151"/>
@@ -344,72 +343,38 @@
                         Clicked="SalvarConfiguracaoHome" IsVisible="False"
                         Style="{StaticResource PrimaryButton}"/>
 
-                <Border BackgroundColor="#ECF8F4" StrokeThickness="0" StrokeShape="RoundRectangle 14" Padding="16,14" Margin="0,10,0,0">
-                    <Border.GestureRecognizers><TapGestureRecognizer Tapped="IrSobre"/></Border.GestureRecognizers>
-                    <Grid ColumnDefinitions="40,*,Auto" ColumnSpacing="12">
-                        <Image Source="nav_about.png" WidthRequest="32" HeightRequest="32" VerticalOptions="Center"/>
-                        <VerticalStackLayout Grid.Column="1" Spacing="2">
-                            <Label Text="Sobre o projeto" FontSize="16" FontAttributes="Bold" TextColor="#07142E"/>
-                            <Label Text="Saiba mais sobre o Triar e suas triagens." FontSize="12" TextColor="#40506A" LineBreakMode="WordWrap"/>
-                        </VerticalStackLayout>
-                        <Label Grid.Column="2" Text="›" FontSize="28" TextColor="#009B72" VerticalOptions="Center"/>
-                    </Grid>
-                </Border>
-
-                <Border BackgroundColor="White" Stroke="#009B72" StrokeThickness="1" StrokeShape="RoundRectangle 14" Padding="16,14">
-                    <Border.GestureRecognizers><TapGestureRecognizer Tapped="IrCriarTriagem"/></Border.GestureRecognizers>
-                    <Grid ColumnDefinitions="40,*,Auto" ColumnSpacing="12">
-                        <Image Source="nav_create.png" WidthRequest="32" HeightRequest="32" VerticalOptions="Center"/>
-                        <VerticalStackLayout Grid.Column="1" Spacing="2">
-                            <Label Text="Criar sua triagem" FontSize="16" FontAttributes="Bold" TextColor="#07142E"/>
-                            <Label Text="Monte uma triagem personalizada." FontSize="12" TextColor="#40506A" LineBreakMode="WordWrap"/>
-                        </VerticalStackLayout>
-                        <Label Grid.Column="2" Text="›" FontSize="28" TextColor="#009B72" VerticalOptions="Center"/>
-                    </Grid>
-                </Border>
             </VerticalStackLayout>
             </ScrollView>
 
-            <Border Grid.Row="1"
-                    BackgroundColor="White"
-                    Stroke="#EEF1F4"
-                    StrokeThickness="0,1,0,0"
-                    Padding="8,5,8,5">
-                <Grid ColumnDefinitions="*,*,*,*,*">
-                    <VerticalStackLayout Spacing="2" HorizontalOptions="Fill" Padding="0,6">
-                        <Image Source="nav_home.png" WidthRequest="22" HeightRequest="22"/>
-                        <Label Text="Início" FontSize="10" TextColor="#009B72" HorizontalTextAlignment="Center"/>
-                    </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Fill" Padding="0,6">
-                        <VerticalStackLayout.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="IrCreditos"/>
-                        </VerticalStackLayout.GestureRecognizers>
-                        <Image Source="nav_credits.png" WidthRequest="22" HeightRequest="22"/>
-                        <Label Text="Créditos" FontSize="10" TextColor="#40506A" HorizontalTextAlignment="Center"/>
-                    </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Column="2" Spacing="2" HorizontalOptions="Fill" Padding="0,6">
-                        <VerticalStackLayout.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="IrContato"/>
-                        </VerticalStackLayout.GestureRecognizers>
-                        <Image Source="nav_contact.png" WidthRequest="22" HeightRequest="22"/>
-                        <Label Text="Contato" FontSize="10" TextColor="#40506A" HorizontalTextAlignment="Center"/>
-                    </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Column="3" Spacing="2" HorizontalOptions="Fill" Padding="0,6">
-                        <VerticalStackLayout.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="IrSobre"/>
-                        </VerticalStackLayout.GestureRecognizers>
-                        <Image Source="nav_about.png" WidthRequest="22" HeightRequest="22"/>
-                        <Label Text="Sobre o projeto" FontSize="10" TextColor="#40506A" HorizontalTextAlignment="Center" LineBreakMode="WordWrap"/>
-                    </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Column="4" Spacing="2" HorizontalOptions="Fill" Padding="0,6">
-                        <VerticalStackLayout.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="IrCriarTriagem"/>
-                        </VerticalStackLayout.GestureRecognizers>
-                        <Image Source="nav_create.png" WidthRequest="22" HeightRequest="22"/>
-                        <Label Text="Criar triagem" FontSize="10" TextColor="#40506A" HorizontalTextAlignment="Center" LineBreakMode="WordWrap"/>
-                    </VerticalStackLayout>
+            <Grid Grid.Row="1" BackgroundColor="White" RowDefinitions="1,*" HeightRequest="78" VerticalOptions="End">
+                <BoxView Color="#EEF1F4" HeightRequest="1"/>
+                <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*,*" Padding="8,13,8,12">
+                    <Grid RowDefinitions="24,Auto" RowSpacing="2" HorizontalOptions="Fill" VerticalOptions="Start">
+                        <Image Source="nav_home.png" WidthRequest="22" HeightRequest="22" HorizontalOptions="Center"/>
+                        <Label Grid.Row="1" Text="Início" FontSize="10" TextColor="#009B72" HorizontalOptions="Center" HorizontalTextAlignment="Center"/>
+                    </Grid>
+                    <Grid Grid.Column="1" RowDefinitions="24,Auto" RowSpacing="2" HorizontalOptions="Fill" VerticalOptions="Start">
+                        <Grid.GestureRecognizers><TapGestureRecognizer Tapped="IrCreditos"/></Grid.GestureRecognizers>
+                        <Image Source="nav_credits.png" WidthRequest="22" HeightRequest="22" HorizontalOptions="Center"/>
+                        <Label Grid.Row="1" Text="Créditos" FontSize="10" TextColor="#40506A" HorizontalOptions="Center" HorizontalTextAlignment="Center"/>
+                    </Grid>
+                    <Grid Grid.Column="2" RowDefinitions="24,Auto" RowSpacing="2" HorizontalOptions="Fill" VerticalOptions="Start">
+                        <Grid.GestureRecognizers><TapGestureRecognizer Tapped="IrContato"/></Grid.GestureRecognizers>
+                        <Image Source="nav_contact.png" WidthRequest="22" HeightRequest="22" HorizontalOptions="Center"/>
+                        <Label Grid.Row="1" Text="Contato" FontSize="10" TextColor="#40506A" HorizontalOptions="Center" HorizontalTextAlignment="Center"/>
+                    </Grid>
+                    <Grid Grid.Column="3" RowDefinitions="24,Auto" RowSpacing="2" HorizontalOptions="Fill" VerticalOptions="Start">
+                        <Grid.GestureRecognizers><TapGestureRecognizer Tapped="IrSobre"/></Grid.GestureRecognizers>
+                        <Image Source="nav_about.png" WidthRequest="22" HeightRequest="22" HorizontalOptions="Center"/>
+                        <Label Grid.Row="1" Text="Sobre o projeto" FontSize="8" TextColor="#40506A" HorizontalOptions="Center" HorizontalTextAlignment="Center" LineBreakMode="NoWrap"/>
+                    </Grid>
+                    <Grid Grid.Column="4" RowDefinitions="24,Auto" RowSpacing="2" HorizontalOptions="Fill" VerticalOptions="Start">
+                        <Grid.GestureRecognizers><TapGestureRecognizer Tapped="IrCriarTriagem"/></Grid.GestureRecognizers>
+                        <Image Source="nav_create.png" WidthRequest="22" HeightRequest="22" HorizontalOptions="Center"/>
+                        <Label Grid.Row="1" Text="Criar triagem" FontSize="8" TextColor="#40506A" HorizontalOptions="Center" HorizontalTextAlignment="Center" LineBreakMode="NoWrap"/>
+                    </Grid>
                 </Grid>
-            </Border>
+            </Grid>
         </Grid>
     </Grid>
 </ContentPage>

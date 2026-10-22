@@ -22,6 +22,7 @@ public partial class CriarTriagemPage : ContentPage
     public CriarTriagemPage()
     {
         InitializeComponent();
+        AtualizarPreviewImagem();
         BindableLayout.SetItemsSource(ListaPerguntas, _perguntas);
         BindableLayout.SetItemsSource(ListaFaixas, _faixas);
 

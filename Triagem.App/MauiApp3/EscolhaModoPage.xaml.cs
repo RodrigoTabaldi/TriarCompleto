@@ -32,6 +32,17 @@ public partial class EscolhaModoPage : ContentPage
         ModeOptions.ColumnDefinitions = estreito
             ? new ColumnDefinitionCollection { new(GridLength.Star) }
             : new ColumnDefinitionCollection { new(GridLength.Star), new(GridLength.Star) };
+        ModeOptions.RowDefinitions = estreito
+            ? new RowDefinitionCollection { new(GridLength.Auto), new(GridLength.Auto) }
+            : new RowDefinitionCollection { new(GridLength.Auto) };
+        CardIndividual.WidthRequest = CardGrupo.WidthRequest = estreito
+            ? Math.Min(250, Math.Max(0, Width - 96))
+            : -1;
+        CardIndividual.HorizontalOptions = CardGrupo.HorizontalOptions = estreito
+            ? LayoutOptions.Center
+            : LayoutOptions.Fill;
+        Grid.SetRow(CardIndividual, 0);
+        Grid.SetColumn(CardIndividual, 0);
         Grid.SetColumn(CardGrupo, estreito ? 0 : 1);
         Grid.SetRow(CardGrupo, estreito ? 1 : 0);
     }
@@ -71,6 +82,7 @@ public partial class EscolhaModoPage : ContentPage
             }
             else
             {
+                ApiService.SelecionarModoGrupo();
                 await Shell.Current.GoToAsync(nameof(LoginPage));
             }
         }

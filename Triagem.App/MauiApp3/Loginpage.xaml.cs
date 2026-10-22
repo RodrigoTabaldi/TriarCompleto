@@ -10,6 +10,8 @@ public partial class LoginPage : ContentPage
     public LoginPage()
     {
         InitializeComponent();
+        if (ApiService.ModoLocal)
+            MensagemLogin.Text = "Entre com uma conta deste aparelho ou cadastre-se";
     }
 
     protected override async void OnAppearing()
@@ -53,7 +55,9 @@ public partial class LoginPage : ContentPage
 
             if (usuario is null)
             {
-                await DisplayAlertAsync("Erro", "Email ou senha inválidos.", "OK");
+                await DisplayAlertAsync("Erro", ApiService.ModoLocal
+                    ? "Email ou senha inválidos neste aparelho. Cadastre uma conta local se ainda não tiver uma."
+                    : "Email ou senha inválidos.", "OK");
                 return;
             }
 
@@ -65,8 +69,9 @@ public partial class LoginPage : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlertAsync("Erro",
-                $"Não foi possível conectar à API. Verifique se ela está no ar.\n\n{ex.Message}", "OK");
+            await DisplayAlertAsync("Erro", ApiService.ModoLocal
+                ? $"Não foi possível acessar os dados deste aparelho.\n\n{ex.Message}"
+                : $"Não foi possível conectar à API. Verifique se ela está no ar.\n\n{ex.Message}", "OK");
         }
         finally
         {

@@ -283,9 +283,18 @@ public static class ApiService
 
     private const string ChaveUsuarioIndividualId = "triar_individual_usuario_id";
 
+    public static void SelecionarModoGrupo()
+    {
+        _forcarModoLocalIndividual = false;
+        _usuarioAtualId = 0;
+        DefinirToken(null);
+        LimparCache();
+    }
+
     public static async Task<Usuario> IniciarModoIndividualAsync()
     {
         _forcarModoLocalIndividual = true;
+        DefinirToken(null);
         LimparCache();
 
         var idSalvo = await SecureStorage.Default.GetAsync(ChaveUsuarioIndividualId);

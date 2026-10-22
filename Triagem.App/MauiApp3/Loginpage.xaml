@@ -47,6 +47,7 @@
                             TextColor="#111827"/>
 
                         <Label 
+                            x:Name="MensagemLogin"
                             Text="Faça login para acessar sua conta"
                             FontSize="14"
                             HorizontalOptions="Center"

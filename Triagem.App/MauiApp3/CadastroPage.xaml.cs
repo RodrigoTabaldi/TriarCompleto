@@ -44,8 +44,9 @@ public partial class CadastroPage : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlertAsync("Erro",
-                $"Não foi possível conectar à API. Verifique se ela está no ar.\n\n{ex.Message}", "OK");
+            await DisplayAlertAsync("Erro", ApiService.ModoLocal
+                ? $"Não foi possível salvar a conta neste aparelho.\n\n{ex.Message}"
+                : $"Não foi possível conectar à API. Verifique se ela está no ar.\n\n{ex.Message}", "OK");
         }
         finally
         {

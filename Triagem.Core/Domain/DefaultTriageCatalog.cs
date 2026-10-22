@@ -28,6 +28,8 @@ public static class DefaultTriageCatalog
 
     public static IEnumerable<DefaultTriage> TriagensPrincipais => Items.Where(item =>
         item.Title == TituloRiscoVocal || item.LegacyTitle == TituloOriginalFono);
+    public static IEnumerable<DefaultTriage> TriagensEspecificas => Items.Where(item =>
+        item.Title != TituloRiscoVocal && item.LegacyTitle != TituloOriginalFono);
     public const int Version = 5;
     public const bool ClinicallyValidated = false;
     public const string ValidationNotice =

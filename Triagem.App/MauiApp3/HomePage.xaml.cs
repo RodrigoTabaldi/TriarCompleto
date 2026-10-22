@@ -9,7 +9,6 @@ public partial class HomePage : ContentPage
 {
     private readonly ObservableCollection<TriagemResumo> _triagensDesktop = [];
     private readonly ObservableCollection<TriagemResumo> _triagensMobile = [];
-    private readonly ObservableCollection<TriagemResumo> _especificasMobile = [];
     private List<TriagemResumo> _todas = [];
     private bool _modoEdicao;
     private bool _mostrarPrincipais = true;
@@ -20,7 +19,6 @@ public partial class HomePage : ContentPage
 
         ListaTriagensDesktop.ItemsSource = _triagensDesktop;
         BindableLayout.SetItemsSource(ListaTriagensMobile, _triagensMobile);
-        SeletorEspecificasMobile.ItemsSource = _especificasMobile;
         SizeChanged += AjustarLayout;
 
         if (App.UsuarioLogado is { } u)
@@ -38,7 +36,6 @@ public partial class HomePage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        _mostrarPrincipais = true;
         await CarregarAsync();
     }
 
@@ -95,44 +92,27 @@ public partial class HomePage : ContentPage
         var visiveis = _todas.Where(t => (_modoEdicao || t.VisivelNaHome) &&
             (EhPrincipal(t) == _mostrarPrincipais)).ToList();
 
-        BotaoPrincipaisDesktop.BackgroundColor = BotaoPrincipaisMobile.BackgroundColor =
+        BotaoPrincipaisDesktop.BackgroundColor =
             _mostrarPrincipais ? Color.FromArgb("#009B72") : Colors.White;
-        BotaoPrincipaisDesktop.TextColor = BotaoPrincipaisMobile.TextColor =
+        BotaoPrincipaisDesktop.TextColor =
             _mostrarPrincipais ? Colors.White : Color.FromArgb("#009B72");
-        BotaoEspecificasDesktop.BackgroundColor = BotaoEspecificasMobile.BackgroundColor =
+        BotaoEspecificasDesktop.BackgroundColor =
             _mostrarPrincipais ? Colors.White : Color.FromArgb("#009B72");
-        BotaoEspecificasDesktop.TextColor = BotaoEspecificasMobile.TextColor =
+        BotaoEspecificasDesktop.TextColor =
             _mostrarPrincipais ? Color.FromArgb("#009B72") : Colors.White;
+
+        BotaoPrincipaisMobile.BackgroundColor = _mostrarPrincipais ? Color.FromArgb("#009B72") : Colors.Transparent;
+        BotaoPrincipaisMobile.TextColor = _mostrarPrincipais ? Colors.White : Color.FromArgb("#40506A");
+        BotaoEspecificasMobile.BackgroundColor = _mostrarPrincipais ? Colors.Transparent : Color.FromArgb("#009B72");
+        BotaoEspecificasMobile.TextColor = _mostrarPrincipais ? Color.FromArgb("#40506A") : Colors.White;
 
         _triagensDesktop.Clear();
         foreach (var t in visiveis)
             _triagensDesktop.Add(t);
 
         _triagensMobile.Clear();
-        SeletorEspecificasMobile.IsVisible = !_mostrarPrincipais;
-        if (_mostrarPrincipais)
-        {
-            foreach (var t in visiveis)
-                _triagensMobile.Add(t);
-        }
-        else
-        {
-            var selecionadaId = (SeletorEspecificasMobile.SelectedItem as TriagemResumo)?.Id;
-            _especificasMobile.Clear();
-            foreach (var t in visiveis)
-                _especificasMobile.Add(t);
-            SeletorEspecificasMobile.SelectedItem = _especificasMobile.FirstOrDefault(t => t.Id == selecionadaId)
-                ?? _especificasMobile.FirstOrDefault();
-        }
-        MensagemMobileVazia.IsVisible = _triagensMobile.Count == 0;
-    }
-
-    private void SelecionarEspecificaMobile(object? sender, EventArgs e)
-    {
-        if (_mostrarPrincipais) return;
-        _triagensMobile.Clear();
-        if (SeletorEspecificasMobile.SelectedItem is TriagemResumo selecionada)
-            _triagensMobile.Add(selecionada);
+        foreach (var t in visiveis)
+            _triagensMobile.Add(t);
         MensagemMobileVazia.IsVisible = _triagensMobile.Count == 0;
     }
 

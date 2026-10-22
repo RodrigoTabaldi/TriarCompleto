@@ -40,7 +40,7 @@
                         HorizontalTextAlignment="Center"
                         TextColor="#6B7280"/>
 
-                    <Grid x:Name="ModeOptions" ColumnDefinitions="*,*" ColumnSpacing="16" RowSpacing="8" Margin="0,8,0,8">
+                    <Grid x:Name="ModeOptions" ColumnDefinitions="*,*" RowDefinitions="Auto" ColumnSpacing="16" RowSpacing="10" Margin="0,8,0,16">
 
                         <Border
                             x:Name="CardIndividual"
@@ -51,7 +51,7 @@
                             Padding="16"
                             Grid.Column="0"
                             MinimumHeightRequest="216"
-                            HorizontalOptions="Fill">
+                            HorizontalOptions="Center">
 
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="SelecionarIndividual"/>
@@ -84,7 +84,7 @@
                             Padding="16"
                             Grid.Column="1"
                             MinimumHeightRequest="216"
-                            HorizontalOptions="Fill">
+                            HorizontalOptions="Center">
 
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="SelecionarGrupo"/>

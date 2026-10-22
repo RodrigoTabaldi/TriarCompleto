@@ -76,13 +76,26 @@ public class TriagemResumo : ObservableBase
                 : titulo.Contains("respirat") ? "triagem_respiratoria_profissional.png"
                 : "triagem_clinica_profissional.png";
 
-            return _imagemHome = ImageSource.FromFile(arquivo);
+            return _imagemHome = TriagemImagem.CriarImagemDoPacote(arquivo);
         }
     }
 }
 
 public static class TriagemImagem
 {
+    public static ImageSource CriarImagemDoPacote(string arquivo)
+    {
+        if (DeviceInfo.Platform == DevicePlatform.WinUI)
+        {
+            var nomeEscala = $"{Path.GetFileNameWithoutExtension(arquivo)}.scale-200{Path.GetExtension(arquivo)}";
+            var caminho = Path.Combine(AppContext.BaseDirectory, nomeEscala);
+            if (File.Exists(caminho))
+                return ImageSource.FromStream(() => File.OpenRead(caminho));
+        }
+
+        return ImageSource.FromFile(arquivo);
+    }
+
     public static ImageSource CriarImageSource(string? dataUrl, string fallback)
     {
         if (!string.IsNullOrWhiteSpace(dataUrl))
@@ -102,7 +115,7 @@ public static class TriagemImagem
             }
         }
 
-        return ImageSource.FromFile(fallback);
+        return CriarImagemDoPacote(fallback);
     }
 }
 
@@ -295,6 +308,21 @@ public class PerguntaRespondivel : ObservableBase
     public int PerguntaId { get; set; }
     public int Numero { get; set; }
     public string Texto { get; set; } = "";
+    public string TextoExibido
+    {
+        get
+        {
+            var texto = Texto.TrimStart();
+            var numero = Numero.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (texto.StartsWith(numero, StringComparison.Ordinal) &&
+                texto.Length > numero.Length + 1 &&
+                (texto[numero.Length] == '.' || texto[numero.Length] == ')') &&
+                char.IsWhiteSpace(texto[numero.Length + 1]))
+                return texto[(numero.Length + 1)..].TrimStart();
+
+            return texto;
+        }
+    }
     public int Peso { get; set; }
     public string Categoria { get; set; } = "";
     public List<string> Opcoes
