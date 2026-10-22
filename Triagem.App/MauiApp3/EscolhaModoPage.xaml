@@ -6,20 +6,21 @@
     BackgroundColor="#F5F7F6"
     Shell.NavBarIsVisible="False">
 
-    <Grid Padding="12">
+    <ScrollView>
+    <Grid Padding="16" MinimumHeightRequest="600">
         <VerticalStackLayout
             VerticalOptions="Center"
             HorizontalOptions="Center"
-            MaximumWidthRequest="620"
+            MaximumWidthRequest="668"
             Spacing="10">
 
             <Border
+                x:Name="ModePanel"
                 BackgroundColor="White"
                 StrokeThickness="0"
                 StrokeShape="RoundRectangle 20"
-                Padding="16"
-                HorizontalOptions="Fill"
-                Shadow="0,4,20,#00000020">
+                Padding="20"
+                HorizontalOptions="Fill">
 
                 <VerticalStackLayout Spacing="10">
                     <Image Source="logo.png" HeightRequest="58" HorizontalOptions="Center"/>
@@ -39,7 +40,7 @@
                         HorizontalTextAlignment="Center"
                         TextColor="#6B7280"/>
 
-                    <VerticalStackLayout Spacing="8" Margin="0,4,0,0">
+                    <Grid x:Name="ModeOptions" ColumnDefinitions="*,*" ColumnSpacing="16" RowSpacing="8" Margin="0,8,0,8">
 
                         <Border
                             x:Name="CardIndividual"
@@ -47,21 +48,30 @@
                             Stroke="#E5E7EB"
                             StrokeThickness="1.5"
                             StrokeShape="RoundRectangle 16"
-                            Padding="12"
+                            Padding="16"
+                            Grid.Column="0"
+                            MinimumHeightRequest="216"
                             HorizontalOptions="Fill">
 
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="SelecionarIndividual"/>
                             </Border.GestureRecognizers>
 
-                            <VerticalStackLayout Spacing="5">
+                            <VerticalStackLayout Spacing="7">
                                 <Image Source="icone_individual.png"
-                                       WidthRequest="34"
-                                       HeightRequest="34"
+                                       WidthRequest="44"
+                                       HeightRequest="44"
                                        HorizontalOptions="Start"/>
 
                                 <Label Text="Triagem Individual" FontSize="17" FontAttributes="Bold" TextColor="#0F172A"/>
-                                <Label Text="Resultado imediato, com dados salvos neste aparelho." FontSize="12" TextColor="#6B7280"/>
+                                <Label Text="Resultado exibido na hora, ideal para um atendimento rápido." FontSize="13" TextColor="#6B7280"/>
+                                <Border BackgroundColor="#F3F4F6" StrokeThickness="0" StrokeShape="RoundRectangle 16" Padding="8,3" HorizontalOptions="Start">
+                                    <HorizontalStackLayout Spacing="5">
+                                        <Image Source="icone_privado.png" WidthRequest="14" HeightRequest="14"/>
+                                        <Label Text="Não salva dados na nuvem" FontSize="11" TextColor="#374151"/>
+                                    </HorizontalStackLayout>
+                                </Border>
+                                <Label Text="Selecionar →" FontSize="14" FontAttributes="Bold" TextColor="#10B981" Margin="0,6,0,0"/>
                             </VerticalStackLayout>
                         </Border>
 
@@ -71,24 +81,33 @@
                             Stroke="#E5E7EB"
                             StrokeThickness="1.5"
                             StrokeShape="RoundRectangle 16"
-                            Padding="12"
+                            Padding="16"
+                            Grid.Column="1"
+                            MinimumHeightRequest="216"
                             HorizontalOptions="Fill">
 
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="SelecionarGrupo"/>
                             </Border.GestureRecognizers>
 
-                            <VerticalStackLayout Spacing="5">
+                            <VerticalStackLayout Spacing="7">
                                 <Image Source="icone_grupo.png"
-                                       WidthRequest="34"
-                                       HeightRequest="34"
+                                       WidthRequest="44"
+                                       HeightRequest="44"
                                        HorizontalOptions="Start"/>
 
                                 <Label Text="Triagem em Grupo" FontSize="17" FontAttributes="Bold" TextColor="#0F172A"/>
-                                <Label Text="Atenda várias pessoas e acompanhe o histórico." FontSize="12" TextColor="#6B7280"/>
+                                <Label Text="Faça a triagem de várias pessoas e acompanhe o histórico de cada uma." FontSize="13" TextColor="#6B7280"/>
+                                <Border BackgroundColor="#F3F4F6" StrokeThickness="0" StrokeShape="RoundRectangle 16" Padding="8,3" HorizontalOptions="Start">
+                                    <HorizontalStackLayout Spacing="5">
+                                        <Image Source="icone_salvar.png" WidthRequest="14" HeightRequest="14"/>
+                                        <Label Text="Salva dados" FontSize="11" TextColor="#374151"/>
+                                    </HorizontalStackLayout>
+                                </Border>
+                                <Label Text="Selecionar →" FontSize="14" FontAttributes="Bold" TextColor="#10B981" Margin="0,6,0,0"/>
                             </VerticalStackLayout>
                         </Border>
-                    </VerticalStackLayout>
+                    </Grid>
 
                     <Button
                         x:Name="BotaoContinuar"
@@ -104,4 +123,5 @@
             </Border>
         </VerticalStackLayout>
     </Grid>
+    </ScrollView>
 </ContentPage>

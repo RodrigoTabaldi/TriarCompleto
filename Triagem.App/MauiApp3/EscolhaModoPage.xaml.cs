@@ -20,6 +20,20 @@ public partial class EscolhaModoPage : ContentPage
     public EscolhaModoPage()
     {
         InitializeComponent();
+        SizeChanged += (_, _) => AtualizarLayout();
+    }
+
+    private void AtualizarLayout()
+    {
+        if (Width <= 0) return;
+
+        ModePanel.WidthRequest = Math.Min(668, Math.Max(0, Width - 32));
+        bool estreito = Width > 0 && Width < 700;
+        ModeOptions.ColumnDefinitions = estreito
+            ? new ColumnDefinitionCollection { new(GridLength.Star) }
+            : new ColumnDefinitionCollection { new(GridLength.Star), new(GridLength.Star) };
+        Grid.SetColumn(CardGrupo, estreito ? 0 : 1);
+        Grid.SetRow(CardGrupo, estreito ? 1 : 0);
     }
 
     private void SelecionarIndividual(object? sender, EventArgs e) => Selecionar(Modo.Individual);

@@ -19,6 +19,22 @@ public partial class App : Application
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        return new Window(new AppShell());
+        var shell = new AppShell();
+        var window = new Window(shell);
+#if WINDOWS
+        window.HandlerChanged += (_, _) =>
+        {
+            if (window.Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindow)
+            {
+                if (nativeWindow.Content is Microsoft.UI.Xaml.FrameworkElement content)
+                {
+                    content.Loaded += (_, _) => WindowsWindowChrome.Install(nativeWindow, shell);
+                    if (content.IsLoaded)
+                        WindowsWindowChrome.Install(nativeWindow, shell);
+                }
+            }
+        };
+#endif
+        return window;
     }
 }
