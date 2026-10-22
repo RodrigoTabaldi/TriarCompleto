@@ -22,6 +22,12 @@ public partial class App : Application
         var shell = new AppShell();
         var window = new Window(shell);
 #if WINDOWS
+        window.TitleBar = new TitleBar
+        {
+            Title = "Triar",
+            BackgroundColor = Colors.White,
+            ForegroundColor = Color.FromArgb("#0F172A")
+        };
         window.HandlerChanged += (_, _) =>
         {
             if (window.Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindow &&
