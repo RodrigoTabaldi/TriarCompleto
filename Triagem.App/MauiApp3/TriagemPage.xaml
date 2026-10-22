@@ -157,6 +157,18 @@
                                     </Button>
                                 </Grid>
 
+                                <VerticalStackLayout IsVisible="{Binding MostrarOpcoesMultiplas}"
+                                                     BindableLayout.ItemsSource="{Binding OpcoesMultiplas}" Spacing="4">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="models:OpcaoRespondivel">
+                                            <HorizontalStackLayout Spacing="8">
+                                                <CheckBox IsChecked="{Binding Selecionada, Mode=TwoWay}" Color="#009B72"/>
+                                                <Label Text="{Binding Texto}" VerticalOptions="Center" TextColor="#0F172A"/>
+                                            </HorizontalStackLayout>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </VerticalStackLayout>
+
                             </VerticalStackLayout>
                         </Border>
                     </DataTemplate>

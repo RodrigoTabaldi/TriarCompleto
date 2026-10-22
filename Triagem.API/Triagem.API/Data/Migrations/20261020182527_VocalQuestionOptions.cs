@@ -10,26 +10,16 @@ namespace Triagem.API.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "Categoria",
-                table: "Perguntas",
-                type: "nvarchar(max)",
-                nullable: false,
-                defaultValue: "");
+            migrationBuilder.Sql("""
+                IF COL_LENGTH('dbo.Perguntas', 'Categoria') IS NULL
+                    ALTER TABLE [Perguntas] ADD [Categoria] nvarchar(max) NOT NULL DEFAULT N'';
 
-            migrationBuilder.AddColumn<string>(
-                name: "OpcoesJson",
-                table: "Perguntas",
-                type: "nvarchar(max)",
-                nullable: false,
-                defaultValue: "[]");
+                IF COL_LENGTH('dbo.Perguntas', 'OpcoesJson') IS NULL
+                    ALTER TABLE [Perguntas] ADD [OpcoesJson] nvarchar(max) NOT NULL DEFAULT N'[]';
 
-            migrationBuilder.AddColumn<bool>(
-                name: "SelecaoUnica",
-                table: "Perguntas",
-                type: "bit",
-                nullable: false,
-                defaultValue: false);
+                IF COL_LENGTH('dbo.Perguntas', 'SelecaoUnica') IS NULL
+                    ALTER TABLE [Perguntas] ADD [SelecaoUnica] bit NOT NULL DEFAULT CAST(0 AS bit);
+                """);
         }
 
         /// <inheritdoc />

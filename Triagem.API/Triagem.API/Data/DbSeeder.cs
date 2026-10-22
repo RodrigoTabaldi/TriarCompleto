@@ -41,6 +41,25 @@ public static class DbSeeder
                     ? DefaultTriageCatalog.TituloRiscoVocal : DefaultTriageCatalog.TituloPrincipalFono;
                 if (!await db.TriagemModelos.AnyAsync(t => t.Titulo == titulo))
                     db.TriagemModelos.Add(ModeloPrincipal(item, titulo));
+                else if (titulo == DefaultTriageCatalog.TituloPrincipalFono)
+                {
+                    var modelo = await db.TriagemModelos.Include(t => t.Perguntas)
+                        .Include(t => t.Faixas).SingleAsync(t => t.Titulo == titulo);
+                    if (modelo.Perguntas.Count != item.Questions.Count)
+                        throw new InvalidOperationException("A triagem fonoaudiológica existente não tem 20 perguntas; atualize-a sem excluir o histórico.");
+
+                    foreach (var pergunta in modelo.Perguntas)
+                    {
+                        var origem = item.Questions[pergunta.Ordem - 1];
+                        pergunta.Texto = TextoPergunta(origem);
+                        pergunta.Peso = origem.Weight;
+                        pergunta.Categoria = origem.Category ?? "";
+                        pergunta.OpcoesJson = JsonSerializer.Serialize(origem.Options ?? []);
+                        pergunta.SelecaoUnica = origem.SingleChoice;
+                    }
+                    db.FaixasResultado.RemoveRange(modelo.Faixas);
+                    modelo.Faixas = ModeloPrincipal(item, titulo).Faixas;
+                }
                 else if (titulo == DefaultTriageCatalog.TituloRiscoVocal)
                 {
                     var modelo = await db.TriagemModelos.Include(t => t.Perguntas)
@@ -326,7 +345,7 @@ public static class DbSeeder
             var origem = item.Questions[i];
             var destino = modelo.Perguntas[i];
             destino.Categoria = origem.Category ?? "";
-            destino.OpcoesJson = origem.SingleChoice ? JsonSerializer.Serialize(origem.Options) : "[]";
+            destino.OpcoesJson = JsonSerializer.Serialize(origem.Options ?? []);
             destino.SelecaoUnica = origem.SingleChoice;
         }
         if (titulo == DefaultTriageCatalog.TituloRiscoVocal)

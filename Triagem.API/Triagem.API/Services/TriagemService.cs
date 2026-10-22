@@ -274,19 +274,29 @@ public partial class TriagemService(
                     ? VocalTriageRules.Score(pergunta.Ordem, pergunta.Peso, false, r.OpcoesSelecionadas[0])
                     : pergunta.Peso;
             }
+            else if (modelo.Titulo == DefaultTriageCatalog.TituloPrincipalFono && pergunta.Ordem == 8)
+            {
+                var opcoes = JsonSerializer.Deserialize<List<string>>(pergunta.OpcoesJson) ?? [];
+                if (!FonoElderTriageRules.ConsistenciasValidas(r.Valor, opcoes, r.OpcoesSelecionadas))
+                    return (null, "Marque as consistências do engasgo ou responda Não.");
+                pontuacao += FonoElderTriageRules.Score(pergunta.Ordem, pergunta.Peso, r.Valor);
+            }
             else
             {
                 if (r.OpcoesSelecionadas is { Count: > 0 })
                     return (null, "Esta pergunta aceita apenas Sim ou Não.");
                 pontuacao += modelo.Titulo == DefaultTriageCatalog.TituloRiscoVocal
                     ? VocalTriageRules.Score(pergunta.Ordem, pergunta.Peso, r.Valor, null)
-                    : r.Valor ? pergunta.Peso : 0;
+                    : modelo.Titulo == DefaultTriageCatalog.TituloPrincipalFono
+                        ? FonoElderTriageRules.Score(pergunta.Ordem, pergunta.Peso, r.Valor)
+                        : r.Valor ? pergunta.Peso : 0;
             }
             respostas.Add(new RespostaDada
             {
                 PerguntaId = r.PerguntaId,
                 Valor = false,
-                ValorProtegido = encryptor.Encrypt(pergunta.SelecaoUnica
+                ValorProtegido = encryptor.Encrypt(pergunta.SelecaoUnica ||
+                    modelo.Titulo == DefaultTriageCatalog.TituloPrincipalFono && pergunta.Ordem == 8 && r.Valor
                     ? JsonSerializer.Serialize(r.OpcoesSelecionadas) : r.Valor ? "1" : "0")
             });
         }

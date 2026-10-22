@@ -61,11 +61,16 @@
                         <Label Grid.Column="1" Grid.Row="3" x:Name="DataTriagem" FontAttributes="Bold" TextColor="#0F172A"/>
                     </Grid>
 
+                    <VerticalStackLayout x:Name="DadosOpcionais" IsVisible="False" Spacing="8">
+                        <Label x:Name="EscolaridadePaciente" TextColor="#374151" LineBreakMode="WordWrap" IsVisible="False"/>
+                        <Label x:Name="DoencasPreviasPaciente" TextColor="#374151" LineBreakMode="WordWrap" IsVisible="False"/>
+                    </VerticalStackLayout>
+
                 </VerticalStackLayout>
             </Border>
 
             <VerticalStackLayout x:Name="DetalhesRespostas" IsVisible="False" Spacing="10">
-                <Label Text="Perguntas e respostas" FontSize="19" FontAttributes="Bold" TextColor="#0F172A" />
+                <Label Text="Informações complementares" FontSize="19" FontAttributes="Bold" TextColor="#0F172A" />
                 <VerticalStackLayout x:Name="ListaRespostas" Spacing="8" />
             </VerticalStackLayout>
 

@@ -59,10 +59,20 @@ public class TriagemResumo : ObservableBase
                 return _imagemHome = TriagemImagem.CriarImageSource(Imagem, "triagem_clinica_profissional.png");
 
             var titulo = Titulo.ToLowerInvariant();
-            var arquivo = titulo.Contains("mental") ? "triagem_mental_profissional.png"
-                : titulo.Contains("infantil") || titulo.Contains("criança") || titulo.Contains("crianca") ? "triagem_infantil_profissional.png"
-                : titulo.Contains("mulher") ? "triagem_mulher_profissional.png"
+            var arquivo = titulo.Contains("risco vocal") || titulo.Contains("triagem de voz")
+                ? "triagem_voz_profissional.png"
+                : titulo.Contains("fonoaudiológica para pessoa idosa")
+                    ? "triagem_idoso_profissional.png"
+                : titulo.Contains("infantil") || titulo.Contains("criança") || titulo.Contains("crianca")
+                    ? "triagem_infantil_profissional.png"
+                : titulo.Contains("auditiva") || titulo.Contains("audição")
+                    ? "triagem_auditiva_profissional.png"
                 : titulo.Contains("idoso") ? "triagem_idoso_profissional.png"
+                : titulo.Contains("motricidade orofacial")
+                    ? "triagem_orofacial_profissional.png"
+                : titulo.Contains("linguagem") || titulo.Contains("cognição") || titulo.Contains("mental")
+                    ? "triagem_mental_profissional.png"
+                : titulo.Contains("mulher") ? "triagem_mulher_profissional.png"
                 : titulo.Contains("respirat") ? "triagem_respiratoria_profissional.png"
                 : "triagem_clinica_profissional.png";
 
@@ -185,6 +195,8 @@ public class ResultadoTriagem
     public string NomePaciente { get; set; } = "";
     public int Idade { get; set; }
     public string Sexo { get; set; } = "";
+    public string? Escolaridade { get; set; }
+    public string? DoencasPrevias { get; set; }
     public int Pontuacao { get; set; }
     public int PontuacaoMaxima { get; set; }
     public string Classificacao { get; set; } = "";
@@ -278,22 +290,41 @@ public class PerguntaRespondivel : ObservableBase
 {
     private bool? _resposta;
     private string? _opcaoSelecionada;
+    private List<string> _opcoes = [];
 
     public int PerguntaId { get; set; }
     public int Numero { get; set; }
     public string Texto { get; set; } = "";
     public int Peso { get; set; }
     public string Categoria { get; set; } = "";
-    public List<string> Opcoes { get; set; } = [];
+    public List<string> Opcoes
+    {
+        get => _opcoes;
+        set
+        {
+            _opcoes = value;
+            OpcoesMultiplas.Clear();
+            foreach (var texto in value)
+            {
+                var opcao = new OpcaoRespondivel { Texto = texto };
+                opcao.Alterada += () => RespostaAlterada?.Invoke();
+                OpcoesMultiplas.Add(opcao);
+            }
+        }
+    }
+    public ObservableCollection<OpcaoRespondivel> OpcoesMultiplas { get; } = [];
     public bool SelecaoUnica { get; set; }
     public bool SimNaoVisivel => !SelecaoUnica;
     public bool OpcoesVisiveis => SelecaoUnica;
+    public bool MostrarOpcoesMultiplas => !SelecaoUnica && OpcoesMultiplas.Count > 0 && Resposta == true;
+    public List<string> OpcoesSelecionadas => OpcoesMultiplas.Where(o => o.Selecionada).Select(o => o.Texto).ToList();
     public string? OpcaoSelecionada
     {
         get => _opcaoSelecionada;
         set { if (Set(ref _opcaoSelecionada, value)) RespostaAlterada?.Invoke(); }
     }
-    public bool Respondida => SelecaoUnica ? OpcaoSelecionada is not null : Resposta is not null;
+    public bool Respondida => SelecaoUnica ? OpcaoSelecionada is not null :
+        Resposta == false || Resposta == true && (OpcoesMultiplas.Count == 0 || OpcoesSelecionadas.Count > 0);
 
     public bool? Resposta
     {
@@ -302,8 +333,11 @@ public class PerguntaRespondivel : ObservableBase
         {
             if (Set(ref _resposta, value))
             {
+                if (value != true)
+                    foreach (var opcao in OpcoesMultiplas) opcao.Selecionada = false;
                 Notificar(nameof(SimSelecionado));
                 Notificar(nameof(NaoSelecionado));
+                Notificar(nameof(MostrarOpcoesMultiplas));
                 RespostaAlterada?.Invoke();
             }
         }
@@ -313,4 +347,16 @@ public class PerguntaRespondivel : ObservableBase
     public bool NaoSelecionado => Resposta == false;
 
     public event Action? RespostaAlterada;
+}
+
+public class OpcaoRespondivel : ObservableBase
+{
+    private bool _selecionada;
+    public string Texto { get; set; } = "";
+    public bool Selecionada
+    {
+        get => _selecionada;
+        set { if (Set(ref _selecionada, value)) Alterada?.Invoke(); }
+    }
+    public event Action? Alterada;
 }

@@ -24,14 +24,12 @@ public partial class App : Application
 #if WINDOWS
         window.HandlerChanged += (_, _) =>
         {
-            if (window.Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindow)
+            if (window.Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindow &&
+                nativeWindow.Content is Microsoft.UI.Xaml.FrameworkElement content)
             {
-                if (nativeWindow.Content is Microsoft.UI.Xaml.FrameworkElement content)
-                {
-                    content.Loaded += (_, _) => WindowsWindowChrome.Install(nativeWindow, shell);
-                    if (content.IsLoaded)
-                        WindowsWindowChrome.Install(nativeWindow, shell);
-                }
+                content.Loaded += (_, _) => WindowsWindowChrome.Install(nativeWindow);
+                if (content.IsLoaded)
+                    WindowsWindowChrome.Install(nativeWindow);
             }
         };
 #endif

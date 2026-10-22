@@ -33,6 +33,8 @@ public static partial class BancoLocal
             {
                 if (titulo == DefaultTriageCatalog.TituloRiscoVocal)
                     await AtualizarRiscoVocalAsync(db, existente.Id, item);
+                else
+                    await AtualizarFonoIdosoAsync(db, existente.Id, item);
                 continue;
             }
 
@@ -48,12 +50,36 @@ public static partial class BancoLocal
                 Texto = q.Options is { Count: > 0 } && !q.SingleChoice
                     ? $"Engasga com algum dos seguintes: {string.Join(", ", q.Options)}?" : q.Text,
                 Categoria = q.Category ?? "",
-                OpcoesJson = q.SingleChoice ? JsonSerializer.Serialize(q.Options) : "[]",
+                OpcoesJson = JsonSerializer.Serialize(q.Options ?? []),
                 SelecaoUnica = q.SingleChoice
             }).ToList());
             await db.InsertAllAsync(titulo == DefaultTriageCatalog.TituloRiscoVocal
                 ? FaixasRiscoVocal(modelo.Id) : FaixasPadrao(modelo.Id, item.Questions.Sum(q => q.Weight)));
         }
+    }
+
+    private static async Task AtualizarFonoIdosoAsync(SQLiteAsyncConnection db, int modeloId, DefaultTriage item)
+    {
+        var perguntas = await db.Table<PerguntaLocal>().Where(p => p.TriagemModeloId == modeloId).ToListAsync();
+        if (perguntas.Count != item.Questions.Count)
+            throw new InvalidOperationException("A triagem fonoaudiológica existente não tem 20 perguntas; atualize-a sem excluir o histórico.");
+
+        foreach (var pergunta in perguntas)
+        {
+            var origem = item.Questions[pergunta.Ordem - 1];
+            pergunta.Texto = origem.Options is { Count: > 0 } && !origem.SingleChoice
+                ? $"Engasga com algum dos seguintes: {string.Join(", ", origem.Options)}?" : origem.Text;
+            pergunta.Peso = origem.Weight;
+            pergunta.Categoria = origem.Category ?? "";
+            pergunta.OpcoesJson = JsonSerializer.Serialize(origem.Options ?? []);
+            pergunta.SelecaoUnica = origem.SingleChoice;
+        }
+        await db.UpdateAllAsync(perguntas);
+
+        var faixas = await db.Table<FaixaLocal>().Where(f => f.TriagemModeloId == modeloId).ToListAsync();
+        foreach (var faixa in faixas)
+            await db.DeleteAsync(faixa);
+        await db.InsertAllAsync(FaixasPadrao(modeloId, item.Questions.Sum(q => q.Weight)));
     }
 
     private static async Task AtualizarRiscoVocalAsync(SQLiteAsyncConnection db, int modeloId, DefaultTriage item)

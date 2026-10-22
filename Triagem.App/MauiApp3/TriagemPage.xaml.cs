@@ -158,7 +158,7 @@ public partial class TriagemPage : ContentPage
                     PerguntaId = p.PerguntaId,
                     Valor = p.Resposta == true,
                     OpcoesSelecionadas = p.SelecaoUnica && p.OpcaoSelecionada is not null
-                        ? [p.OpcaoSelecionada] : []
+                        ? [p.OpcaoSelecionada] : p.Resposta == true ? p.OpcoesSelecionadas : []
                 }).ToList()
             };
 
@@ -170,9 +170,13 @@ public partial class TriagemPage : ContentPage
                 return;
             }
 
+            resultado.Escolaridade = payload.Escolaridade;
+            resultado.DoencasPrevias = payload.DoencasPrevias;
+            resultado.Respostas = [];
+
             if (_triagem.Titulo == DefaultTriageCatalog.TituloRiscoVocal)
             {
-                resultado.Respostas = _perguntas.Select(p => new RespostaResultado
+                resultado.Respostas = _perguntas.Where(p => p.SelecaoUnica).Select(p => new RespostaResultado
                 {
                     Numero = p.Numero,
                     Pergunta = p.Texto,

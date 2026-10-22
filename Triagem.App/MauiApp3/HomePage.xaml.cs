@@ -32,7 +32,7 @@ public partial class HomePage : ContentPage
             InicialUsuarioMobile.Text = GerarIniciais(u.Nome);
         }
 
-        BotaoSairDesktop.Text = App.ModoIndividual ? "Trocar modo de triagem" : "Sair";
+        BotaoSairDesktop.Text = App.ModoIndividual ? "Trocar modo" : "Sair";
     }
 
     protected override async void OnAppearing()

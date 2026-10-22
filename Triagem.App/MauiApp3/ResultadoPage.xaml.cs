@@ -31,6 +31,12 @@ public partial class ResultadoPage : ContentPage
         IdadePaciente.Text = $"{r.Idade} anos";
         DataTriagem.Text = r.Data.ToLocalTime().ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
 
+        EscolaridadePaciente.IsVisible = !string.IsNullOrWhiteSpace(r.Escolaridade);
+        EscolaridadePaciente.Text = $"Escolaridade: {r.Escolaridade}";
+        DoencasPreviasPaciente.IsVisible = !string.IsNullOrWhiteSpace(r.DoencasPrevias);
+        DoencasPreviasPaciente.Text = $"Doenças prévias: {r.DoencasPrevias}";
+        DadosOpcionais.IsVisible = EscolaridadePaciente.IsVisible || DoencasPreviasPaciente.IsVisible;
+
         DetalhesRespostas.IsVisible = r.Respostas.Count > 0;
         ListaRespostas.Children.Clear();
         foreach (var resposta in r.Respostas.OrderBy(x => x.Numero))
