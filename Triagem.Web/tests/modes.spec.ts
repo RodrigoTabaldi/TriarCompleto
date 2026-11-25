@@ -190,12 +190,22 @@ test('Triagem personalizada conserva imagem local', async ({ page }) => {
   await expect(page.locator('.triage-card').filter({ hasText: 'Triagem com imagem' }).locator('img')).toHaveAttribute('src', /^data:image\/png;base64,/);
 });
 
+test('Triagem infantil não aparece entre as específicas nem na edição da home', async ({ page }) => {
+  await page.goto('/');
+  await individual(page);
+  await page.getByRole('button', { name: 'Triagens específicas' }).click();
+  await expect(page.getByRole('heading', { name: 'Triagem de Voz', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Triagem Fonoaudiológica Infantil', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: /Editar triagens/ }).first().click();
+  await expect(page.getByRole('heading', { name: 'Triagem Fonoaudiológica Infantil', exact: true })).toHaveCount(0);
+});
+
 test('Todas as triagens padrão aplicam pesos e faixas do catálogo MAUI', async ({ page }) => {
   const apiCalls: string[] = [];
   page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/')) apiCalls.push(request.url()); });
   await page.goto('/');
   await individual(page);
-  for (const model of catalog) {
+  for (const model of catalog.filter(item => item.titulo !== 'Triagem Fonoaudiológica Infantil')) {
     for (const yes of [false, true]) {
       if (model.id > 2) await page.getByRole('button', { name: 'Triagens específicas' }).click();
       else await page.getByRole('button', { name: 'Triagens principais' }).click();
@@ -203,6 +213,7 @@ test('Todas as triagens padrão aplicam pesos e faixas do catálogo MAUI', async
       await page.getByLabel('Nome completo', { exact: true }).fill('Paciente de teste');
       await page.getByLabel('Idade', { exact: true }).fill('42');
       for (const question of await page.locator('fieldset.question').all()) {
+        expect(await question.evaluate(element => Array.from(element.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim() === '0'))).toBe(false);
         const single = question.locator('.option-list input[type=radio]');
         if (await single.count()) await single.first().check();
         else {
