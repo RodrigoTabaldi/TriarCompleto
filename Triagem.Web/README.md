@@ -4,10 +4,10 @@ Site separado em React + TypeScript, com API ASP.NET Core. A tela inicial permit
 
 ## Modos
 
-- **Individual:** entra sem login. Um banco SQLite real, executado com sql.js, fica no navegador e é persistido no IndexedDB. Pacientes, respostas, triagens particulares e histórico não são enviados à API. Em Sobre, use **Baixar cópia do SQLite** para guardar uma cópia. Limpar os dados do navegador apaga esse banco; dispositivos e navegadores diferentes possuem bancos separados.
+- **Individual:** entra sem login e não precisa de API. Um banco SQLite executado com sql.js fica no navegador e é persistido no IndexedDB, cifrado com AES-GCM e uma chave não exportável armazenada no próprio navegador. A chave não tem as mesmas garantias do armazenamento seguro do sistema operacional usado pelo MAUI; código malicioso executado na mesma origem pode acessar os dados. Em Sobre, **Baixar cópia do SQLite** gera um arquivo legível, sem essa cifra: guarde-o em local protegido. Limpar os dados do navegador apaga o banco e a chave; dispositivos e navegadores diferentes possuem bancos separados.
 - **Em grupo:** exige cadastro/login e usa a API ASP.NET com PostgreSQL. Os dados são associados ao usuário. O token fica em memória; recarregar retorna à escolha e exige novo login nesse modo.
 
-Há sete protocolos padrão do catálogo MAUI atualizado, perguntas sim/não e múltiplas opções, escolaridade, doenças prévias, resultados, histórico, exportação Excel e edição de triagens particulares. Protocolos antigos permanecem no histórico.
+O catálogo contém as oito triagens do núcleo compartilhado com o MAUI, incluindo as regras específicas de risco vocal e da triagem fonoaudiológica para pessoa idosa. Há escolaridade, doenças prévias, resultados, histórico, exportação Excel e edição de triagens particulares. A atualização do catálogo conserva protocolos anteriores e históricos no banco local.
 
 ## Docker
 
@@ -59,7 +59,7 @@ Para integração da API, use banco de testes: o script cria usuários e registr
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-web-api.ps1
 ```
 
-O catálogo web deriva de `Triagem.API/Triagem.API/Data/DefaultTriageCatalog.cs`. Para regenerar seu JSON, na raiz:
+O catálogo web deriva de `Triagem.Core/Domain/DefaultTriageCatalog.cs`. Para regenerar seu JSON, na raiz:
 
 ```sh
 dotnet run --project scripts/ExportCatalog -- Triagem.Web/src/default-triages.json
